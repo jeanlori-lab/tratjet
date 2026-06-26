@@ -176,6 +176,33 @@
 
     }
 
+    /* Autocomplete */
+    .autocomplete-wrap { position: relative; }
+    .autocomplete-list {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0; right: 0;
+      background: #fff;
+      border: 1.5px solid #c8e6c9;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+      z-index: 999;
+      overflow: hidden;
+      display: none;
+    }
+    .autocomplete-item {
+      padding: 9px 13px;
+      font-size: 13px;
+      color: #1a2433;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f4f8;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item:hover { background: #f1fdf1; }
+
     /* Bouton */
     .btn {
       width: 100%;
@@ -351,7 +378,7 @@
       <div class="param-icon">📍</div>
       <div class="param-label">Départ</div>
       <div class="param-input">
-        <input type="text" id="depart" value="60 rue de Dantzig, Paris" oninput="resetResultat()">
+        <input type="text" id="depart" value="60 rue de Dantzig, 75015 Paris" oninput="resetResultat()">
       </div>
     </div>
 
@@ -359,7 +386,7 @@
       <div class="param-icon">🏁</div>
       <div class="param-label">Destination</div>
       <div class="param-input">
-        <input type="text" id="arrivee" placeholder="Ex : votre lieu de vacances" oninput="resetResultat()">
+        <input type="text" id="arrivee" placeholder="prout" oninput="resetResultat()">
       </div>
     </div>
   </div>
@@ -402,13 +429,62 @@
         </tr>
       </tbody>
     </table>
-    <div class="maps-wrap">
-      <a class="maps-link" id="mapsLink" href="#" target="_blank"><img src="logo maps.png" alt="" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;"> Voir l'itinéraire sur Maps</a>
+    <div class="maps-wrap" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <a class="maps-link" id="mapsLink" href="#" target="_blank"><img src="logo maps.png" alt="" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;"> Itinéraire Maps</a>
+      <a class="maps-link" id="vinciLink" href="#" target="_blank" style="background:#eef7ee;color:#2e7d32;">Prix péage</a>
     </div>
   </div>
 
 </div>
 <script>
+// Autocomplétion
+let autoTimers = {};
+
+async function onAutoComplete(input, listId) {
+  resetResultat();
+  const val = input.value.trim();
+  const list = document.getElementById(listId);
+  clearTimeout(autoTimers[listId]);
+  if (val.length < 3) { list.style.display = 'none'; return; }
+  autoTimers[listId] = setTimeout(async () => {
+    const apiKey = document.getElementById('apiKey').value.trim();
+    const texteGeo = (val.split(/\s+/).length === 1 && !/\d/.test(val)) ? val + ', France' : val;
+    try {
+      const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(texteGeo)}&size=5`;
+      const r = await fetch(url);
+      if (!r.ok) return;
+      const d = await r.json();
+      if (!d.features || d.features.length === 0) { list.style.display = 'none'; return; }
+      list.innerHTML = '';
+      d.features.forEach(f => {
+        const label = f.properties.label;
+        const div = document.createElement('div');
+        div.className = 'autocomplete-item';
+        div.innerHTML = '📍 ' + label;
+        div.addEventListener('mousedown', e => {
+          e.preventDefault();
+          input.value = label;
+          list.style.display = 'none';
+          resetResultat();
+        });
+        list.appendChild(div);
+      });
+      list.style.display = 'block';
+    } catch(e) { list.style.display = 'none'; }
+  }, 300);
+}
+
+function onAutoKey(event, listId) {
+  if (event.key === 'Escape') document.getElementById(listId).style.display = 'none';
+}
+
+document.addEventListener('click', e => {
+  ['depart-list','arrivee-list'].forEach(id => {
+    const list = document.getElementById(id);
+    if (list && !list.contains(e.target)) list.style.display = 'none';
+  });
+});
+
 const CARB_FIELD = {
   gazole:'gazole_prix', sp95:'sp95_prix', sp98:'sp98_prix',
   e10:'e10_prix', e85:'e85_prix', gplc:'gplc_prix'
@@ -463,8 +539,26 @@ async function chargerPrix() {
 }
 chargerPrix();
 
+function parseGPS(texte) {
+  const clean = texte.trim().replace(/[,;]/g, ' ');
+  const parts = clean.split(/[ ]+/).filter(Boolean);
+  if (parts.length >= 2) {
+    const lat = parseFloat(parts[0]);
+    const lng = parseFloat(parts[1]);
+    if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      return [lng, lat];
+    }
+  }
+  return null;
+}
+
 async function geocode(lieu, apiKey) {
-  const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(lieu)}&size=1`;
+  const gps = parseGPS(lieu);
+  if (gps) return gps;
+  // layers=locality,address force un point accessible en voiture
+  // Si un seul mot sans chiffre ni virgule, on ajoute France pour mieux géocoder
+  const texteGeo = (lieu.trim().split(/\s+/).length === 1 && !/\d/.test(lieu)) ? lieu + ', France' : lieu;
+  const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(texteGeo)}&size=1&layers=locality,address,street`;
   const r = await fetch(url);
   if (!r.ok) throw new Error('Géocodage impossible pour "' + lieu + '"');
   const d = await r.json();
@@ -478,7 +572,13 @@ async function getRoute(c1, c2, apiKey) {
     headers: { 'Authorization': apiKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({ coordinates: [c1, c2] })
   });
-  if (!r.ok) throw new Error(r.status === 403 ? 'Clé API invalide ou quota dépassé' : 'Erreur itinéraire (code ' + r.status + ')');
+  if (!r.ok) {
+    let msg = 'Erreur itinéraire (code ' + r.status + ')';
+    if (r.status === 403) msg = 'Clé API invalide ou quota dépassé';
+    if (r.status === 404) msg = 'Itinéraire introuvable — essaie de préciser l\'adresse';
+    if (r.status === 400) msg = 'Adresse non reconnue — essaie d\'être plus précis (ex: "Houdan, Yvelines" ou "Paris 15")';
+    throw new Error(msg);
+  }
   const d = await r.json();
   const s = d.routes[0].summary;
   return { distanceKm: s.distance / 1000, dureeSec: s.duration };
@@ -525,6 +625,10 @@ async function calculer() {
 
     document.getElementById('mapsLink').href =
       `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(depart)}&destination=${encodeURIComponent(arrivee)}&travelmode=driving`;
+    const startObj = JSON.stringify({place: depart, lat: c1[1], lng: c1[0]});
+    const endObj = JSON.stringify({place: arrivee, lat: c2[1], lng: c2[0]});
+    document.getElementById('vinciLink').href =
+      `https://www.vinci-autoroutes.com/fr/mon-trajet/?area=service&filter-status=0&start=${encodeURIComponent(startObj)}&end=${encodeURIComponent(endObj)}`;
 
     document.getElementById('sectionResultats').style.display = 'block';
     document.getElementById('sectionResultats').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
