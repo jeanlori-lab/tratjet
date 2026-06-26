@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<link rel="icon" type="image/png" href="logo budget trajet.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Calculateur coût carburant</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #e8f5e9 0%, #e3f2fd 100%);
+      min-height: 100vh;
+      padding: 24px 16px;
+      color: #1a2433;
+    }
+
+    .page {
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* En-tête */
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1a2433;
+      letter-spacing: -0.02em;
+    }
+    .header p {
+      font-size: 12px;
+      color: #607080;
+      margin-top: 5px;
+      line-height: 1.5;
+    }
+
+    /* Carte */
+    .card {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 20px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: #90a4ae;
+      margin-bottom: 14px;
+    }
+
+    /* Légende */
+    .legende {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #607080;
+    }
+    .legend-dot {
+      width: 12px; height: 12px;
+      border-radius: 3px;
+      background: #c6f5c6;
+      border: 1.5px solid #4caf50;
+      flex-shrink: 0;
+    }
+
+    /* Lignes de paramètres */
+    .param-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f4f8;
+    }
+    .param-row:last-child { border-bottom: none; }
+
+    .param-icon {
+      font-size: 18px;
+      width: 28px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .param-label {
+      font-size: 13px;
+      color: #455060;
+      width: 130px;
+      flex-shrink: 0;
+      line-height: 1.3;
+    }
+    .param-input {
+      flex: 1;
+    }
+
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      padding: 8px 11px;
+      border: 1.5px solid #c8e6c9;
+      border-radius: 10px;
+      background: #f1fdf1;
+      font-size: 13px;
+      font-family: inherit;
+      color: #1a2433;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input[type="text"]:focus, input[type="number"]:focus, select:focus {
+      border-color: #43a047;
+      box-shadow: 0 0 0 3px rgba(67,160,71,0.13);
+    }
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2390a4ae'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 26px;
+      background-color: #f1fdf1;
+    }
+
+    .auto-field {
+      width: 100%;
+      padding: 8px 11px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 10px;
+      background: #f5f7fa;
+      font-size: 13px;
+      color: #607080;
+    }
+
+    .conso-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .conso-wrap input { flex: 1; min-width: 0; }
+    .conso-wrap span { font-size: 13px; color: #607080; white-space: nowrap; }
+    .conso-step {
+      display: inline-flex;
+      width: 34px;
+      height: 34px;
+      border: 1.5px solid #c8e6c9;
+      border-radius: 10px;
+      background: #f1fdf1;
+      color: #1a2433;
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    .conso-step:active { background: #dff6df; }
+    .conso-wrap input { text-align: center; }
+    @media (pointer: coarse) {
+      .conso-step { display: none; }
+    }
+    @media (max-width: 768px) {
+      input[type="text"], input[type="number"], select { font-size: 16px; }
+    }
+
+    @media (max-width: 480px) {
+      .param-label { width: 90px; font-size: 12px; }
+      .param-icon { width: 22px; font-size: 15px; }
+      input[type="text"], input[type="number"], select { font-size: 12px; padding: 7px 8px; }
+      .auto-field { font-size: 12px; padding: 7px 8px; }
+
+    }
+
+    /* Bouton */
+    .btn {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, #2196f3, #1565c0);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      box-shadow: 0 4px 14px rgba(33,150,243,0.35);
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:hover { opacity: 0.92; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { background: linear-gradient(135deg, #90caf9, #78a9d1); box-shadow: none; cursor: not-allowed; }
+
+    /* Loader */
+    .loader {
+      display: none;
+      text-align: center;
+      padding: 10px;
+      font-size: 12px;
+      color: #90a4ae;
+    }
+
+    /* Erreur */
+    .error {
+      display: none;
+      background: #fff5f5;
+      border: 1.5px solid #ffcdd2;
+      color: #c62828;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    /* Résultats */
+    .card.resultats { display: none; }
+
+    .res-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 6px;
+    }
+    .res-table thead th {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #90a4ae;
+      padding: 0 10px 4px;
+      text-align: center;
+    }
+    .res-table thead th:first-child { text-align: left; }
+
+    .res-table tbody tr td {
+      padding: 10px 12px;
+      font-size: 13px;
+      background: #f5f7fa;
+    }
+    .res-table tbody tr td:first-child {
+      border-radius: 10px 0 0 10px;
+      color: #455060;
+    }
+    .res-table tbody tr td:not(:first-child) {
+      text-align: center;
+      font-weight: 600;
+      color: #1a2433;
+    }
+    .res-table tbody tr td:nth-child(2) {
+      background: #e8f4ff;
+    }
+    .res-table tbody tr td:nth-child(3) {
+      background: #e8f8ee;
+      border-radius: 0 10px 10px 0;
+    }
+    .res-table thead th:nth-child(2) { color: #1976d2; }
+    .res-table thead th:nth-child(3) { color: #2e7d32; }
+
+    .maps-wrap {
+      text-align: center;
+      padding-top: 14px;
+    }
+    .maps-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1976d2;
+      text-decoration: none;
+      background: #e8f4ff;
+      padding: 8px 16px;
+      border-radius: 20px;
+      transition: background 0.15s;
+    }
+    .maps-link:hover { background: #bbdefb; }
+  </style>
+  <!-- PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Carburant">
+  <meta name="theme-color" content="#1565c0">
+  <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvw7t0IGNhcmJ1cmFudCB0cmFqZXQiLAogICJzaG9ydF9uYW1lIjogIkNhcmJ1cmFudCIsCiAgImRlc2NyaXB0aW9uIjogIkNhbGN1bGF0ZXVyIGRlIGNvw7t0IGNhcmJ1cmFudCBwb3VyIHVuIHRyYWpldCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZThmNWU5IiwKICAidGhlbWVfY29sb3IiOiAiIzE1NjVjMCIsCiAgIm9yaWVudGF0aW9uIjogInBvcnRyYWl0IiwKICAiaWNvbnMiOiBbCiAgICB7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSFpwWlhkQ2IzZzlJakFnTUNBMU1USWdOVEV5SWo0OGNtVmpkQ0IzYVdSMGFEMGlOVEV5SWlCb1pXbG5hSFE5SWpVeE1pSWdjbmc5SWpFeE5TSWdabWxzYkQwaUl6RTFOalZqTUNJdlBqeDBaWGgwSUhrOUlqTTBNQ0lnZUQwaU1qVTJJaUIwWlhoMExXRnVZMmh2Y2owaWJXbGtaR3hsSWlCbWIyNTBMWE5wZW1VOUlqTXdNQ0lnWm05dWRDMW1ZVzFwYkhrOUluTmxjbWxtSWo3aW03MDhMM1JsZUhRK1BDOXpkbWMrIiwgInNpemVzIjogIjUxMng1MTIiLCAidHlwZSI6ICJpbWFnZS9zdmcreG1sIiwgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIn0KICBdCn0=">
+  <link rel="apple-touch-icon" href="logo budget trajet.png">
+  <script>
+    if ('serviceWorker' in navigator) {
+      const sw = `self.addEventListener('fetch', e => { e.respondWith(fetch(e.request).catch(() => caches.match(e.request))); });`;
+      const blob = new Blob([sw], {type: 'application/javascript'});
+      navigator.serviceWorker.register(URL.createObjectURL(blob));
+    }
+  </script>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <h1>Coût carburant trajet</h1>
+    <p>Prix mis à jour en temps réel depuis les données publiques officielles de l'État.</p>
+  </div>
+
+  <input type="hidden" id="apiKey" value="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY1NjRiM2M4Yjc0OTQ0ZDlhNmNjM2FiOWQzNjFhNTE2IiwiaCI6Im11cm11cjY0In0=">
+
+  <!-- Légende -->
+  <div class="card" style="padding: 12px 20px;">
+    <div class="legende"><div class="legend-dot"></div> Cases vertes = à remplir</div>
+  </div>
+
+  <!-- Paramètres -->
+  <div class="card">
+    <div class="card-title">Paramètres du trajet</div>
+
+    <div class="param-row">
+      <div class="param-icon">⛽</div>
+      <div class="param-label">Carburant</div>
+      <div class="param-input">
+        <select id="carburant" onchange="resetResultat(); chargerPrix();">
+          <option value="sp95">SP95</option>
+          <option value="gazole">Gazole (Diesel)</option>
+          <option value="sp98">SP98</option>
+                    <option value="e85">E85</option>
+          <option value="gplc">GPLc</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="param-row">
+      <div class="param-icon">💶</div>
+      <div class="param-label">Prix moyen actuel</div>
+      <div class="param-input">
+        <div class="auto-field" id="prixAffiche">Chargement…</div>
+      </div>
+    </div>
+
+    <div class="param-row conso-row">
+      <div class="param-icon">🚗</div>
+      <div class="param-label">Conso au 100 km</div>
+      <div class="param-input">
+        <div class="conso-wrap">
+          <button type="button" class="conso-step" aria-label="Diminuer la consommation" onclick="changerConso(-0.1)">-</button>
+          <input type="number" id="conso" value="7.5" min="1" max="30" step="0.1" oninput="resetResultat()">
+          <button type="button" class="conso-step" aria-label="Augmenter la consommation" onclick="changerConso(0.1)">+</button>
+          <span>L / 100 km</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="param-row">
+      <div class="param-icon">📍</div>
+      <div class="param-label">Départ</div>
+      <div class="param-input">
+        <input type="text" id="depart" value="60 rue de Dantzig, Paris" oninput="resetResultat()">
+      </div>
+    </div>
+
+    <div class="param-row">
+      <div class="param-icon">🏁</div>
+      <div class="param-label">Destination</div>
+      <div class="param-input">
+        <input type="text" id="arrivee" placeholder="Ex : votre lieu de vacances" oninput="resetResultat()">
+      </div>
+    </div>
+  </div>
+
+  <button class="btn" id="calcBtn" onclick="calculer()">Calculer le coût du trajet</button>
+  <div class="loader" id="loader">⏳ Calcul en cours…</div>
+  <div class="error" id="error"></div>
+
+  <!-- Résultats -->
+  <div class="card resultats" id="sectionResultats" style="margin-top:14px;">
+    <div class="card-title">Résultats</div>
+    <table class="res-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Aller simple</th>
+          <th>Aller-retour</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Distance</td>
+          <td id="r-dist-a">—</td>
+          <td id="r-dist-ar">—</td>
+        </tr>
+        <tr>
+          <td>Durée</td>
+          <td id="r-duree-a">—</td>
+          <td id="r-duree-ar">—</td>
+        </tr>
+        <tr>
+          <td>Coût carburant</td>
+          <td id="r-cout-a">—</td>
+          <td id="r-cout-ar">—</td>
+        </tr>
+        <tr>
+          <td>Litres consommés</td>
+          <td id="r-litres-a">—</td>
+          <td id="r-litres-ar">—</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="maps-wrap">
+      <a class="maps-link" id="mapsLink" href="#" target="_blank"><img src="logo maps.png" alt="" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;"> Voir l'itinéraire sur Maps</a>
+    </div>
+  </div>
+
+</div>
+<script>
+const CARB_FIELD = {
+  gazole:'gazole_prix', sp95:'sp95_prix', sp98:'sp98_prix',
+  e10:'e10_prix', e85:'e85_prix', gplc:'gplc_prix'
+};
+let prixActuel = null;
+
+function showError(msg) { const e=document.getElementById('error'); e.textContent=msg; e.style.display='block'; }
+function hideError() { document.getElementById('error').style.display='none'; }
+function setLoading(on) { document.getElementById('loader').style.display=on?'block':'none'; document.getElementById('calcBtn').disabled=on; }
+function resetResultat() { document.getElementById('sectionResultats').style.display='none'; hideError(); }
+
+function changerConso(delta) {
+  const input = document.getElementById('conso');
+  const min = parseFloat(input.min);
+  const max = parseFloat(input.max);
+  const current = parseFloat(input.value) || 0;
+  const next = Math.min(max, Math.max(min, current + delta));
+  input.value = (Math.round(next * 10) / 10).toFixed(1);
+  resetResultat();
+}
+
+async function fetchPrix(field) {
+  const url = `https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?select=avg(${field})%20as%20prix&limit=1&where=${field}%20is%20not%20null`;
+  const r = await fetch(url);
+  const d = await r.json();
+  if (d.results && d.results[0] && d.results[0].prix) return parseFloat(d.results[0].prix);
+  return null;
+}
+
+async function chargerPrix() {
+  const type = document.getElementById('carburant').value;
+  document.getElementById('prixAffiche').textContent = 'Chargement…';
+  prixActuel = null;
+  try {
+    let prix;
+    if (type === 'sp95') {
+      const [p1, p2] = await Promise.all([fetchPrix('sp95_prix'), fetchPrix('e10_prix')]);
+      const valides = [p1, p2].filter(p => p !== null);
+      prix = valides.length ? valides.reduce((a, b) => a + b, 0) / valides.length : null;
+    } else {
+      prix = await fetchPrix(CARB_FIELD[type]);
+    }
+    if (prix !== null) {
+      prixActuel = prix;
+      document.getElementById('prixAffiche').textContent = prixActuel.toFixed(3) + ' €/L';
+    } else {
+      document.getElementById('prixAffiche').textContent = 'Indisponible';
+    }
+  } catch(e) {
+    document.getElementById('prixAffiche').textContent = 'Erreur réseau';
+  }
+}
+chargerPrix();
+
+async function geocode(lieu, apiKey) {
+  const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(lieu)}&size=1`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('Géocodage impossible pour "' + lieu + '"');
+  const d = await r.json();
+  if (!d.features || d.features.length === 0) throw new Error('Adresse introuvable : "' + lieu + '"');
+  return d.features[0].geometry.coordinates;
+}
+
+async function getRoute(c1, c2, apiKey) {
+  const r = await fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
+    method: 'POST',
+    headers: { 'Authorization': apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ coordinates: [c1, c2] })
+  });
+  if (!r.ok) throw new Error(r.status === 403 ? 'Clé API invalide ou quota dépassé' : 'Erreur itinéraire (code ' + r.status + ')');
+  const d = await r.json();
+  const s = d.routes[0].summary;
+  return { distanceKm: s.distance / 1000, dureeSec: s.duration };
+}
+
+function formatDuree(sec) {
+  const h = Math.floor(sec / 3600);
+  const m = Math.round((sec % 3600) / 60);
+  return h > 0 ? `${h}h${String(m).padStart(2,'0')}` : `${m} min`;
+}
+
+async function calculer() {
+  hideError();
+  const apiKey  = document.getElementById('apiKey').value.trim();
+  const depart  = document.getElementById('depart').value.trim();
+  const arrivee = document.getElementById('arrivee').value.trim();
+  const conso   = parseFloat(document.getElementById('conso').value);
+
+  if (!depart || !arrivee) return showError('⚠️ Remplis le départ et la destination.');
+  if (isNaN(conso) || conso <= 0) return showError('⚠️ Consommation invalide.');
+  if (!prixActuel) return showError('⚠️ Le prix du carburant n\'a pas pu être chargé. Vérifie ta connexion.');
+
+  setLoading(true);
+  document.getElementById('sectionResultats').style.display = 'none';
+
+  try {
+    const [c1, c2] = await Promise.all([geocode(depart, apiKey), geocode(arrivee, apiKey)]);
+    const route = await getRoute(c1, c2, apiKey);
+    const distA   = route.distanceKm;
+    const litresA = (distA * conso) / 100;
+    const coutA   = litresA * prixActuel;
+
+    const fmtKm = n => Math.round(n).toLocaleString('fr-FR') + ' km';
+    document.getElementById('r-dist-a').textContent    = fmtKm(distA);
+    document.getElementById('r-dist-ar').textContent   = fmtKm(distA * 2);
+    document.getElementById('r-duree-a').textContent   = formatDuree(route.dureeSec);
+    document.getElementById('r-duree-ar').textContent  = formatDuree(route.dureeSec * 2);
+    const fmtEur = n => n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
+    document.getElementById('r-cout-a').textContent    = fmtEur(coutA);
+    document.getElementById('r-cout-ar').textContent   = fmtEur(coutA * 2);
+    const fmtL = n => n.toLocaleString('fr-FR', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' L';
+    document.getElementById('r-litres-a').textContent  = fmtL(litresA);
+    document.getElementById('r-litres-ar').textContent = fmtL(litresA * 2);
+
+    document.getElementById('mapsLink').href =
+      `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(depart)}&destination=${encodeURIComponent(arrivee)}&travelmode=driving`;
+
+    document.getElementById('sectionResultats').style.display = 'block';
+    document.getElementById('sectionResultats').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch(e) {
+    showError('⚠️ ' + (e.message || 'Erreur inconnue.'));
+  } finally {
+    setLoading(false);
+  }
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Enter') calculer(); });
+</script>
+</body>
+</html>
