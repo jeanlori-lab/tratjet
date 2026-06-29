@@ -677,7 +677,7 @@ async function getRoute(c1, c2, apiKey) {
 
 // URL du relais Cloudflare Worker qui appelle TollGuru (contourne le blocage CORS).
 // ⚠️ Colle ici l'URL de TON Worker, ex : https://peage.toncompte.workers.dev
-const TOLL_PROXY_URL = '';
+const TOLL_PROXY_URL = 'https://peage.jeanlorilleux37.workers.dev/';
 
 async function getTolls(geometry) {
   // ORS renvoie une polyline encodée (précision 5, compatible Google).
