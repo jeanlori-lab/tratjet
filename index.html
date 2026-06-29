@@ -658,7 +658,9 @@ async function geocode(lieu, apiKey) {
   if (!r.ok) throw new Error('Géocodage impossible pour "' + lieu + '"');
   const d = await r.json();
   if (!d.features || d.features.length === 0) throw new Error('Adresse introuvable : "' + lieu + '"');
-  return d.features[0].geometry.coordinates;
+  const f = d.features[0];
+  console.log('geocode', JSON.stringify(lieu), '→', f.geometry.coordinates, '|', f.properties && f.properties.label);
+  return f.geometry.coordinates;
 }
 
 async function getRoute(c1, c2, apiKey) {
@@ -671,6 +673,9 @@ async function getRoute(c1, c2, apiKey) {
     body: JSON.stringify({ coordinates: [c1, c2], geometry: true, radiuses: [-1, -1] })
   });
   if (!r.ok) {
+    let errBody = '';
+    try { errBody = await r.text(); } catch(e) {}
+    console.log('ORS route error', r.status, 'pour', JSON.stringify(c1), JSON.stringify(c2), '|', errBody.slice(0, 300));
     let msg = 'Erreur itinéraire (code ' + r.status + ')';
     if (r.status === 403) msg = 'Clé API invalide ou quota dépassé';
     if (r.status === 404) msg = 'Itinéraire introuvable, essaie de préciser l\'adresse';
