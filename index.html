@@ -365,7 +365,6 @@
     <p>Prix mis à jour en temps réel depuis les données publiques officielles de l'État.</p>
   </div>
 
-  <input type="hidden" id="tollguruKey" value="tg_F9E2FD106CAA46B38658750E2C0872E6">
   <input type="hidden" id="apiKey" value="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY1NjRiM2M4Yjc0OTQ0ZDlhNmNjM2FiOWQzNjFhNTE2IiwiaCI6Im11cm11cjY0In0=">
 
   <!-- Légende -->
@@ -676,16 +675,23 @@ async function getRoute(c1, c2, apiKey) {
   return { distanceKm: s.distance / 1000, dureeSec: s.duration, polyline };
 }
 
-// Envoie une polyline encodée à un endpoint TollGuru et renvoie le coût (ou null).
-async function callTollGuru(url, body, key) {
+// URL du relais Cloudflare Worker qui appelle TollGuru (contourne le blocage CORS).
+// ⚠️ Colle ici l'URL de TON Worker, ex : https://peage.toncompte.workers.dev
+const TOLL_PROXY_URL = '';
+
+async function getTolls(geometry) {
+  // ORS renvoie une polyline encodée (précision 5, compatible Google).
+  const polyline = (typeof geometry === 'string') ? geometry : null;
+  if (!polyline) return null;
+  if (!TOLL_PROXY_URL) { console.log('Toll: TOLL_PROXY_URL non configurée'); return null; }
   try {
-    const r = await fetch(url, {
+    const r = await fetch(TOLL_PROXY_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key },
-      body: JSON.stringify(body)
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ polyline: polyline, vehicleType: '2AxlesAuto' })
     });
     const d = await r.json();
-    console.log('TollGuru [' + url + '] HTTP', r.status, JSON.stringify(d).slice(0, 500));
+    console.log('Toll proxy HTTP', r.status, JSON.stringify(d).slice(0, 500));
     // Pas de péage sur l'itinéraire => coût de 0 (et non une erreur N/A).
     if (d.route && d.route.hasTolls === false) return 0;
     const costs = (d.route && d.route.costs)
@@ -693,32 +699,9 @@ async function callTollGuru(url, body, key) {
       || d.costs;
     return extractToll(costs);
   } catch(e) {
-    console.log('TollGuru error [' + url + ']:', e);
+    console.log('Toll proxy error:', e);
     return null;
   }
-}
-
-async function getTolls(geometry) {
-  const key = document.getElementById('tollguruKey').value;
-  // ORS renvoie une polyline encodée (précision 5, compatible Google).
-  const polyline = (typeof geometry === 'string') ? geometry : null;
-  if (!polyline) return null;
-
-  // 1) API TollGuru actuelle (v2) : vehicle.type + source du fournisseur de carte.
-  let toll = await callTollGuru(
-    'https://apis.tollguru.com/toll/v2/complete-polyline-from-mapping-service',
-    { source: 'google', polyline: polyline, vehicle: { type: '2AxlesAuto' }, currency: 'EUR' },
-    key
-  );
-  if (toll !== null) return toll;
-
-  // 2) Repli sur l'ancien endpoint (vehicleType) au cas où la clé n'aurait que cet accès.
-  toll = await callTollGuru(
-    'https://dev.api.tollguru.com/v1/calc/route',
-    { source: 'google', polyline: polyline, vehicleType: '2AxlesAuto', currency: 'EUR' },
-    key
-  );
-  return toll;
 }
 
 function extractToll(costs) {
