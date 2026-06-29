@@ -662,10 +662,13 @@ async function geocode(lieu, apiKey) {
 }
 
 async function getRoute(c1, c2, apiKey) {
+  // radiuses: -1 = rayon illimité pour raccrocher chaque point à la route la
+  // plus proche. Sans ça, ORS échoue (404) si le point géocodé est à plus de
+  // ~350 m d'une route carrossable (centre piéton, village, montagne…).
   const r = await fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
     method: 'POST',
     headers: { 'Authorization': apiKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ coordinates: [c1, c2], geometry: true })
+    body: JSON.stringify({ coordinates: [c1, c2], geometry: true, radiuses: [-1, -1] })
   });
   if (!r.ok) {
     let msg = 'Erreur itinéraire (code ' + r.status + ')';
