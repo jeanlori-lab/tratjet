@@ -679,11 +679,33 @@ async function getRoute(c1, c2, apiKey) {
 // ⚠️ Colle ici l'URL de TON Worker, ex : https://peage.toncompte.workers.dev
 const TOLL_PROXY_URL = 'https://peage.jeanlorilleux37.workers.dev/';
 
+// Cache des péages (localStorage) : un trajet déjà calculé ne reconsomme pas
+// le quota TollGuru (plan gratuit = 15 calculs/jour).
+function tollCacheKey(c1, c2) {
+  const r = n => n.toFixed(4); // ~11 m de précision, suffisant pour identifier un trajet
+  return 'toll:' + r(c1[1]) + ',' + r(c1[0]) + '>' + r(c2[1]) + ',' + r(c2[0]);
+}
+function tollCacheGet(key) {
+  try { const v = localStorage.getItem(key); return v === null ? undefined : JSON.parse(v); }
+  catch(e) { return undefined; }
+}
+function tollCacheSet(key, cost) {
+  try { localStorage.setItem(key, JSON.stringify(cost)); } catch(e) {}
+}
+
 async function getTolls(geometry, c1, c2) {
   // ORS renvoie une polyline encodée (précision 5, compatible Google).
   const polyline = (typeof geometry === 'string') ? geometry : null;
   if (!polyline) return null;
   if (!TOLL_PROXY_URL) { console.log('Toll: TOLL_PROXY_URL non configurée'); return null; }
+
+  // 1) Cache : si ce trajet a déjà été calculé, on réutilise (économise le quota).
+  const cacheKey = (c1 && c2) ? tollCacheKey(c1, c2) : null;
+  if (cacheKey) {
+    const cached = tollCacheGet(cacheKey);
+    if (typeof cached === 'number') { console.log('Toll: depuis le cache', cached); return cached; }
+  }
+
   try {
     // c1/c2 sont des coordonnées [lng, lat] (format ORS/GeoJSON).
     const from = c1 ? { lat: c1[1], lng: c1[0] } : null;
@@ -696,14 +718,22 @@ async function getTolls(geometry, c1, c2) {
     const d = await r.json();
     console.log('Toll proxy HTTP', r.status, JSON.stringify(d).slice(0, 1200));
     // Le Worker renvoie un coût normalisé { cost: <nombre|null> }.
-    if (typeof d.cost === 'number') return d.cost;
-    if (d.cost === null) return null;
-    // Compat : ancienne forme (réponse brute TollGuru).
-    if (d.route && d.route.hasTolls === false) return 0;
-    const costs = (d.route && d.route.costs)
-      || (d.routes && d.routes[0] && d.routes[0].costs)
-      || d.costs;
-    return extractToll(costs);
+    let cost = null;
+    if (typeof d.cost === 'number') {
+      cost = d.cost;
+    } else if (d.cost === undefined) {
+      // Compat : ancienne forme (réponse brute TollGuru).
+      if (d.route && d.route.hasTolls === false) cost = 0;
+      else {
+        const costs = (d.route && d.route.costs)
+          || (d.routes && d.routes[0] && d.routes[0].costs)
+          || d.costs;
+        cost = extractToll(costs);
+      }
+    }
+    // On ne met en cache qu'un coût valide (jamais un échec/N/A).
+    if (cacheKey && typeof cost === 'number') tollCacheSet(cacheKey, cost);
+    return cost;
   } catch(e) {
     console.log('Toll proxy error:', e);
     return null;
