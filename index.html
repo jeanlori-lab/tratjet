@@ -286,6 +286,11 @@
     .res-table thead th:nth-child(2) { color: #1976d2; }
     .res-table thead th:nth-child(3) { color: #2e7d32; }
 
+    /* Ligne total */
+    .total-row td { font-weight: 700 !important; font-size: 14px !important; }
+    .total-row td:nth-child(2) { background: #d0e8ff !important; color: #1565c0 !important; }
+    .total-row td:nth-child(3) { background: #c8f0d8 !important; color: #1b5e20 !important; }
+
     /* Sous-blocs résultats */
     .res-table tr.group-header td {
       background: none;
@@ -457,6 +462,14 @@
           <td id="r-litres-a">—</td>
           <td id="r-litres-ar">—</td>
         </tr>
+        <tr class="group-header">
+          <td colspan="3">💰 Total</td>
+        </tr>
+        <tr class="group-row group-first group-last total-row">
+          <td><strong>Coût total du trajet</strong></td>
+          <td id="r-total-a">—</td>
+          <td id="r-total-ar">—</td>
+        </tr>
       </tbody>
     </table>
     <div class="maps-wrap" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
@@ -606,13 +619,13 @@ async function getRoute(c1, c2, apiKey) {
   const r = await fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
     method: 'POST',
     headers: { 'Authorization': apiKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ coordinates: [c1, c2], geometry: true })
+    body: JSON.stringify({ coordinates: [c1, c2], geometry: true, geometry_format: "encodedpolyline" })
   });
   if (!r.ok) {
     let msg = 'Erreur itinéraire (code ' + r.status + ')';
     if (r.status === 403) msg = 'Clé API invalide ou quota dépassé';
-    if (r.status === 404) msg = 'Itinéraire introuvable : essaie de préciser l\'adresse';
-    if (r.status === 400) msg = 'Itinéraire introuvable : essaie de préciser l\'adresse';
+    if (r.status === 404) msg = 'Itinéraire introuvable — essaie de préciser l\'adresse';
+    if (r.status === 400) msg = 'Itinéraire introuvable — essaie de préciser l\'adresse';
     throw new Error(msg);
   }
   const d = await r.json();
@@ -639,12 +652,14 @@ async function getTolls(polyline) {
     });
     if (!r.ok) return null;
     const d = await r.json();
-    const routes = d.route;
-    if (routes && routes.costs && routes.costs.EUR !== undefined) {
-      return parseFloat(routes.costs.EUR);
-    }
+    // TollGuru peut retourner le coût dans différentes structures
+    if (d.route && d.route.costs && d.route.costs.EUR !== undefined) return parseFloat(d.route.costs.EUR);
+    if (d.routes && d.routes[0] && d.routes[0].costs && d.routes[0].costs.EUR !== undefined) return parseFloat(d.routes[0].costs.EUR);
+    if (d.costs && d.costs.EUR !== undefined) return parseFloat(d.costs.EUR);
+    console.log('TollGuru response:', JSON.stringify(d).slice(0, 300));
     return null;
   } catch(e) {
+    console.log('TollGuru error:', e);
     return null;
   }
 }
@@ -681,6 +696,10 @@ async function calculer() {
     const fmtEurPeage = n => n !== null ? n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €' : 'N/A';
     document.getElementById('r-peage-a').textContent  = fmtEurPeage(peage);
     document.getElementById('r-peage-ar').textContent = peage !== null ? fmtEurPeage(peage * 2) : 'N/A';
+    const totalA  = peage !== null ? coutA + peage : null;
+    const totalAR = peage !== null ? (coutA + peage) * 2 : null;
+    document.getElementById('r-total-a').textContent  = totalA  !== null ? fmtEurPeage(totalA)  : fmtEurPeage(coutA) + ' *';
+    document.getElementById('r-total-ar').textContent = totalAR !== null ? fmtEurPeage(totalAR) : fmtEurPeage(coutA * 2) + ' *';
 
     const fmtKm = n => Math.round(n).toLocaleString('fr-FR') + ' km';
     document.getElementById('r-dist-a').textContent    = fmtKm(distA);
