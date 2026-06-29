@@ -635,45 +635,28 @@ async function getRoute(c1, c2, apiKey) {
   return { distanceKm: s.distance / 1000, dureeSec: s.duration, polyline };
 }
 
-// Encode GeoJSON coordinates en polyline Google (format attendu par TollGuru)
-function encodePolyline(coords) {
-  let output = '';
-  let prevLat = 0, prevLng = 0;
-  for (const [lng, lat] of coords) {
-    const dLat = Math.round((lat - prevLat) * 1e5);
-    const dLng = Math.round((lng - prevLng) * 1e5);
-    prevLat = lat; prevLng = lng;
-    for (let v of [dLat, dLng]) {
-      v = v < 0 ? ~(v << 1) : v << 1;
-      while (v >= 0x20) { output += String.fromCharCode((0x20 | (v & 0x1f)) + 63); v >>= 5; }
-      output += String.fromCharCode(v + 63);
-    }
-  }
-  return output;
-}
-
 async function getTolls(geometry) {
   const key = document.getElementById('tollguruKey').value;
   try {
-    // ORS retourne GeoJSON : { type: "LineString", coordinates: [[lng,lat],...] }
-    let polyline;
+    // Convertir les coordonnées GeoJSON [lng,lat] en format "lat,lng|lat,lng" pour TollGuru
+    let path;
     if (geometry && geometry.coordinates) {
-      polyline = encodePolyline(geometry.coordinates);
+      path = geometry.coordinates.map(([lng, lat]) => lat + ',' + lng).join('|');
     } else if (typeof geometry === 'string') {
-      polyline = geometry;
+      // ORS a retourné une polyline encodée — on l'envoie directement
+      path = null;
+      var polylineStr = geometry;
     } else {
       return null;
     }
-    console.log('Polyline encodée:', polyline.slice(0, 50));
+    const body = path
+      ? { source: 'custom', path: path, vehicleType: '2AxlesAuto', currency: 'EUR' }
+      : { source: 'google', polyline: polylineStr, vehicleType: '2AxlesAuto', currency: 'EUR' };
+    console.log('TollGuru body:', JSON.stringify(body).slice(0, 100));
     const r = await fetch('https://dev.api.tollguru.com/v1/calc/route', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key },
-      body: JSON.stringify({
-        source: 'google',
-        polyline: polyline,
-        vehicleType: '2AxlesAuto',
-        currency: 'EUR'
-      })
+      body: JSON.stringify(body)
     });
     const d = await r.json();
     console.log('TollGuru response:', JSON.stringify(d).slice(0, 500));
