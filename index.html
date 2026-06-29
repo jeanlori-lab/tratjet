@@ -291,12 +291,15 @@
     .total-row td:nth-child(2) { background: #d0e8ff !important; color: #1565c0 !important; }
     .total-row td:nth-child(3) { background: #c8f0d8 !important; color: #1b5e20 !important; }
 
-    /* Ligne Coût total isolée : mini espace + bords arrondis */
+    /* Ligne Coût total isolée : bords arrondis (haut + bas) */
     .total-standalone td:first-child { border-radius: 10px 0 0 10px; }
     .total-standalone td:nth-child(3) { border-radius: 0 10px 10px 0; }
-    .total-standalone td {
-      border-top: 10px solid #ffffff;
-      background-clip: padding-box;
+
+    /* Mini espace pour détacher la ligne « Coût total » du bloc Carburant */
+    .res-table tr.total-spacer td {
+      background: none;
+      padding: 0;
+      height: 6px;
     }
 
     /* Sous-blocs résultats */
@@ -471,6 +474,7 @@
           <td id="r-litres-a">—</td>
           <td id="r-litres-ar">—</td>
         </tr>
+        <tr class="total-spacer"><td colspan="3"></td></tr>
         <tr class="group-row group-first group-last total-row total-standalone">
           <td><strong>Coût total</strong></td>
           <td id="r-total-a">—</td>
@@ -672,41 +676,49 @@ async function getRoute(c1, c2, apiKey) {
   return { distanceKm: s.distance / 1000, dureeSec: s.duration, polyline };
 }
 
-async function getTolls(geometry) {
-  const key = document.getElementById('tollguruKey').value;
+// Envoie une polyline encodée à un endpoint TollGuru et renvoie le coût (ou null).
+async function callTollGuru(url, body, key) {
   try {
-    // Convertir les coordonnées GeoJSON [lng,lat] en format "lat,lng|lat,lng" pour TollGuru
-    let path;
-    if (geometry && geometry.coordinates) {
-      path = geometry.coordinates.map(([lng, lat]) => lat + ',' + lng).join('|');
-    } else if (typeof geometry === 'string') {
-      // ORS a retourné une polyline encodée — on l'envoie directement
-      path = null;
-      var polylineStr = geometry;
-    } else {
-      return null;
-    }
-    const body = path
-      ? { source: 'custom', path: path, vehicleType: '2AxlesAuto', currency: 'EUR' }
-      : { source: 'google', polyline: polylineStr, vehicleType: '2AxlesAuto', currency: 'EUR' };
-    console.log('TollGuru body:', JSON.stringify(body).slice(0, 100));
-    const r = await fetch('https://dev.api.tollguru.com/v1/calc/route', {
+    const r = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key },
       body: JSON.stringify(body)
     });
     const d = await r.json();
-    console.log('TollGuru response:', JSON.stringify(d).slice(0, 500));
-    // TollGuru renvoie les coûts sous différents champs selon la version de l'API
-    // (tag, cash, minimumTollCost…) et non sous une clé "EUR".
+    console.log('TollGuru [' + url + '] HTTP', r.status, JSON.stringify(d).slice(0, 500));
+    // Pas de péage sur l'itinéraire => coût de 0 (et non une erreur N/A).
+    if (d.route && d.route.hasTolls === false) return 0;
     const costs = (d.route && d.route.costs)
       || (d.routes && d.routes[0] && d.routes[0].costs)
       || d.costs;
     return extractToll(costs);
   } catch(e) {
-    console.log('TollGuru error:', e);
+    console.log('TollGuru error [' + url + ']:', e);
     return null;
   }
+}
+
+async function getTolls(geometry) {
+  const key = document.getElementById('tollguruKey').value;
+  // ORS renvoie une polyline encodée (précision 5, compatible Google).
+  const polyline = (typeof geometry === 'string') ? geometry : null;
+  if (!polyline) return null;
+
+  // 1) API TollGuru actuelle (v2) : vehicle.type + source du fournisseur de carte.
+  let toll = await callTollGuru(
+    'https://apis.tollguru.com/toll/v2/complete-polyline-from-mapping-service',
+    { source: 'google', polyline: polyline, vehicle: { type: '2AxlesAuto' }, currency: 'EUR' },
+    key
+  );
+  if (toll !== null) return toll;
+
+  // 2) Repli sur l'ancien endpoint (vehicleType) au cas où la clé n'aurait que cet accès.
+  toll = await callTollGuru(
+    'https://dev.api.tollguru.com/v1/calc/route',
+    { source: 'google', polyline: polyline, vehicleType: '2AxlesAuto', currency: 'EUR' },
+    key
+  );
+  return toll;
 }
 
 function extractToll(costs) {
