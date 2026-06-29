@@ -679,16 +679,19 @@ async function getRoute(c1, c2, apiKey) {
 // ⚠️ Colle ici l'URL de TON Worker, ex : https://peage.toncompte.workers.dev
 const TOLL_PROXY_URL = 'https://peage.jeanlorilleux37.workers.dev/';
 
-async function getTolls(geometry) {
+async function getTolls(geometry, c1, c2) {
   // ORS renvoie une polyline encodée (précision 5, compatible Google).
   const polyline = (typeof geometry === 'string') ? geometry : null;
   if (!polyline) return null;
   if (!TOLL_PROXY_URL) { console.log('Toll: TOLL_PROXY_URL non configurée'); return null; }
   try {
+    // c1/c2 sont des coordonnées [lng, lat] (format ORS/GeoJSON).
+    const from = c1 ? { lat: c1[1], lng: c1[0] } : null;
+    const to   = c2 ? { lat: c2[1], lng: c2[0] } : null;
     const r = await fetch(TOLL_PROXY_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ polyline: polyline, vehicleType: '2AxlesAuto' })
+      body: JSON.stringify({ polyline: polyline, from: from, to: to, vehicleType: '2AxlesAuto' })
     });
     const d = await r.json();
     console.log('Toll proxy HTTP', r.status, JSON.stringify(d).slice(0, 1200));
@@ -750,7 +753,7 @@ async function calculer() {
     const coutA   = litresA * prixActuel;
 
     // Péages via TollGuru
-    const peage = await getTolls(route.polyline);
+    const peage = await getTolls(route.polyline, c1, c2);
     const fmtEurPeage = n => n !== null ? n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €' : 'N/A';
     document.getElementById('r-peage-a').textContent  = fmtEurPeage(peage);
     document.getElementById('r-peage-ar').textContent = peage !== null ? fmtEurPeage(peage * 2) : 'N/A';
