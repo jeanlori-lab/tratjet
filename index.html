@@ -514,7 +514,7 @@ async function onAutoComplete(input, listId) {
     const apiKey = document.getElementById('apiKey').value.trim();
     const texteGeo = (val.split(/\s+/).length === 1 && !/\d/.test(val)) ? val + ', France' : val;
     try {
-      const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(texteGeo)}&size=5`;
+      const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(texteGeo)}&size=5&focus.point.lon=2.3522&focus.point.lat=48.8566`;
       const r = await fetch(url);
       if (!r.ok) return;
       const d = await r.json();
@@ -653,7 +653,10 @@ async function geocode(lieu, apiKey) {
   // layers=locality,address force un point accessible en voiture
   // Si un seul mot sans chiffre ni virgule, on ajoute France pour mieux géocoder
   const texteGeo = (lieu.trim().split(/\s+/).length === 1 && !/\d/.test(lieu)) ? lieu + ', France' : lieu;
-  const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(texteGeo)}&size=1&layers=locality,address,street`;
+  // focus.point (Paris = départ) : privilégie le résultat le plus proche pour
+  // lever les ambiguïtés de noms (ex. Houdan Yvelines vs Houdan Guadeloupe),
+  // sans empêcher les destinations lointaines légitimes.
+  const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(texteGeo)}&size=1&layers=locality,address,street&focus.point.lon=2.3522&focus.point.lat=48.8566`;
   const r = await fetch(url);
   if (!r.ok) throw new Error('Géocodage impossible pour "' + lieu + '"');
   const d = await r.json();
