@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
 <link rel="icon" type="image/png" href="logo budget trajet.png">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Calculateur coÃ»t carburant</title>
+  <title>Calculateur coût carburant</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -21,7 +21,7 @@
       margin: 0 auto;
     }
 
-    /* En-tÃªte */
+    /* En-tête */
     .header {
       text-align: center;
       margin-bottom: 20px;
@@ -57,7 +57,7 @@
       margin-bottom: 14px;
     }
 
-    /* LÃ©gende */
+    /* Légende */
     .legende {
       display: flex;
       align-items: center;
@@ -73,7 +73,7 @@
       flex-shrink: 0;
     }
 
-    /* Lignes de paramÃ¨tres */
+    /* Lignes de paramètres */
     .param-row {
       display: flex;
       align-items: center;
@@ -243,7 +243,7 @@
       margin-top: 10px;
     }
 
-    /* RÃ©sultats */
+    /* Résultats */
     .card.resultats { display: none; }
 
     .res-table {
@@ -291,7 +291,7 @@
     .total-row td:nth-child(2) { background: #d0e8ff !important; color: #1565c0 !important; }
     .total-row td:nth-child(3) { background: #c8f0d8 !important; color: #1b5e20 !important; }
 
-    /* Sous-blocs rÃ©sultats */
+    /* Sous-blocs résultats */
     .res-table tr.group-header td {
       background: none;
       border-radius: 0;
@@ -349,24 +349,24 @@
 <div class="page">
 
   <div class="header">
-    <h1>CoÃ»t carburant trajet</h1>
-    <p>Prix mis Ã  jour en temps rÃ©el depuis les donnÃ©es publiques officielles de l'Ã‰tat.</p>
+    <h1>Coût carburant trajet</h1>
+    <p>Prix mis à jour en temps réel depuis les données publiques officielles de l'État.</p>
   </div>
 
   <input type="hidden" id="tollguruKey" value="tg_F9E2FD106CAA46B38658750E2C0872E6">
   <input type="hidden" id="apiKey" value="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY1NjRiM2M4Yjc0OTQ0ZDlhNmNjM2FiOWQzNjFhNTE2IiwiaCI6Im11cm11cjY0In0=">
 
-  <!-- LÃ©gende -->
+  <!-- Légende -->
   <div class="card" style="padding: 12px 20px;">
-    <div class="legende"><div class="legend-dot"></div> Cases vertes = Ã  remplir</div>
+    <div class="legende"><div class="legend-dot"></div> Cases vertes = à remplir</div>
   </div>
 
-  <!-- ParamÃ¨tres -->
+  <!-- Paramètres -->
   <div class="card">
-    <div class="card-title">ParamÃ¨tres du trajet</div>
+    <div class="card-title">Paramètres du trajet</div>
 
     <div class="param-row">
-      <div class="param-icon">â›½</div>
+      <div class="param-icon">⛽</div>
       <div class="param-label">Carburant</div>
       <div class="param-input">
         <select id="carburant" onchange="resetResultat(); chargerPrix();">
@@ -380,15 +380,15 @@
     </div>
 
     <div class="param-row">
-      <div class="param-icon">ðŸ’¶</div>
+      <div class="param-icon">💶</div>
       <div class="param-label">Prix moyen actuel</div>
       <div class="param-input">
-        <div class="auto-field" id="prixAffiche">Chargementâ€¦</div>
+        <div class="auto-field" id="prixAffiche">Chargement…</div>
       </div>
     </div>
 
     <div class="param-row conso-row">
-      <div class="param-icon">ðŸš—</div>
+      <div class="param-icon">🚗</div>
       <div class="param-label">Conso au 100 km</div>
       <div class="param-input">
         <div class="conso-wrap">
@@ -399,15 +399,15 @@
     </div>
 
     <div class="param-row">
-      <div class="param-icon">ðŸ“</div>
-      <div class="param-label">DÃ©part</div>
+      <div class="param-icon">📍</div>
+      <div class="param-label">Départ</div>
       <div class="param-input">
         <input type="text" id="depart" value="60 rue de Dantzig, Paris" readonly>
       </div>
     </div>
 
     <div class="param-row">
-      <div class="param-icon">ðŸ</div>
+      <div class="param-icon">🏁</div>
       <div class="param-label">Destination</div>
       <div class="param-input">
         <input type="text" id="arrivee" placeholder="Lieu de vacances" oninput="resetResultat()">
@@ -415,13 +415,13 @@
     </div>
   </div>
 
-  <button class="btn" id="calcBtn" onclick="calculer()">Calculer le coÃ»t du trajet</button>
-  <div class="loader" id="loader">â³ Calcul en coursâ€¦</div>
+  <button class="btn" id="calcBtn" onclick="calculer()">Calculer le coût du trajet</button>
+  <div class="loader" id="loader">⏳ Calcul en cours…</div>
   <div class="error" id="error"></div>
 
-  <!-- RÃ©sultats -->
+  <!-- Résultats -->
   <div class="card resultats" id="sectionResultats" style="margin-top:14px;">
-    <div class="card-title">RÃ©sultats</div>
+    <div class="card-title">Résultats</div>
     <table class="res-table">
       <thead>
         <tr>
@@ -436,57 +436,57 @@
         </tr>
         <tr class="group-row group-first">
           <td>Distance</td>
-          <td id="r-dist-a">â€”</td>
-          <td id="r-dist-ar">â€”</td>
+          <td id="r-dist-a">—</td>
+          <td id="r-dist-ar">—</td>
         </tr>
         <tr class="group-row group-last">
-          <td>DurÃ©e</td>
-          <td id="r-duree-a">â€”</td>
-          <td id="r-duree-ar">â€”</td>
+          <td>Durée</td>
+          <td id="r-duree-a">—</td>
+          <td id="r-duree-ar">—</td>
         </tr>
         <tr class="group-header">
           <td colspan="3">Carburant</td>
         </tr>
         <tr class="group-row group-first">
-          <td>CoÃ»t</td>
-          <td id="r-cout-a">â€”</td>
-          <td id="r-cout-ar">â€”</td>
+          <td>Coût</td>
+          <td id="r-cout-a">—</td>
+          <td id="r-cout-ar">—</td>
         </tr>
         <tr class="group-row">
-          <td>PÃ©ages</td>
-          <td id="r-peage-a">â€”</td>
-          <td id="r-peage-ar">â€”</td>
+          <td>Péages</td>
+          <td id="r-peage-a">—</td>
+          <td id="r-peage-ar">—</td>
         </tr>
         <tr class="group-row group-last">
-          <td>Litres consommÃ©s</td>
-          <td id="r-litres-a">â€”</td>
-          <td id="r-litres-ar">â€”</td>
+          <td>Litres consommés</td>
+          <td id="r-litres-a">—</td>
+          <td id="r-litres-ar">—</td>
         </tr>
         <tr class="group-header">
-          <td colspan="3">ðŸ’° Total</td>
+          <td colspan="3">💰 Total</td>
         </tr>
         <tr class="group-row group-first group-last total-row">
-          <td><strong>CoÃ»t total du trajet</strong></td>
-          <td id="r-total-a">â€”</td>
-          <td id="r-total-ar">â€”</td>
+          <td><strong>Coût total du trajet</strong></td>
+          <td id="r-total-a">—</td>
+          <td id="r-total-ar">—</td>
         </tr>
       </tbody>
     </table>
     <div class="maps-wrap" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
     <a class="maps-link" id="mapsLink" href="#" target="_blank">
         <img src="logo maps.png" alt="" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">
-        ItinÃ©raire Maps
+        Itinéraire Maps
     </a>
 
     <a class="maps-link" id="vinciLink" href="#" target="_blank" style="background:#eef7ee;color:#2e7d32;">
-        Prix pÃ©age
+        Prix péage
     </a>
 </div>
   </div>
 
 </div>
 <script>
-// AutocomplÃ©tion
+// Autocomplétion
 let autoTimers = {};
 
 async function onAutoComplete(input, listId) {
@@ -509,7 +509,7 @@ async function onAutoComplete(input, listId) {
         const label = f.properties.label;
         const div = document.createElement('div');
         div.className = 'autocomplete-item';
-        div.innerHTML = 'ðŸ“ ' + label;
+        div.innerHTML = '📍 ' + label;
         div.addEventListener('mousedown', e => {
           e.preventDefault();
           input.value = label;
@@ -565,7 +565,7 @@ async function fetchPrix(field) {
 
 async function chargerPrix() {
   const type = document.getElementById('carburant').value;
-  document.getElementById('prixAffiche').textContent = 'Chargementâ€¦';
+  document.getElementById('prixAffiche').textContent = 'Chargement…';
   prixActuel = null;
   try {
     let prix;
@@ -578,12 +578,12 @@ async function chargerPrix() {
     }
     if (prix !== null) {
       prixActuel = prix;
-      document.getElementById('prixAffiche').textContent = prixActuel.toFixed(3) + ' â‚¬/L';
+      document.getElementById('prixAffiche').textContent = prixActuel.toFixed(3) + ' €/L';
     } else {
       document.getElementById('prixAffiche').textContent = 'Indisponible';
     }
   } catch(e) {
-    document.getElementById('prixAffiche').textContent = 'Erreur rÃ©seau';
+    document.getElementById('prixAffiche').textContent = 'Erreur réseau';
   }
 }
 chargerPrix();
@@ -623,11 +623,11 @@ async function geocode(lieu, apiKey) {
   const gps = parseGPS(lieu);
   if (gps) return gps;
   // layers=locality,address force un point accessible en voiture
-  // Si un seul mot sans chiffre ni virgule, on ajoute France pour mieux gÃ©ocoder
+  // Si un seul mot sans chiffre ni virgule, on ajoute France pour mieux géocoder
   const texteGeo = (lieu.trim().split(/\s+/).length === 1 && !/\d/.test(lieu)) ? lieu + ', France' : lieu;
   const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(texteGeo)}&size=1&layers=locality,address,street`;
   const r = await fetch(url);
-  if (!r.ok) throw new Error('GÃ©ocodage impossible pour "' + lieu + '"');
+  if (!r.ok) throw new Error('Géocodage impossible pour "' + lieu + '"');
   const d = await r.json();
   if (!d.features || d.features.length === 0) throw new Error('Adresse introuvable : "' + lieu + '"');
   return d.features[0].geometry.coordinates;
@@ -640,10 +640,10 @@ async function getRoute(c1, c2, apiKey) {
     body: JSON.stringify({ coordinates: [c1, c2], geometry: true })
   });
   if (!r.ok) {
-    let msg = 'Erreur itinÃ©raire (code ' + r.status + ')';
-    if (r.status === 403) msg = 'ClÃ© API invalide ou quota dÃ©passÃ©';
-    if (r.status === 404) msg = 'ItinÃ©raire introuvable â€” essaie de prÃ©ciser l\'adresse';
-    if (r.status === 400) msg = 'ItinÃ©raire introuvable â€” essaie de prÃ©ciser l\'adresse';
+    let msg = 'Erreur itinéraire (code ' + r.status + ')';
+    if (r.status === 403) msg = 'Clé API invalide ou quota dépassé';
+    if (r.status === 404) msg = 'Itinéraire introuvable — essaie de préciser l\'adresse';
+    if (r.status === 400) msg = 'Itinéraire introuvable — essaie de préciser l\'adresse';
     throw new Error(msg);
   }
   const d = await r.json();
@@ -656,12 +656,12 @@ async function getRoute(c1, c2, apiKey) {
 async function getTolls(geometry) {
   const key = document.getElementById('tollguruKey').value;
   try {
-    // Convertir les coordonnÃ©es GeoJSON [lng,lat] en format "lat,lng|lat,lng" pour TollGuru
+    // Convertir les coordonnées GeoJSON [lng,lat] en format "lat,lng|lat,lng" pour TollGuru
     let path;
     if (geometry && geometry.coordinates) {
       path = geometry.coordinates.map(([lng, lat]) => lat + ',' + lng).join('|');
     } else if (typeof geometry === 'string') {
-      // ORS a retournÃ© une polyline encodÃ©e â€” on l'envoie directement
+      // ORS a retourné une polyline encodée — on l'envoie directement
       path = null;
       var polylineStr = geometry;
     } else {
@@ -702,9 +702,9 @@ async function calculer() {
   const arrivee = document.getElementById('arrivee').value.trim();
   const conso   = parseFloat(document.getElementById('conso').value);
 
-  if (!depart || !arrivee) return showError('âš ï¸ Remplis le dÃ©part et la destination.');
-  if (isNaN(conso) || conso <= 0) return showError('âš ï¸ Consommation invalide.');
-  if (!prixActuel) return showError('âš ï¸ Le prix du carburant n\'a pas pu Ãªtre chargÃ©. VÃ©rifie ta connexion.');
+  if (!depart || !arrivee) return showError('⚠️ Remplis le départ et la destination.');
+  if (isNaN(conso) || conso <= 0) return showError('⚠️ Consommation invalide.');
+  if (!prixActuel) return showError('⚠️ Le prix du carburant n\'a pas pu être chargé. Vérifie ta connexion.');
 
   mettreDestinationDansLien(arrivee);
   setLoading(true);
@@ -717,9 +717,9 @@ async function calculer() {
     const litresA = (distA * conso) / 100;
     const coutA   = litresA * prixActuel;
 
-    // PÃ©ages via TollGuru
+    // Péages via TollGuru
     const peage = await getTolls(route.polyline);
-    const fmtEurPeage = n => n !== null ? n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' â‚¬' : 'N/A';
+    const fmtEurPeage = n => n !== null ? n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €' : 'N/A';
     document.getElementById('r-peage-a').textContent  = fmtEurPeage(peage);
     document.getElementById('r-peage-ar').textContent = peage !== null ? fmtEurPeage(peage * 2) : 'N/A';
     const totalA  = peage !== null ? coutA + peage : null;
@@ -732,7 +732,7 @@ async function calculer() {
     document.getElementById('r-dist-ar').textContent   = fmtKm(distA * 2);
     document.getElementById('r-duree-a').textContent   = formatDuree(route.dureeSec);
     document.getElementById('r-duree-ar').textContent  = formatDuree(route.dureeSec * 2);
-    const fmtEur = n => n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' â‚¬';
+    const fmtEur = n => n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
     document.getElementById('r-cout-a').textContent    = fmtEur(coutA);
     document.getElementById('r-cout-ar').textContent   = fmtEur(coutA * 2);
     const fmtL = n => n.toLocaleString('fr-FR', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' L';
@@ -750,7 +750,7 @@ async function calculer() {
     document.getElementById('sectionResultats').style.display = 'block';
     document.getElementById('sectionResultats').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } catch(e) {
-    showError('âš ï¸ ' + (e.message || 'Erreur inconnue.'));
+    showError('⚠️ ' + (e.message || 'Erreur inconnue.'));
   } finally {
     setLoading(false);
   }
