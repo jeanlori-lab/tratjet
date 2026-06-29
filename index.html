@@ -291,6 +291,14 @@
     .total-row td:nth-child(2) { background: #d0e8ff !important; color: #1565c0 !important; }
     .total-row td:nth-child(3) { background: #c8f0d8 !important; color: #1b5e20 !important; }
 
+    /* Ligne Coût total isolée : mini espace + bords arrondis */
+    .total-standalone td:first-child { border-radius: 10px 0 0 10px; }
+    .total-standalone td:nth-child(3) { border-radius: 0 10px 10px 0; }
+    .total-standalone td {
+      border-top: 10px solid #ffffff;
+      background-clip: padding-box;
+    }
+
     /* Sous-blocs résultats */
     .res-table tr.group-header td {
       background: none;
@@ -329,6 +337,7 @@
       transition: background 0.15s;
     }
     .maps-link:hover { background: #bbdefb; }
+    #vinciLink:hover { background: #cce8cc !important; }
   </style>
   <!-- PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -462,11 +471,8 @@
           <td id="r-litres-a">—</td>
           <td id="r-litres-ar">—</td>
         </tr>
-        <tr class="group-header">
-          <td colspan="3">💰 Total</td>
-        </tr>
-        <tr class="group-row group-first group-last total-row">
-          <td><strong>Coût total du trajet</strong></td>
+        <tr class="group-row group-first group-last total-row total-standalone">
+          <td><strong>Coût total</strong></td>
           <td id="r-total-a">—</td>
           <td id="r-total-ar">—</td>
         </tr>
@@ -570,9 +576,8 @@ async function chargerPrix() {
   try {
     let prix;
     if (type === 'sp95') {
-      const [p1, p2] = await Promise.all([fetchPrix('sp95_prix'), fetchPrix('e10_prix')]);
-      const valides = [p1, p2].filter(p => p !== null);
-      prix = valides.length ? valides.reduce((a, b) => a + b, 0) / valides.length : null;
+      // Sans plomb 95 : on affiche uniquement le prix moyen actuel du SP95 E10
+      prix = await fetchPrix('e10_prix');
     } else {
       prix = await fetchPrix(CARB_FIELD[type]);
     }
@@ -692,14 +697,30 @@ async function getTolls(geometry) {
     });
     const d = await r.json();
     console.log('TollGuru response:', JSON.stringify(d).slice(0, 500));
-    if (d.route && d.route.costs && d.route.costs.EUR !== undefined) return parseFloat(d.route.costs.EUR);
-    if (d.routes && d.routes[0] && d.routes[0].costs && d.routes[0].costs.EUR !== undefined) return parseFloat(d.routes[0].costs.EUR);
-    if (d.costs && d.costs.EUR !== undefined) return parseFloat(d.costs.EUR);
-    return null;
+    // TollGuru renvoie les coûts sous différents champs selon la version de l'API
+    // (tag, cash, minimumTollCost…) et non sous une clé "EUR".
+    const costs = (d.route && d.route.costs)
+      || (d.routes && d.routes[0] && d.routes[0].costs)
+      || d.costs;
+    return extractToll(costs);
   } catch(e) {
     console.log('TollGuru error:', e);
     return null;
   }
+}
+
+function extractToll(costs) {
+  if (!costs || typeof costs !== 'object') return null;
+  // On parcourt les champs de coût possibles, du plus pertinent au plus générique.
+  const candidats = [
+    costs.tag, costs.cash, costs.creditCard, costs.licensePlate,
+    costs.minimumTollCost, costs.maximumTollCost, costs.prepaidCard, costs.EUR
+  ];
+  for (const c of candidats) {
+    const n = parseFloat(c);
+    if (c !== undefined && c !== null && !isNaN(n)) return n;
+  }
+  return null;
 }
 
 function formatDuree(sec) {
