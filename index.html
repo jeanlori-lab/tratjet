@@ -140,7 +140,7 @@
       align-items: center;
       gap: 6px;
     }
-    .conso-wrap input { flex: 1; min-width: 0; }
+    .conso-wrap input { width: 70px; min-width: 0; flex: none; }
     .conso-wrap span { font-size: 13px; color: #607080; white-space: nowrap; }
     .conso-step {
       display: inline-flex;
@@ -286,6 +286,26 @@
     .res-table thead th:nth-child(2) { color: #1976d2; }
     .res-table thead th:nth-child(3) { color: #2e7d32; }
 
+    /* Sous-blocs résultats */
+    .res-table tr.group-header td {
+      background: none;
+      border-radius: 0;
+      padding: 12px 4px 4px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #90a4ae;
+      border-bottom: none;
+    }
+    .res-table tr.group-row td { border-radius: 0; }
+    .res-table tr.group-row td:first-child { border-radius: 0; }
+    .res-table tr.group-row td:nth-child(3) { border-radius: 0; }
+    .res-table tr.group-first td:first-child { border-radius: 10px 0 0 0; }
+    .res-table tr.group-first td:nth-child(3) { border-radius: 0 10px 0 0; }
+    .res-table tr.group-last td:first-child { border-radius: 0 0 0 10px; }
+    .res-table tr.group-last td:nth-child(3) { border-radius: 0 0 10px 0; }
+
     .maps-wrap {
       text-align: center;
       padding-top: 14px;
@@ -366,9 +386,7 @@
       <div class="param-label">Conso au 100 km</div>
       <div class="param-input">
         <div class="conso-wrap">
-          <button type="button" class="conso-step" aria-label="Diminuer la consommation" onclick="changerConso(-0.1)">-</button>
           <input type="number" id="conso" value="7.5" min="1" max="30" step="0.1" oninput="resetResultat()">
-          <button type="button" class="conso-step" aria-label="Augmenter la consommation" onclick="changerConso(0.1)">+</button>
           <span>L / 100 km</span>
         </div>
       </div>
@@ -378,7 +396,7 @@
       <div class="param-icon">📍</div>
       <div class="param-label">Départ</div>
       <div class="param-input">
-        <input type="text" id="depart" value="60 rue de Dantzig, 75015 Paris" oninput="resetResultat()">
+        <input type="text" id="depart" value="60 rue de Dantzig, Paris" oninput="resetResultat()">
       </div>
     </div>
 
@@ -386,7 +404,7 @@
       <div class="param-icon">🏁</div>
       <div class="param-label">Destination</div>
       <div class="param-input">
-        <input type="text" id="arrivee" placeholder="prout" oninput="resetResultat()">
+        <input type="text" id="arrivee" placeholder="Lieu de vacances" oninput="resetResultat()">
       </div>
     </div>
   </div>
@@ -407,22 +425,28 @@
         </tr>
       </thead>
       <tbody>
-        <tr>
+        <tr class="group-header">
+          <td colspan="3">🗺 Trajet</td>
+        </tr>
+        <tr class="group-row group-first">
           <td>Distance</td>
           <td id="r-dist-a">—</td>
           <td id="r-dist-ar">—</td>
         </tr>
-        <tr>
+        <tr class="group-row group-last">
           <td>Durée</td>
           <td id="r-duree-a">—</td>
           <td id="r-duree-ar">—</td>
         </tr>
-        <tr>
-          <td>Coût carburant</td>
+        <tr class="group-header">
+          <td colspan="3">⛽ Carburant</td>
+        </tr>
+        <tr class="group-row group-first">
+          <td>Coût</td>
           <td id="r-cout-a">—</td>
           <td id="r-cout-ar">—</td>
         </tr>
-        <tr>
+        <tr class="group-row group-last">
           <td>Litres consommés</td>
           <td id="r-litres-a">—</td>
           <td id="r-litres-ar">—</td>
@@ -430,9 +454,15 @@
       </tbody>
     </table>
     <div class="maps-wrap" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-      <a class="maps-link" id="mapsLink" href="#" target="_blank"><img src="logo maps.png" alt="" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;"> Itinéraire Maps</a>
-      <a class="maps-link" id="vinciLink" href="#" target="_blank" style="background:#eef7ee;color:#2e7d32;">Prix péage</a>
-    </div>
+    <a class="maps-link" id="mapsLink" href="#" target="_blank">
+        <img src="logo maps.png" alt="" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;">
+        Itinéraire Maps
+    </a>
+
+    <a class="maps-link" id="vinciLink" href="#" target="_blank" style="background:#eef7ee;color:#2e7d32;">
+        Prix péage
+    </a>
+</div>
   </div>
 
 </div>
