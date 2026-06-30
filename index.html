@@ -370,6 +370,13 @@
       font-style: italic;
       color: #1976d2;
     }
+    /* Note discrète du quota TollGuru sous le prix du péage */
+    .quota-note {
+      margin-top: 2px;
+      font-size: 9px;
+      font-weight: 400;
+      color: #aab4bf;
+    }
 
     /* Mini espace pour détacher la ligne « Coût total » du bloc Carburant */
     .res-table tr.total-spacer td {
@@ -883,6 +890,27 @@ function tollCacheSet(key, cost) {
   try { localStorage.setItem(key, JSON.stringify(cost)); } catch(e) {}
 }
 
+// Suivi du quota TollGuru (15 requêtes / 24 h glissantes), estimé côté navigateur :
+// on horodate chaque appel réellement consommé (ni cache, ni refus quota).
+const TOLL_QUOTA_MAX = 15;
+const TOLL_QUOTA_WINDOW = 24 * 3600 * 1000;
+function tollQuotaCalls() {
+  let arr;
+  try { arr = JSON.parse(localStorage.getItem('tollQuotaCalls') || '[]'); } catch(e) { arr = []; }
+  const cutoff = Date.now() - TOLL_QUOTA_WINDOW;
+  arr = arr.filter(t => t > cutoff);
+  try { localStorage.setItem('tollQuotaCalls', JSON.stringify(arr)); } catch(e) {}
+  return arr;
+}
+function tollQuotaRemaining() {
+  return Math.max(0, TOLL_QUOTA_MAX - tollQuotaCalls().length);
+}
+function recordTollCall() {
+  const arr = tollQuotaCalls();
+  arr.push(Date.now());
+  try { localStorage.setItem('tollQuotaCalls', JSON.stringify(arr)); } catch(e) {}
+}
+
 async function getTolls(geometry, c1, c2) {
   // ORS renvoie une polyline encodée (précision 5, compatible Google).
   const polyline = (typeof geometry === 'string') ? geometry : null;
@@ -922,6 +950,8 @@ async function getTolls(geometry, c1, c2) {
     }
     // On ne met en cache qu'un coût valide (jamais un échec/N/A).
     if (cacheKey && typeof cost === 'number') tollCacheSet(cacheKey, cost);
+    // Un coût obtenu par appel réseau = 1 transaction TollGuru consommée.
+    if (typeof cost === 'number') recordTollCall();
     return cost;
   } catch(e) {
     return null;
@@ -992,7 +1022,13 @@ async function calculer() {
       peageA.colSpan = 1;
       peageA.classList.remove('peage-msg');
       peageAR.style.display = '';
-      peageA.textContent  = fmtEurPeage(peage);
+      // Prix + petite note discrète du quota restant (sous le prix aller simple).
+      peageA.textContent = '';
+      peageA.appendChild(document.createTextNode(fmtEurPeage(peage)));
+      const note = document.createElement('div');
+      note.className = 'quota-note';
+      note.textContent = 'Quota restant : ' + tollQuotaRemaining() + '/' + TOLL_QUOTA_MAX;
+      peageA.appendChild(note);
       peageAR.textContent = fmtEurPeage(peage * 2);
     }
     const totalA  = peage !== null ? coutA + peage : null;
