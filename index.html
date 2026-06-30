@@ -166,35 +166,71 @@
       margin: 0;
     }
 
-    .conso-wrap {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .conso-wrap input { width: 70px; min-width: 0; flex: none; }
-    .conso-wrap span { font-size: 13px; color: #607080; white-space: nowrap; }
-    .conso-step {
-      display: inline-flex;
-      width: 34px;
-      height: 34px;
+    /* Roulette de consommation (glisser horizontal, souris + doigt) */
+    .conso-roulette {
+      position: relative;
+      width: 100%;
+      height: 44px;
       border: 1.5px solid #c8e6c9;
       border-radius: 10px;
       background: #f1fdf1;
-      color: #1a2433;
-      font-size: 20px;
-      font-weight: 700;
-      line-height: 1;
-      cursor: pointer;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
+      overflow: hidden;
+      cursor: grab;
+      touch-action: none;
       user-select: none;
     }
-    .conso-step:active { background: #dff6df; }
-    .conso-wrap input { text-align: center; }
-    @media (pointer: coarse) {
-      .conso-step { display: none; }
+    .conso-roulette:active { cursor: grabbing; }
+    .roulette-track {
+      position: absolute;
+      top: 0; left: 0; height: 100%;
+      width: 4000px;
+      /* graduations fines tous les 0,1 (6px) */
+      background-image: repeating-linear-gradient(90deg, #bcdcc0 0, #bcdcc0 1px, transparent 1px, transparent 6px);
+      background-repeat: repeat-x;
+      background-position: 0 100%;
+      background-size: 6px 8px;
     }
+    .rt-major {
+      position: absolute;
+      bottom: 0;
+      width: 0; height: 100%;
+    }
+    .rt-major::before { /* graduation majeure (entier) */
+      content: '';
+      position: absolute;
+      left: 0; bottom: 0;
+      width: 1.5px; height: 15px;
+      background: #7fae84;
+      transform: translateX(-50%);
+    }
+    .rt-major span {
+      position: absolute;
+      bottom: 16px; left: 0;
+      transform: translateX(-50%);
+      font-size: 10px;
+      color: #6f8a72;
+    }
+    .roulette-center {
+      position: absolute;
+      left: 50%; top: 22px; bottom: 0;
+      width: 2px;
+      background: #2e7d32;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+    .roulette-value {
+      position: absolute;
+      top: 4px; left: 50%;
+      transform: translateX(-50%);
+      background: #f1fdf1;
+      padding: 0 7px;
+      font-weight: 700;
+      color: #1b5e20;
+      font-size: 15px;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    .roulette-unit { font-size: 10px; font-weight: 600; color: #6f8a72; }
     @media (max-width: 768px) {
       input[type="text"], input[type="number"], select { font-size: 16px; }
     }
@@ -526,9 +562,11 @@
       <div class="param-icon">🚗</div>
       <div class="param-label">Consommation</div>
       <div class="param-input">
-        <div class="conso-wrap">
-          <input type="number" id="conso" value="7.5" min="1" max="30" step="0.1" oninput="resetResultat()">
-          <span>L / 100 km</span>
+        <input type="hidden" id="conso" value="7.5">
+        <div class="conso-roulette" id="consoRoulette" role="slider" aria-label="Consommation au 100 km" aria-valuemin="1" aria-valuemax="30" tabindex="0">
+          <div class="roulette-track" id="rouletteTrack"></div>
+          <div class="roulette-center"></div>
+          <div class="roulette-value"><span id="consoVal">7,5</span> <span class="roulette-unit">L/100km</span></div>
         </div>
       </div>
     </div>
@@ -691,15 +729,64 @@ function hideError() { document.getElementById('error').style.display='none'; }
 function setLoading(on) { document.getElementById('loader').style.display=on?'block':'none'; document.getElementById('calcBtn').disabled=on; }
 function resetResultat() { document.getElementById('sectionResultats').style.display='none'; hideError(); }
 
-function changerConso(delta) {
-  const input = document.getElementById('conso');
-  const min = parseFloat(input.min);
-  const max = parseFloat(input.max);
-  const current = parseFloat(input.value) || 0;
-  const next = Math.min(max, Math.max(min, current + delta));
-  input.value = (Math.round(next * 10) / 10).toFixed(1);
-  resetResultat();
+// --- Roulette de consommation (1 à 30, pas de 0,1) ---
+const CONSO_MIN = 1, CONSO_MAX = 30, CONSO_PPU = 60; // px par L/100km
+function consoValeur() { return parseFloat(document.getElementById('conso').value) || 7.5; }
+function consoSet(v, doReset) {
+  v = Math.min(CONSO_MAX, Math.max(CONSO_MIN, Math.round(v * 10) / 10));
+  document.getElementById('conso').value = v.toFixed(1);
+  const disp = document.getElementById('consoVal');
+  if (disp) disp.textContent = v.toFixed(1).replace('.', ',');
+  const track = document.getElementById('rouletteTrack');
+  const box = document.getElementById('consoRoulette');
+  if (track && box) {
+    const center = box.clientWidth / 2;
+    track.style.transform = `translateX(${center - (v - 1) * CONSO_PPU}px)`;
+  }
+  const slider = document.getElementById('consoRoulette');
+  if (slider) slider.setAttribute('aria-valuenow', v);
+  if (doReset) resetResultat();
 }
+function consoInit() {
+  const track = document.getElementById('rouletteTrack');
+  const box = document.getElementById('consoRoulette');
+  if (!track || !box) return;
+  // Graduations majeures + numéros (les entiers).
+  let html = '';
+  for (let i = CONSO_MIN; i <= CONSO_MAX; i++) {
+    html += `<div class="rt-major" style="left:${(i - 1) * CONSO_PPU}px"><span>${i}</span></div>`;
+  }
+  track.innerHTML = html;
+
+  let dragging = false, startX = 0, startVal = 7.5;
+  box.addEventListener('pointerdown', e => {
+    dragging = true; startX = e.clientX; startVal = consoValeur();
+    track.style.transition = 'none';
+    box.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  box.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    consoSet(startVal - (e.clientX - startX) / CONSO_PPU, true);
+  });
+  const end = () => {
+    if (!dragging) return;
+    dragging = false;
+    track.style.transition = 'transform 0.15s ease-out';
+    consoSet(consoValeur(), true);
+  };
+  box.addEventListener('pointerup', end);
+  box.addEventListener('pointercancel', end);
+  // Clavier (accessibilité).
+  box.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft')  { consoSet(consoValeur() - 0.1, true); e.preventDefault(); }
+    if (e.key === 'ArrowRight') { consoSet(consoValeur() + 0.1, true); e.preventDefault(); }
+  });
+  // Repositionne si la largeur change.
+  window.addEventListener('resize', () => consoSet(consoValeur(), false));
+  consoSet(consoValeur(), false);
+}
+consoInit();
 
 async function fetchPrix(field) {
   const url = `https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?select=avg(${field})%20as%20prix&limit=1&where=${field}%20is%20not%20null`;
