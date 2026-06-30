@@ -235,40 +235,69 @@
     .itinerary-controls {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 10px;
       padding: 6px 0 2px;
     }
-    .link-btn {
-      background: none;
-      border: none;
-      color: #1976d2;
-      font-size: 13px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      padding: 4px 0;
-    }
-    .link-btn:hover { text-decoration: underline; }
-    /* Bouton d'inversion : à droite, centré entre départ et destination, discret */
     .points-wrap { position: relative; }
-    .points-wrap.has-swap #points { padding-right: 36px; }
+    /* Espace entre départ et destination (sans étape) pour loger + et ⇅ */
+    .points-wrap.two-points #points .point-row:first-child { margin-bottom: 24px; }
+
+    /* Petit rond « + » pour ajouter une étape */
+    .add-round {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 24px; height: 24px;
+      padding: 0;
+      border: 1px solid #bcdcc0;
+      border-radius: 50%;
+      background: #eef8ef;
+      color: #2e7d32;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    }
+    .add-round:hover { background: #d8f0da; box-shadow: 0 0 0 3px rgba(46,125,50,0.10); }
+    .add-round:active { transform: scale(0.9); }
+    #addBottom { display: flex; } /* visible par défaut, masqué via JS quand 2 points */
+
+    /* + entre départ et destination, à gauche dans l'espace */
+    .gap-add {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .gap-add:active { transform: translateY(-50%) scale(0.9); }
+
+    /* Flèches d'inversion : à droite dans l'espace, discrètes */
     .swap-btn {
       position: absolute;
       right: 0;
       top: 50%;
       transform: translateY(-50%);
-      width: 30px; height: 30px;
+      width: 24px; height: 24px;
+      padding: 0;
       border: 1px solid #e3e9ef;
-      border-radius: 8px;
+      border-radius: 50%;
       background: #fff;
       color: #9aa7b4;
-      font-size: 15px;
+      font-size: 14px;
       line-height: 1;
       cursor: pointer;
       display: none;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s, box-shadow 0.15s, transform 0.1s;
     }
-    .swap-btn:hover { background: #f5f7fa; color: #607080; }
+    .swap-btn:hover { background: #eef4fb; color: #1976d2; border-color: #cfe0f3; box-shadow: 0 0 0 3px rgba(33,150,243,0.10); }
+    .swap-btn:active { transform: translateY(-50%) scale(0.9); }
+    /* Effet sympa : survoler les flèches éclaire les deux encadrés */
+    .points-wrap:has(.swap-btn:hover) .point-input {
+      border-color: #93b8e6;
+      box-shadow: 0 0 0 3px rgba(33,150,243,0.12);
+    }
     .stop-remove {
       width: 26px; height: 26px;
       border: none;
@@ -530,12 +559,14 @@
     <!-- Points du trajet (départ, étapes, destination) — réordonnables -->
     <div class="points-wrap">
       <div id="points"></div>
-      <!-- Inverser départ ↔ destination (visible seulement sans étape) -->
-      <button type="button" class="swap-btn" id="swapBtn" onclick="swapItinerary()" title="Inverser départ et destination">⇅</button>
+      <!-- Entre départ et destination (sans étape) : + à gauche, inversion à droite -->
+      <button type="button" class="add-round gap-add" id="addGap" onclick="addPoint()" title="Ajouter une étape" aria-label="Ajouter une étape">+</button>
+      <button type="button" class="swap-btn" id="swapBtn" onclick="swapItinerary()" title="Inverser départ et destination" aria-label="Inverser départ et destination">⇅</button>
     </div>
 
-    <div class="itinerary-controls">
-      <button type="button" class="link-btn" onclick="addPoint()">➕ Ajouter une étape</button>
+    <!-- + Ajouter une étape (quand il y a déjà des étapes) -->
+    <div class="itinerary-controls" id="addBottomWrap">
+      <button type="button" class="add-round" id="addBottom" onclick="addPoint()" title="Ajouter une étape" aria-label="Ajouter une étape">+</button>
     </div>
   </div>
 
@@ -771,12 +802,17 @@ function refreshPoints() {
       input.placeholder = 'Arrêt'; rm.style.display = '';
     }
   });
-  // Le bouton d'inversion n'a de sens que sans étape (départ + destination).
-  const showSwap = rows.length === 2;
+  // Sans étape (départ + destination) : + et flèches dans l'espace entre les deux.
+  // Dès qu'il y a une étape : plus de flèches, et le + repasse en bas.
+  const twoPoints = rows.length === 2;
   const wrap = document.querySelector('.points-wrap');
   const swap = document.getElementById('swapBtn');
-  if (wrap) wrap.classList.toggle('has-swap', showSwap);
-  if (swap) swap.style.display = showSwap ? 'block' : 'none';
+  const addGap = document.getElementById('addGap');
+  const addBottom = document.getElementById('addBottom');
+  if (wrap) wrap.classList.toggle('two-points', twoPoints);
+  if (swap) swap.style.display = twoPoints ? 'flex' : 'none';
+  if (addGap) addGap.style.display = twoPoints ? 'flex' : 'none';
+  if (addBottom) addBottom.style.display = twoPoints ? 'none' : 'flex';
 }
 
 function getPoints() {
