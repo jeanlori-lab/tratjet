@@ -82,6 +82,9 @@
       border-bottom: 1px solid #f0f4f8;
     }
     .param-row:last-child { border-bottom: none; }
+    /* Réserve à gauche la largeur de la poignée de glissement (18px + 12px de gap)
+       sur les lignes sans poignée, pour aligner tous les champs sur la gauche. */
+    .param-row:not(.point-row) { padding-left: 30px; }
 
     .param-icon {
       font-size: 18px;
@@ -250,7 +253,8 @@
       color: #b0bcc8;
       font-size: 16px;
       line-height: 1;
-      padding: 0 2px;
+      width: 18px;
+      text-align: center;
       flex-shrink: 0;
       touch-action: none;
       user-select: none;
