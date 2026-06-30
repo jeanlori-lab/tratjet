@@ -576,21 +576,22 @@
 </div>
 <script>
 // Autocomplétion
-let autoTimers = {};
+const autoTimers = new WeakMap();
 
-async function onAutoComplete(input, listId) {
-  resetResultat();
+// Autocomplétion d'adresses pour un champ donné (suggestions ORS, biais France).
+async function onAutoComplete(input) {
+  const list = input.parentElement.querySelector('.autocomplete-list');
+  if (!list) return;
   const val = input.value.trim();
-  const list = document.getElementById(listId);
-  clearTimeout(autoTimers[listId]);
+  clearTimeout(autoTimers.get(input));
   if (val.length < 3) { list.style.display = 'none'; return; }
-  autoTimers[listId] = setTimeout(async () => {
+  autoTimers.set(input, setTimeout(async () => {
     const apiKey = document.getElementById('apiKey').value.trim();
     const texteGeo = (val.split(/\s+/).length === 1 && !/\d/.test(val)) ? val + ', France' : val;
     try {
       const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(texteGeo)}&size=5&focus.point.lon=2.3522&focus.point.lat=48.8566`;
       const r = await fetch(url);
-      if (!r.ok) return;
+      if (!r.ok) { list.style.display = 'none'; return; }
       const d = await r.json();
       if (!d.features || d.features.length === 0) { list.style.display = 'none'; return; }
       list.innerHTML = '';
@@ -598,28 +599,25 @@ async function onAutoComplete(input, listId) {
         const label = f.properties.label;
         const div = document.createElement('div');
         div.className = 'autocomplete-item';
-        div.innerHTML = '📍 ' + label;
+        div.textContent = '📍 ' + label;
         div.addEventListener('mousedown', e => {
           e.preventDefault();
           input.value = label;
           list.style.display = 'none';
-          destinationChangee();
+          resetResultat();
+          updateLien();
         });
         list.appendChild(div);
       });
       list.style.display = 'block';
     } catch(e) { list.style.display = 'none'; }
-  }, 300);
+  }, 300));
 }
 
-function onAutoKey(event, listId) {
-  if (event.key === 'Escape') document.getElementById(listId).style.display = 'none';
-}
-
+// Ferme les listes de suggestions au clic en dehors.
 document.addEventListener('click', e => {
-  ['depart-list','arrivee-list'].forEach(id => {
-    const list = document.getElementById(id);
-    if (list && !list.contains(e.target)) list.style.display = 'none';
+  document.querySelectorAll('.autocomplete-list').forEach(list => {
+    if (!list.parentElement.contains(e.target)) list.style.display = 'none';
   });
 });
 
@@ -703,7 +701,10 @@ function makePointRow(value) {
     '<div class="drag-handle" title="Glisser pour déplacer">⠿</div>' +
     '<div class="param-icon"></div>' +
     '<div class="param-label"></div>' +
-    '<div class="param-input"><input type="text" class="point-input" oninput="onPointInput()"></div>' +
+    '<div class="param-input"><div class="autocomplete-wrap">' +
+      '<input type="text" class="point-input" autocomplete="off" oninput="onPointInput(this)">' +
+      '<div class="autocomplete-list"></div>' +
+    '</div></div>' +
     '<button type="button" class="stop-remove" onclick="removePoint(this)" title="Supprimer cette étape">✕</button>';
   if (value) row.querySelector('input').value = value;
   row.querySelector('.drag-handle').addEventListener('pointerdown', startDrag);
@@ -757,9 +758,10 @@ function removePoint(btn) {
   updateLien();
 }
 
-function onPointInput() {
+function onPointInput(el) {
   resetResultat();
   updateLien();
+  if (el) onAutoComplete(el);
 }
 // Conservé pour compat (anciennes références).
 function destinationChangee() { onPointInput(); }
