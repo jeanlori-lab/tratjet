@@ -722,11 +722,14 @@ function makePointRow(value) {
 // Met à jour icône / libellé / placeholder / bouton supprimer selon la position.
 function refreshPoints() {
   const rows = Array.from(pointsEl().querySelectorAll('.point-row'));
+  // Poignées de déplacement visibles uniquement quand il y a au moins une étape.
+  const showHandles = rows.length > 2;
   rows.forEach((row, i) => {
     const icon = row.querySelector('.param-icon');
     const label = row.querySelector('.param-label');
     const input = row.querySelector('.point-input');
     const rm = row.querySelector('.stop-remove');
+    row.querySelector('.drag-handle').style.display = showHandles ? '' : 'none';
     if (i === 0) {
       icon.textContent = '🏠'; label.textContent = 'Départ';
       input.placeholder = 'Adresse de départ'; rm.style.display = 'none';
