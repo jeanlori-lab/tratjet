@@ -77,18 +77,16 @@
     .param-row {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       padding: 8px 0;
       border-bottom: 1px solid #f0f4f8;
+      position: relative;
     }
     .param-row:last-child { border-bottom: none; }
-    /* Réserve à gauche la largeur de la poignée de glissement (18px + 12px de gap)
-       sur les lignes sans poignée, pour aligner tous les champs sur la gauche. */
-    .param-row:not(.point-row) { padding-left: 30px; }
 
     .param-icon {
-      font-size: 18px;
-      width: 28px;
+      font-size: 16px;
+      width: 22px;
       text-align: center;
       flex-shrink: 0;
     }
@@ -248,14 +246,18 @@
       flex-shrink: 0;
     }
     .stop-remove:hover { color: #8e0000; }
+    /* Poignée sortie du flux : centrée dans la marge à gauche de l'emoji. */
     .drag-handle {
+      position: absolute;
+      left: -18px;
+      top: 0; bottom: 0;
+      width: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: grab;
       color: #b0bcc8;
-      font-size: 16px;
-      line-height: 1;
-      width: 18px;
-      text-align: center;
-      flex-shrink: 0;
+      font-size: 15px;
       touch-action: none;
       user-select: none;
     }
