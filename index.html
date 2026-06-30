@@ -166,11 +166,22 @@
       margin: 0;
     }
 
-    /* Roulette de consommation (glisser horizontal, souris + doigt) */
+    /* Valeur sélectionnée, au-dessus de la règle (indépendante) */
+    .conso-value {
+      text-align: center;
+      font-weight: 700;
+      color: #1b5e20;
+      font-size: 15px;
+      line-height: 1;
+      margin-bottom: 5px;
+    }
+    .conso-value .roulette-unit { font-size: 11px; font-weight: 600; color: #6f8a72; }
+
+    /* Règle / roulette de consommation (glisser horizontal, souris + doigt) */
     .conso-roulette {
       position: relative;
       width: 100%;
-      height: 44px;
+      height: 30px;
       border: 1.5px solid #c8e6c9;
       border-radius: 10px;
       background: #f1fdf1;
@@ -188,7 +199,7 @@
       background-image: repeating-linear-gradient(90deg, #bcdcc0 0, #bcdcc0 1px, transparent 1px, transparent 6px);
       background-repeat: repeat-x;
       background-position: 0 100%;
-      background-size: 6px 8px;
+      background-size: 6px 7px;
     }
     .rt-major {
       position: absolute;
@@ -199,38 +210,25 @@
       content: '';
       position: absolute;
       left: 0; bottom: 0;
-      width: 1.5px; height: 15px;
+      width: 1.5px; height: 11px;
       background: #7fae84;
       transform: translateX(-50%);
     }
     .rt-major span {
       position: absolute;
-      bottom: 16px; left: 0;
+      bottom: 12px; left: 0;
       transform: translateX(-50%);
-      font-size: 10px;
+      font-size: 9px;
       color: #6f8a72;
     }
     .roulette-center {
       position: absolute;
-      left: 50%; top: 22px; bottom: 0;
+      left: 50%; top: 0; bottom: 0;
       width: 2px;
       background: #2e7d32;
       transform: translateX(-50%);
       pointer-events: none;
     }
-    .roulette-value {
-      position: absolute;
-      top: 4px; left: 50%;
-      transform: translateX(-50%);
-      background: #f1fdf1;
-      padding: 0 7px;
-      font-weight: 700;
-      color: #1b5e20;
-      font-size: 15px;
-      white-space: nowrap;
-      pointer-events: none;
-    }
-    .roulette-unit { font-size: 10px; font-weight: 600; color: #6f8a72; }
     @media (max-width: 768px) {
       input[type="text"], input[type="number"], select { font-size: 16px; }
     }
@@ -563,10 +561,10 @@
       <div class="param-label">Consommation</div>
       <div class="param-input">
         <input type="hidden" id="conso" value="7.5">
+        <div class="conso-value"><span id="consoVal">7,5</span> <span class="roulette-unit">L / 100 km</span></div>
         <div class="conso-roulette" id="consoRoulette" role="slider" aria-label="Consommation au 100 km" aria-valuemin="1" aria-valuemax="30" tabindex="0">
           <div class="roulette-track" id="rouletteTrack"></div>
           <div class="roulette-center"></div>
-          <div class="roulette-value"><span id="consoVal">7,5</span> <span class="roulette-unit">L/100km</span></div>
         </div>
       </div>
     </div>
