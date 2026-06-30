@@ -136,6 +136,23 @@
       color: #607080;
     }
 
+    /* Prix moyen actuel, intégré sous le sélecteur Carburant */
+    .prix-actuel {
+      margin-top: 5px;
+      padding-left: 2px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #2e7d32;
+      line-height: 1.2;
+    }
+    .prix-actuel-lib {
+      font-size: 11px;
+      font-weight: 600;
+      color: #90a4ae;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
     .conso-wrap {
       display: flex;
       align-items: center;
@@ -377,7 +394,8 @@
     .quota-note {
       position: absolute;
       left: 0; right: 0;
-      top: calc(50% + 8px);
+      top: calc(50% + 4px);
+      line-height: 1;
       font-size: 9px;
       font-weight: 400;
       color: #aab4bf;
@@ -484,14 +502,7 @@
           <option value="e85">Superéthanol E85</option>
           <option value="gplc">GPLc</option>
         </select>
-      </div>
-    </div>
-
-    <div class="param-row">
-      <div class="param-icon">💶</div>
-      <div class="param-label">Prix moyen actuel</div>
-      <div class="param-input">
-        <div class="auto-field" id="prixAffiche">Chargement…</div>
+        <div class="prix-actuel"><span id="prixAffiche">Chargement…</span> <span class="prix-actuel-lib">prix moyen actuel</span></div>
       </div>
     </div>
 
@@ -592,7 +603,17 @@
 // Autocomplétion
 const autoTimers = new WeakMap();
 
-// Autocomplétion d'adresses pour un champ donné (suggestions ORS, biais France).
+// Place les résultats français en tête (tri stable : l'ordre de pertinence
+// est conservé à l'intérieur de chaque groupe).
+function frenchFirst(features) {
+  return features.slice().sort((a, b) => {
+    const fa = (a.properties && a.properties.country_a === 'FRA') ? 0 : 1;
+    const fb = (b.properties && b.properties.country_a === 'FRA') ? 0 : 1;
+    return fa - fb;
+  });
+}
+
+// Autocomplétion d'adresses pour un champ donné (suggestions ORS, France d'abord).
 async function onAutoComplete(input) {
   const list = input.parentElement.querySelector('.autocomplete-list');
   if (!list) return;
@@ -601,18 +622,19 @@ async function onAutoComplete(input) {
   if (val.length < 3) { list.style.display = 'none'; return; }
   autoTimers.set(input, setTimeout(async () => {
     const apiKey = document.getElementById('apiKey').value.trim();
-    // Pas de « , France » forcé : le biais focus.point (Paris) privilégie déjà
-    // la France pour les homonymes, sans casser les villes étrangères.
+    // Pas de « , France » forcé : on récupère large (villes + adresses) puis on
+    // remonte les résultats français en tête, sans exclure l'étranger.
     const texteGeo = val;
     try {
-      const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(texteGeo)}&size=5&focus.point.lon=2.3522&focus.point.lat=48.8566`;
+      const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(texteGeo)}&size=10&focus.point.lon=2.3522&focus.point.lat=48.8566`;
       const r = await fetch(url);
       if (!r.ok) { list.style.display = 'none'; return; }
       const d = await r.json();
       if (!d.features || d.features.length === 0) { list.style.display = 'none'; return; }
       list.innerHTML = '';
       const vus = new Set();
-      d.features.forEach(f => {
+      frenchFirst(d.features).forEach(f => {
+        if (list.children.length >= 6) return; // limite l'affichage
         const label = f.properties.label;
         // Le géocodeur renvoie parfois plusieurs résultats au même libellé : on dédoublonne.
         const cle = label.trim().toLowerCase();
@@ -848,12 +870,13 @@ async function geocode(lieu, apiKey) {
   // focus.point (Paris = départ) : privilégie le résultat le plus proche pour
   // lever les ambiguïtés de noms (ex. Houdan Yvelines vs Houdan Guadeloupe),
   // sans empêcher les destinations lointaines légitimes.
-  const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(texteGeo)}&size=1&layers=locality,address,street&focus.point.lon=2.3522&focus.point.lat=48.8566`;
+  const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(texteGeo)}&size=5&layers=locality,address,street&focus.point.lon=2.3522&focus.point.lat=48.8566`;
   const r = await fetch(url);
   if (!r.ok) throw new Error('Géocodage impossible pour "' + lieu + '"');
   const d = await r.json();
   if (!d.features || d.features.length === 0) throw new Error('Adresse introuvable : "' + lieu + '"');
-  return d.features[0].geometry.coordinates;
+  // France d'abord (sans exclure l'étranger si aucun résultat français).
+  return frenchFirst(d.features)[0].geometry.coordinates;
 }
 
 async function getRoute(coords, apiKey) {
@@ -1055,10 +1078,13 @@ async function calculer() {
     document.getElementById('r-litres-a').textContent  = fmtL(litresA);
     document.getElementById('r-litres-ar').textContent = fmtL(litresA * 2);
 
-    // Itinéraire Maps : inclut les étapes via le format /maps/dir/A/B/C.
-    const mapsPath = lieux.map(l => encodeURIComponent(l)).join('/');
-    document.getElementById('mapsLink').href =
-      `https://www.google.com/maps/dir/${mapsPath}`;
+    // Itinéraire Maps : force le mode voiture (travelmode=driving) + étapes.
+    const origin = encodeURIComponent(lieux[0]);
+    const destination = encodeURIComponent(lieux[lieux.length - 1]);
+    const waypoints = lieux.slice(1, -1).map(l => encodeURIComponent(l)).join('|');
+    let mapsUrl = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}`;
+    if (waypoints) mapsUrl += `&waypoints=${waypoints}`;
+    document.getElementById('mapsLink').href = mapsUrl;
     const startObj = JSON.stringify({place: depart, lat: c1[1], lng: c1[0]});
     const endObj = JSON.stringify({place: arrivee, lat: c2[1], lng: c2[0]});
     document.getElementById('vinciLink').href =
