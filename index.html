@@ -89,13 +89,17 @@
       width: 22px;
       text-align: center;
       flex-shrink: 0;
+      line-height: 1;
+      /* Les emojis sont rendus un peu haut dans leur ligne selon l'OS :
+         léger décalage vers le bas pour les aligner avec le texte. */
+      transform: translateY(1.5px);
     }
     .param-label {
       font-size: 13px;
       color: #455060;
       width: 130px;
       flex-shrink: 0;
-      line-height: 1.3;
+      line-height: 1.2;
     }
     .param-input {
       flex: 1;
