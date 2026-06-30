@@ -203,6 +203,49 @@
     .autocomplete-item:last-child { border-bottom: none; }
     .autocomplete-item:hover { background: #f1fdf1; }
 
+    /* Étapes / inversion */
+    .itinerary-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 6px 0 2px;
+    }
+    .link-btn {
+      background: none;
+      border: none;
+      color: #1976d2;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+    .link-btn:hover { text-decoration: underline; }
+    .swap-btn {
+      width: 34px; height: 34px;
+      border: 1.5px solid #c8e6c9;
+      border-radius: 10px;
+      background: #f1fdf1;
+      color: #1a2433;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .swap-btn:hover { background: #dff6df; }
+    .stop-remove {
+      width: 26px; height: 26px;
+      border: none;
+      background: none;
+      color: #c62828;
+      font-size: 15px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .stop-remove:hover { color: #8e0000; }
+
     /* Bouton */
     .btn {
       width: 100%;
@@ -294,6 +337,15 @@
     /* Ligne Coût total isolée : bords arrondis (haut + bas) */
     .total-standalone td:first-child { border-radius: 10px 0 0 10px; }
     .total-standalone td:nth-child(3) { border-radius: 0 10px 10px 0; }
+
+    /* Message péage indisponible (occupe les 2 colonnes de la ligne Péages) */
+    .res-table td.peage-msg {
+      border-right: 1px solid #dbe3ec;
+      font-size: 12px;
+      font-weight: 600;
+      font-style: italic;
+      color: #1976d2;
+    }
 
     /* Mini espace pour détacher la ligne « Coût total » du bloc Carburant */
     .res-table tr.total-spacer td {
@@ -419,11 +471,20 @@
     </div>
 
     <div class="param-row">
-      <div class="param-icon">📍</div>
+      <div class="param-icon">🏠</div>
       <div class="param-label">Départ</div>
       <div class="param-input">
         <input type="text" id="depart" value="60 rue de Dantzig, Paris" oninput="resetResultat()">
       </div>
+    </div>
+
+    <!-- Étapes intermédiaires (ajoutées dynamiquement) -->
+    <div id="stops"></div>
+
+    <!-- Contrôles : ajouter une étape + inverser le trajet -->
+    <div class="itinerary-controls">
+      <button type="button" class="link-btn" onclick="addStop()">➕ Ajouter une étape</button>
+      <button type="button" class="swap-btn" onclick="swapItinerary()" title="Inverser l'ordre du trajet">⇅</button>
     </div>
 
     <div class="param-row">
@@ -635,6 +696,51 @@ function destinationChangee() {
   mettreDestinationDansLien(document.getElementById('arrivee').value);
 }
 
+// --- Étapes intermédiaires ---
+function makeStopRow(value) {
+  const row = document.createElement('div');
+  row.className = 'param-row stop-row';
+  row.innerHTML =
+    '<div class="param-icon">📍</div>' +
+    '<div class="param-label">Étape</div>' +
+    '<div class="param-input"><input type="text" class="stop-input" placeholder="Arrêt" oninput="resetResultat()"></div>' +
+    '<button type="button" class="stop-remove" onclick="removeStop(this)" title="Supprimer cette étape">✕</button>';
+  if (value) row.querySelector('input').value = value;
+  return row;
+}
+function renumberStops() {
+  document.querySelectorAll('#stops .stop-row').forEach((row, i) => {
+    const label = row.querySelector('.param-label');
+    if (label) label.textContent = 'Étape ' + (i + 1);
+  });
+}
+function addStop(value) {
+  document.getElementById('stops').appendChild(makeStopRow(typeof value === 'string' ? value : ''));
+  renumberStops();
+  resetResultat();
+}
+function removeStop(btn) {
+  const row = btn.closest('.stop-row');
+  if (row) row.remove();
+  renumberStops();
+  resetResultat();
+}
+function getStops() {
+  return Array.from(document.querySelectorAll('#stops .stop-input')).map(i => i.value.trim());
+}
+
+// Inverse tout l'ordre du trajet : départ <-> destination, étapes inversées.
+function swapItinerary() {
+  const dep = document.getElementById('depart');
+  const arr = document.getElementById('arrivee');
+  const stopInputs = Array.from(document.querySelectorAll('#stops .stop-input'));
+  const values = [dep.value, ...stopInputs.map(i => i.value), arr.value].reverse();
+  dep.value = values[0];
+  arr.value = values[values.length - 1];
+  values.slice(1, -1).forEach((v, i) => { stopInputs[i].value = v; });
+  destinationChangee();
+}
+
 chargerRechercheDepuisLien();
 
 function parseGPS(texte) {
@@ -669,19 +775,20 @@ async function geocode(lieu, apiKey) {
   return f.geometry.coordinates;
 }
 
-async function getRoute(c1, c2, apiKey) {
+async function getRoute(coords, apiKey) {
+  // coords : tableau de points [lng, lat] (départ, étapes…, destination).
   // radiuses: -1 = rayon illimité pour raccrocher chaque point à la route la
   // plus proche. Sans ça, ORS échoue (404) si le point géocodé est à plus de
   // ~350 m d'une route carrossable (centre piéton, village, montagne…).
   const r = await fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
     method: 'POST',
     headers: { 'Authorization': apiKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ coordinates: [c1, c2], geometry: true, radiuses: [-1, -1] })
+    body: JSON.stringify({ coordinates: coords, geometry: true, radiuses: coords.map(() => -1) })
   });
   if (!r.ok) {
     let errBody = '';
     try { errBody = await r.text(); } catch(e) {}
-    console.log('ORS route error', r.status, 'pour', JSON.stringify(c1), JSON.stringify(c2), '|', errBody.slice(0, 300));
+    console.log('ORS route error', r.status, 'pour', JSON.stringify(coords), '|', errBody.slice(0, 300));
     let msg = 'Erreur itinéraire (code ' + r.status + ')';
     if (r.status === 403) msg = 'Clé API invalide ou quota dépassé';
     if (r.status === 404) msg = 'Itinéraire introuvable, essaie de préciser l\'adresse';
@@ -785,6 +892,7 @@ async function calculer() {
   const apiKey  = document.getElementById('apiKey').value.trim();
   const depart  = document.getElementById('depart').value.trim();
   const arrivee = document.getElementById('arrivee').value.trim();
+  const stops   = getStops().filter(s => s.length > 0);
   const conso   = parseFloat(document.getElementById('conso').value);
 
   if (!depart || !arrivee) return showError('⚠️ Remplis le départ et la destination.');
@@ -796,17 +904,35 @@ async function calculer() {
   document.getElementById('sectionResultats').style.display = 'none';
 
   try {
-    const [c1, c2] = await Promise.all([geocode(depart, apiKey), geocode(arrivee, apiKey)]);
-    const route = await getRoute(c1, c2, apiKey);
+    // Géocode tous les points dans l'ordre : départ, étapes…, destination.
+    const lieux  = [depart, ...stops, arrivee];
+    const coords = await Promise.all(lieux.map(l => geocode(l, apiKey)));
+    const c1 = coords[0], c2 = coords[coords.length - 1];
+    const route = await getRoute(coords, apiKey);
+    // ORS renvoie déjà la distance/durée totale cumulée sur tous les tronçons.
     const distA   = route.distanceKm;
     const litresA = (distA * conso) / 100;
     const coutA   = litresA * prixActuel;
 
-    // Péages via TollGuru
-    const peage = await getTolls(route.polyline, c1, c2);
-    const fmtEurPeage = n => n !== null ? n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €' : 'N/A';
-    document.getElementById('r-peage-a').textContent  = fmtEurPeage(peage);
-    document.getElementById('r-peage-ar').textContent = peage !== null ? fmtEurPeage(peage * 2) : 'N/A';
+    // Péages : pas de calcul dès qu'il y a au moins une étape intermédiaire.
+    const peage = stops.length > 0 ? null : await getTolls(route.polyline, c1, c2);
+    const fmtEurPeage = n => n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
+    const peageA  = document.getElementById('r-peage-a');
+    const peageAR = document.getElementById('r-peage-ar');
+    if (peage === null) {
+      // Péage indisponible (quota, erreur, ou trajet multi-étapes) :
+      // message centré sur les deux colonnes renvoyant vers le bouton « Prix péage ».
+      peageA.colSpan = 2;
+      peageA.classList.add('peage-msg');
+      peageA.textContent = 'Voir les prix de péage en bas de page';
+      peageAR.style.display = 'none';
+    } else {
+      peageA.colSpan = 1;
+      peageA.classList.remove('peage-msg');
+      peageAR.style.display = '';
+      peageA.textContent  = fmtEurPeage(peage);
+      peageAR.textContent = fmtEurPeage(peage * 2);
+    }
     const totalA  = peage !== null ? coutA + peage : null;
     const totalAR = peage !== null ? (coutA + peage) * 2 : null;
     document.getElementById('r-total-a').textContent  = totalA  !== null ? fmtEurPeage(totalA)  : fmtEurPeage(coutA);
@@ -824,9 +950,10 @@ async function calculer() {
     document.getElementById('r-litres-a').textContent  = fmtL(litresA);
     document.getElementById('r-litres-ar').textContent = fmtL(litresA * 2);
 
-    const mapsQuery = `${depart} vers ${arrivee}`;
+    // Itinéraire Maps : inclut les étapes via le format /maps/dir/A/B/C.
+    const mapsPath = lieux.map(l => encodeURIComponent(l)).join('/');
     document.getElementById('mapsLink').href =
-      `https://maps.google.com/maps?q=${encodeURIComponent(mapsQuery)}`;
+      `https://www.google.com/maps/dir/${mapsPath}`;
     const startObj = JSON.stringify({place: depart, lat: c1[1], lng: c1[0]});
     const endObj = JSON.stringify({place: arrivee, lat: c2[1], lng: c2[0]});
     document.getElementById('vinciLink').href =
