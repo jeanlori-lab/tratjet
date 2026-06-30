@@ -372,12 +372,12 @@
     }
     /* Espace en bas de la cellule péage pour loger la note quota sans
        décaler le prix (qui reste centré verticalement comme l'aller-retour). */
-    #r-peage-a, #r-peage-ar { position: relative; padding-bottom: 16px; }
-    /* Note discrète du quota TollGuru, sortie du flux, en bas de la cellule */
+    #r-peage-a, #r-peage-ar { position: relative; padding-bottom: 14px; }
+    /* Note discrète du quota TollGuru, juste sous le prix (centré) */
     .quota-note {
       position: absolute;
       left: 0; right: 0;
-      bottom: 2px;
+      top: calc(50% + 8px);
       font-size: 9px;
       font-weight: 400;
       color: #aab4bf;
