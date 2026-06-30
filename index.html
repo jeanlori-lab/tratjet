@@ -223,19 +223,25 @@
       padding: 4px 0;
     }
     .link-btn:hover { text-decoration: underline; }
+    /* Bouton d'inversion : à droite, centré entre départ et destination, discret */
+    .points-wrap { position: relative; }
+    .points-wrap.has-swap #points { padding-right: 36px; }
     .swap-btn {
-      width: 34px; height: 34px;
-      border: 1.5px solid #c8e6c9;
-      border-radius: 10px;
-      background: #f1fdf1;
-      color: #1a2433;
-      font-size: 18px;
-      font-weight: 700;
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 30px; height: 30px;
+      border: 1px solid #e3e9ef;
+      border-radius: 8px;
+      background: #fff;
+      color: #9aa7b4;
+      font-size: 15px;
       line-height: 1;
       cursor: pointer;
-      flex-shrink: 0;
+      display: none;
     }
-    .swap-btn:hover { background: #dff6df; }
+    .swap-btn:hover { background: #f5f7fa; color: #607080; }
     .stop-remove {
       width: 26px; height: 26px;
       border: none;
@@ -489,12 +495,14 @@
     </div>
 
     <!-- Points du trajet (départ, étapes, destination) — réordonnables -->
-    <div id="points"></div>
+    <div class="points-wrap">
+      <div id="points"></div>
+      <!-- Inverser départ ↔ destination (visible seulement sans étape) -->
+      <button type="button" class="swap-btn" id="swapBtn" onclick="swapItinerary()" title="Inverser départ et destination">⇅</button>
+    </div>
 
-    <!-- Contrôles : ajouter une étape + inverser le trajet -->
     <div class="itinerary-controls">
       <button type="button" class="link-btn" onclick="addPoint()">➕ Ajouter une étape</button>
-      <button type="button" class="swap-btn" onclick="swapItinerary()" title="Inverser l'ordre du trajet">⇅</button>
     </div>
   </div>
 
@@ -721,6 +729,12 @@ function refreshPoints() {
       input.placeholder = 'Arrêt'; rm.style.display = '';
     }
   });
+  // Le bouton d'inversion n'a de sens que sans étape (départ + destination).
+  const showSwap = rows.length === 2;
+  const wrap = document.querySelector('.points-wrap');
+  const swap = document.getElementById('swapBtn');
+  if (wrap) wrap.classList.toggle('has-swap', showSwap);
+  if (swap) swap.style.display = showSwap ? 'block' : 'none';
 }
 
 function getPoints() {
@@ -755,12 +769,13 @@ function updateLien() {
   mettreDestinationDansLien(pts.length ? pts[pts.length - 1] : '');
 }
 
-// Inverse tout l'ordre du trajet (départ <-> destination, étapes retournées).
+// Échange départ ↔ destination (disponible uniquement sans étape).
 function swapItinerary() {
-  const container = pointsEl();
-  Array.from(container.querySelectorAll('.point-row')).reverse()
-    .forEach(r => container.appendChild(r));
-  refreshPoints();
+  const inputs = pointsEl().querySelectorAll('.point-input');
+  if (inputs.length !== 2) return;
+  const tmp = inputs[0].value;
+  inputs[0].value = inputs[1].value;
+  inputs[1].value = tmp;
   resetResultat();
   updateLien();
 }
