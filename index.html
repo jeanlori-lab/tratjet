@@ -148,6 +148,11 @@
       font-weight: 700;
       color: #2e7d32;
     }
+    /* Aligne ⛽ Carburant avec la liste déroulante (et non le bloc entier
+       qui inclut la ligne de prix en dessous). */
+    .carburant-row { align-items: flex-start; }
+    .carburant-row .param-icon,
+    .carburant-row .param-label { margin-top: 9px; }
 
     .conso-wrap {
       display: flex;
@@ -487,7 +492,7 @@
   <div class="card">
     <div class="card-title">Paramètres du trajet</div>
 
-    <div class="param-row">
+    <div class="param-row carburant-row">
       <div class="param-icon">⛽</div>
       <div class="param-label">Carburant</div>
       <div class="param-input">
@@ -504,7 +509,7 @@
 
     <div class="param-row conso-row">
       <div class="param-icon">🚗</div>
-      <div class="param-label">Conso au 100 km</div>
+      <div class="param-label">Consommation</div>
       <div class="param-input">
         <div class="conso-wrap">
           <input type="number" id="conso" value="7.5" min="1" max="30" step="0.1" oninput="resetResultat()">
