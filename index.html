@@ -612,7 +612,6 @@ async function onAutoComplete(input) {
           input.value = label;
           list.style.display = 'none';
           resetResultat();
-          updateLien();
         });
         list.appendChild(div);
       });
@@ -684,21 +683,6 @@ chargerPrix();
 
 const DEPART_FIXE = '60 rue de Dantzig, Paris';
 
-function mettreDestinationDansLien(destination) {
-  const params = new URLSearchParams(window.location.search);
-  const valeur = (destination || '').trim();
-
-  if (valeur) {
-    params.set('q', valeur);
-  } else {
-    params.delete('q');
-  }
-
-  const baseUrl = window.location.href.split('?')[0].split('#')[0];
-  const query = params.toString();
-  history.replaceState(null, '', query ? `${baseUrl}?${query}` : baseUrl);
-}
-
 // --- Points du trajet (départ, étapes, destination), réordonnables ---
 const pointsEl = () => document.getElementById('points');
 
@@ -766,17 +750,11 @@ function removePoint(btn) {
   if (row) row.remove();
   refreshPoints();
   resetResultat();
-  updateLien();
 }
 
 function onPointInput(el) {
   resetResultat();
-  updateLien();
   if (el) onAutoComplete(el);
-}
-function updateLien() {
-  const pts = getPoints();
-  mettreDestinationDansLien(pts.length ? pts[pts.length - 1] : '');
 }
 
 // Échange départ ↔ destination (disponible uniquement sans étape).
@@ -787,7 +765,6 @@ function swapItinerary() {
   inputs[0].value = inputs[1].value;
   inputs[1].value = tmp;
   resetResultat();
-  updateLien();
 }
 
 // Glisser-déposer (souris + tactile) via Pointer Events.
@@ -818,7 +795,6 @@ function endDrag() {
   dragRow = null;
   document.removeEventListener('pointermove', onDragMove);
   resetResultat();
-  updateLien();
 }
 
 function chargerRechercheDepuisLien() {
@@ -827,8 +803,11 @@ function chargerRechercheDepuisLien() {
   const container = pointsEl();
   container.innerHTML = '';
   container.appendChild(makePointRow(DEPART_FIXE));    // départ
-  container.appendChild(makePointRow(q ? q.trim() : '')); // destination
+  container.appendChild(makePointRow(q ? q.trim() : '')); // destination (lien partagé)
   refreshPoints();
+  // On nettoie l'URL : pas de ?q qui persiste après un rafraîchissement.
+  const baseUrl = window.location.href.split('?')[0].split('#')[0];
+  history.replaceState(null, '', baseUrl);
 }
 
 chargerRechercheDepuisLien();
@@ -984,7 +963,6 @@ async function calculer() {
   if (isNaN(conso) || conso <= 0) return showError('⚠️ Consommation invalide.');
   if (!prixActuel) return showError('⚠️ Le prix du carburant n\'a pas pu être chargé. Vérifie ta connexion.');
 
-  mettreDestinationDansLien(arrivee);
   setLoading(true);
   document.getElementById('sectionResultats').style.display = 'none';
 
