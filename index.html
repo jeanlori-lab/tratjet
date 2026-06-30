@@ -148,11 +148,16 @@
       font-weight: 700;
       color: #2e7d32;
     }
-    /* Aligne ⛽ Carburant avec la liste déroulante (et non le bloc entier
-       qui inclut la ligne de prix en dessous). */
-    .carburant-row { align-items: flex-start; }
-    .carburant-row .param-icon,
-    .carburant-row .param-label { margin-top: 9px; }
+    /* La ligne de prix est sortie du flux (position absolue) : ainsi l'icône, le
+       mot « Carburant » et la liste déroulante restent centrés ensemble. */
+    .carburant-row { padding-bottom: 26px; }
+    .carburant-row .param-input { position: relative; }
+    .carburant-row .prix-actuel {
+      position: absolute;
+      top: calc(100% + 5px);
+      left: 2px;
+      margin: 0;
+    }
 
     .conso-wrap {
       display: flex;
