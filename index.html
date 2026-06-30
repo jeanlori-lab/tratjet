@@ -771,9 +771,6 @@ function onPointInput(el) {
   updateLien();
   if (el) onAutoComplete(el);
 }
-// Conservé pour compat (anciennes références).
-function destinationChangee() { onPointInput(); }
-
 function updateLien() {
   const pts = getPoints();
   mettreDestinationDansLien(pts.length ? pts[pts.length - 1] : '');
@@ -860,9 +857,7 @@ async function geocode(lieu, apiKey) {
   if (!r.ok) throw new Error('Géocodage impossible pour "' + lieu + '"');
   const d = await r.json();
   if (!d.features || d.features.length === 0) throw new Error('Adresse introuvable : "' + lieu + '"');
-  const f = d.features[0];
-  console.log('geocode', JSON.stringify(lieu), '→', f.geometry.coordinates, '|', f.properties && f.properties.label);
-  return f.geometry.coordinates;
+  return d.features[0].geometry.coordinates;
 }
 
 async function getRoute(coords, apiKey) {
@@ -876,9 +871,6 @@ async function getRoute(coords, apiKey) {
     body: JSON.stringify({ coordinates: coords, geometry: true, radiuses: coords.map(() => -1) })
   });
   if (!r.ok) {
-    let errBody = '';
-    try { errBody = await r.text(); } catch(e) {}
-    console.log('ORS route error', r.status, 'pour', JSON.stringify(coords), '|', errBody.slice(0, 300));
     let msg = 'Erreur itinéraire (code ' + r.status + ')';
     if (r.status === 403) msg = 'Clé API invalide ou quota dépassé';
     if (r.status === 404) msg = 'Itinéraire introuvable, essaie de préciser l\'adresse';
@@ -888,7 +880,6 @@ async function getRoute(coords, apiKey) {
   const d = await r.json();
   const s = d.routes[0].summary;
   const polyline = d.routes[0].geometry;
-  console.log('ORS geometry type:', typeof polyline, JSON.stringify(polyline).slice(0, 200));
   return { distanceKm: s.distance / 1000, dureeSec: s.duration, polyline };
 }
 
@@ -914,13 +905,13 @@ async function getTolls(geometry, c1, c2) {
   // ORS renvoie une polyline encodée (précision 5, compatible Google).
   const polyline = (typeof geometry === 'string') ? geometry : null;
   if (!polyline) return null;
-  if (!TOLL_PROXY_URL) { console.log('Toll: TOLL_PROXY_URL non configurée'); return null; }
+  if (!TOLL_PROXY_URL) return null;
 
   // 1) Cache : si ce trajet a déjà été calculé, on réutilise (économise le quota).
   const cacheKey = (c1 && c2) ? tollCacheKey(c1, c2) : null;
   if (cacheKey) {
     const cached = tollCacheGet(cacheKey);
-    if (typeof cached === 'number') { console.log('Toll: depuis le cache', cached); return cached; }
+    if (typeof cached === 'number') return cached;
   }
 
   try {
@@ -933,7 +924,6 @@ async function getTolls(geometry, c1, c2) {
       body: JSON.stringify({ polyline: polyline, from: from, to: to, vehicleType: '2AxlesAuto' })
     });
     const d = await r.json();
-    console.log('Toll proxy HTTP', r.status, JSON.stringify(d).slice(0, 1200));
     // Le Worker renvoie un coût normalisé { cost: <nombre|null> }.
     let cost = null;
     if (typeof d.cost === 'number') {
@@ -952,7 +942,6 @@ async function getTolls(geometry, c1, c2) {
     if (cacheKey && typeof cost === 'number') tollCacheSet(cacheKey, cost);
     return cost;
   } catch(e) {
-    console.log('Toll proxy error:', e);
     return null;
   }
 }
