@@ -214,7 +214,7 @@
     #consoVal.conso-val-input[readonly] { cursor: default; }
 
     /* Desktop : flèches +/- de part et d'autre de la valeur, au lieu de la règle */
-    .conso-arrow {
+    .conso-arrow, .pass-arrow {
       width: 32px; height: 32px;
       flex-shrink: 0;
       border: 1.5px solid #c8e6c9;
@@ -229,8 +229,8 @@
       display: flex; align-items: center; justify-content: center;
       transition: background 0.15s, transform 0.1s;
     }
-    .conso-arrow:hover { background: #e3f5e4; }
-    .conso-arrow:active { transform: scale(0.9); }
+    .conso-arrow:hover, .pass-arrow:hover { background: #e3f5e4; }
+    .conso-arrow:active, .pass-arrow:active { transform: scale(0.9); }
 
     /* Nombre de passagers : compteur +/-, même style que la consommation. */
     .passagers-line { display: flex; align-items: center; justify-content: center; gap: 12px; }
@@ -456,7 +456,7 @@
       padding: 6px 10px;
       border-radius: 8px;
       max-width: 220px;
-      text-align: right;
+      text-align: center;
       z-index: 20;
       opacity: 0;
       transform: translateY(-4px);
@@ -587,9 +587,19 @@
     .total-standalone td:first-child { border-radius: 10px 0 0 10px; }
     .total-standalone td:nth-child(3) { border-radius: 0 10px 10px 0; }
 
-    /* Ligne Coût par personne (partage de frais) : même traitement isolé, en plus discret */
-    .per-person-row td:first-child { border-radius: 10px 0 0 10px; }
-    .per-person-row td:nth-child(3) { border-radius: 0 10px 10px 0; }
+    /* Coût par personne (partage de frais) : sous-ligne discrète dans la même
+       cellule que le total, plutôt qu'une ligne séparée. */
+    .total-standalone td { position: relative; }
+    .total-standalone td.has-per-person { padding-bottom: 22px; }
+    .per-person-note {
+      position: absolute;
+      left: 0; right: 0;
+      bottom: 5px;
+      line-height: 1;
+      font-size: 10px;
+      font-weight: 600;
+      opacity: 0.75;
+    }
 
     /* Message péage indisponible (occupe les 2 colonnes de la ligne Péages) */
     .res-table td.peage-msg {
@@ -656,6 +666,15 @@
       padding: 8px 4px 0;
     }
     .cheapest-note strong { color: #2e7d32; }
+    .cheapest-title { font-weight: 600; color: #455060; margin-bottom: 2px; }
+    .cheapest-link {
+      display: inline-block;
+      margin-top: 4px;
+      font-size: 11px;
+      color: #90a4ae;
+      text-decoration: none;
+    }
+    .cheapest-link:hover { color: #1976d2; text-decoration: underline; }
 
     .maps-wrap {
       text-align: center;
@@ -760,9 +779,9 @@
       <div class="param-input">
         <input type="hidden" id="passagers" value="1">
         <div class="passagers-line">
-          <button type="button" class="conso-arrow" id="passMinus" aria-label="Moins de passagers">−</button>
+          <button type="button" class="pass-arrow" id="passMinus" aria-label="Moins de passagers">−</button>
           <div class="passagers-value"><span id="passagersVal">1</span></div>
-          <button type="button" class="conso-arrow" id="passPlus" aria-label="Plus de passagers">+</button>
+          <button type="button" class="pass-arrow" id="passPlus" aria-label="Plus de passagers">+</button>
         </div>
       </div>
     </div>
@@ -813,11 +832,6 @@
           <td id="r-cout-a">—</td>
           <td id="r-cout-ar">—</td>
         </tr>
-        <tr class="group-row">
-          <td>Coût péages</td>
-          <td id="r-peage-a">—</td>
-          <td id="r-peage-ar">—</td>
-        </tr>
         <tr class="group-row group-last">
           <td>Litres consommés</td>
           <td id="r-litres-a">—</td>
@@ -828,12 +842,6 @@
           <td><strong>Coût total</strong></td>
           <td id="r-total-a">—</td>
           <td id="r-total-ar">—</td>
-        </tr>
-        <tr class="total-spacer" id="perPersonSpacer" style="display:none;"><td colspan="3"></td></tr>
-        <tr class="group-row per-person-row" id="perPersonRow" style="display:none;">
-          <td>Coût par personne</td>
-          <td id="r-per-a">—</td>
-          <td id="r-per-ar">—</td>
         </tr>
       </tbody>
     </table>
@@ -1172,14 +1180,15 @@ function distKm(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.asin(Math.sqrt(a));
 }
 
-// Station la moins chère à proximité du départ (rayon 15 km), pour le carburant
+// Station la moins chère à proximité du départ (rayon 8 km), pour le carburant
 // choisi. Best-effort : en cas d'échec (API indisponible, aucune station dans le
 // rayon…), on masque simplement la note, sans bloquer le reste du calcul.
+const STATION_RAYON_KM = 8;
 async function fetchStationMoinsChere(lat, lon, type) {
   const field = (type === 'sp95') ? 'e10_prix' : CARB_FIELD[type];
   if (!field) return null;
   try {
-    const url = `https://data.economie.gouv.fr/api/records/1.0/search/?dataset=prix-des-carburants-en-france-flux-instantane-v2&geofilter.distance=${lat},${lon},15000&rows=20&sort=${field}`;
+    const url = `https://data.economie.gouv.fr/api/records/1.0/search/?dataset=prix-des-carburants-en-france-flux-instantane-v2&geofilter.distance=${lat},${lon},${STATION_RAYON_KM * 1000}&rows=20&sort=${field}`;
     const r = await fetch(url);
     if (!r.ok) return null;
     const d = await r.json();
@@ -1189,13 +1198,11 @@ async function fetchStationMoinsChere(lat, lon, type) {
       const prix = parseFloat(f[field]);
       if (isNaN(prix) || prix <= 0) continue;
       const geo = rec.geometry && rec.geometry.coordinates; // [lon, lat]
-      return {
-        prix,
-        nom: f.nom || '',
-        ville: f.ville || '',
-        lat: geo ? geo[1] : (f.latitude !== undefined ? parseFloat(f.latitude) : null),
-        lon: geo ? geo[0] : (f.longitude !== undefined ? parseFloat(f.longitude) : null),
-      };
+      const sLat = geo ? geo[1] : (f.latitude !== undefined ? parseFloat(f.latitude) : null);
+      const sLon = geo ? geo[0] : (f.longitude !== undefined ? parseFloat(f.longitude) : null);
+      // Filtre client en plus du rayon serveur (sécurité si l'API renvoie plus large).
+      if (sLat !== null && sLon !== null && distKm(lat, lon, sLat, sLon) > STATION_RAYON_KM) continue;
+      return { prix, nom: f.nom || '', ville: f.ville || '', lat: sLat, lon: sLon };
     }
     return null;
   } catch (e) { return null; }
@@ -1542,7 +1549,6 @@ async function calculer() {
   const arrivee = allPts[allPts.length - 1] || '';
   // Points retenus dans l'ordre, sans les étapes laissées vides.
   const lieux   = allPts.filter(p => p.length > 0);
-  const stops   = lieux.slice(1, -1);
   const conso   = parseFloat(document.getElementById('conso').value);
 
   if (!depart || !arrivee) return showError('⚠️ Remplis le départ et la destination.');
@@ -1561,51 +1567,32 @@ async function calculer() {
     const distA   = route.distanceKm;
     const litresA = (distA * conso) / 100;
     const coutA   = litresA * prixActuel;
-
-    // Péages : pas de calcul dès qu'il y a au moins une étape intermédiaire.
-    const peage = stops.length > 0 ? null : await getTolls(route.polyline, c1, c2);
     const fmtEurPeage = n => n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
-    const peageA  = document.getElementById('r-peage-a');
-    const peageAR = document.getElementById('r-peage-ar');
-    if (peage === null) {
-      // Péage indisponible (quota, erreur, ou trajet multi-étapes) :
-      // message centré sur les deux colonnes renvoyant vers le bouton « Prix péage ».
-      peageA.colSpan = 2;
-      peageA.classList.add('peage-msg');
-      peageA.textContent = 'Voir le prix des péage en bas de page';
-      peageAR.style.display = 'none';
-    } else {
-      peageA.colSpan = 1;
-      peageA.classList.remove('peage-msg');
-      peageAR.style.display = '';
-      // Prix + petite note discrète du quota restant (sous le prix aller simple).
-      peageA.textContent = '';
-      peageA.appendChild(document.createTextNode(fmtEurPeage(peage)));
-      const note = document.createElement('div');
-      note.className = 'quota-note';
-      note.textContent = 'Quota restant : ' + tollQuotaRemaining() + '/' + TOLL_QUOTA_MAX;
-      peageA.appendChild(note);
-      peageAR.textContent = fmtEurPeage(peage * 2);
-    }
-    const totalA  = peage !== null ? coutA + peage : null;
-    const totalAR = peage !== null ? (coutA + peage) * 2 : null;
-    const totalAFinal  = totalA  !== null ? totalA  : coutA;
-    const totalARFinal = totalAR !== null ? totalAR : coutA * 2;
-    document.getElementById('r-total-a').textContent  = fmtEurPeage(totalAFinal);
-    document.getElementById('r-total-ar').textContent = fmtEurPeage(totalARFinal);
 
-    // Partage de frais entre passagers (si plus d'une personne).
+    // Coût péages temporairement retiré de l'affichage (fiabilité insuffisante
+    // du calcul en conditions réelles) ; le total ne compte que le carburant.
+    // getTolls() et le suivi de quota restent disponibles pour une réactivation
+    // future, mais ne sont plus appelés ici.
+    const totalAFinal  = coutA;
+    const totalARFinal = coutA * 2;
+    const rTotalA  = document.getElementById('r-total-a');
+    const rTotalAR = document.getElementById('r-total-ar');
+    rTotalA.textContent  = fmtEurPeage(totalAFinal);
+    rTotalAR.textContent = fmtEurPeage(totalARFinal);
+
+    // Partage de frais entre passagers : sous-ligne discrète dans la cellule du total.
     const passagers = passagersValeur();
-    const perPersonRow = document.getElementById('perPersonRow');
-    const perPersonSpacer = document.getElementById('perPersonSpacer');
+    rTotalA.classList.toggle('has-per-person', passagers > 1);
+    rTotalAR.classList.toggle('has-per-person', passagers > 1);
     if (passagers > 1) {
-      document.getElementById('r-per-a').textContent  = fmtEurPeage(totalAFinal / passagers);
-      document.getElementById('r-per-ar').textContent = fmtEurPeage(totalARFinal / passagers);
-      perPersonRow.style.display = '';
-      perPersonSpacer.style.display = '';
-    } else {
-      perPersonRow.style.display = 'none';
-      perPersonSpacer.style.display = 'none';
+      const noteA = document.createElement('div');
+      noteA.className = 'per-person-note';
+      noteA.textContent = fmtEurPeage(totalAFinal / passagers) + ' / pers.';
+      rTotalA.appendChild(noteA);
+      const noteAR = document.createElement('div');
+      noteAR.className = 'per-person-note';
+      noteAR.textContent = fmtEurPeage(totalARFinal / passagers) + ' / pers.';
+      rTotalAR.appendChild(noteAR);
     }
 
     const fmtKm = n => Math.round(n).toLocaleString('fr-FR') + ' km';
@@ -1638,15 +1625,30 @@ async function calculer() {
     const station = await fetchStationMoinsChere(c1[1], c1[0], carburantType);
     if (station) {
       cheapestNote.textContent = '';
-      cheapestNote.appendChild(document.createTextNode('⛽ Moins cher près du départ : '));
+      const title = document.createElement('div');
+      title.className = 'cheapest-title';
+      title.textContent = '⛽ Station la moins chère près du départ';
+      cheapestNote.appendChild(title);
+
+      const detail = document.createElement('div');
       const strong = document.createElement('strong');
       strong.textContent = station.prix.toFixed(3) + ' €/L';
-      cheapestNote.appendChild(strong);
+      detail.appendChild(strong);
       const lieu = [station.nom, station.ville].filter(Boolean).join(' — ');
-      if (lieu) cheapestNote.appendChild(document.createTextNode(' à ' + lieu));
+      if (lieu) detail.appendChild(document.createTextNode(' à ' + lieu));
       if (station.lat !== null && station.lon !== null) {
         const dKm = distKm(c1[1], c1[0], station.lat, station.lon);
-        if (isFinite(dKm)) cheapestNote.appendChild(document.createTextNode(' (' + dKm.toFixed(1) + ' km)'));
+        if (isFinite(dKm)) detail.appendChild(document.createTextNode(' (' + dKm.toFixed(1) + ' km)'));
+      }
+      cheapestNote.appendChild(detail);
+
+      if (station.lat !== null && station.lon !== null) {
+        const link = document.createElement('a');
+        link.className = 'cheapest-link';
+        link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${station.lat},${station.lon}`;
+        link.target = '_blank';
+        link.textContent = 'Itinéraire vers cette station →';
+        cheapestNote.appendChild(link);
       }
       cheapestNote.style.display = 'block';
     } else {
