@@ -343,9 +343,22 @@
       font-size: 15px;
       touch-action: none;
       user-select: none;
+      transition: color 0.15s, transform 0.1s;
     }
-    .drag-handle:active { cursor: grabbing; }
-    .point-row.dragging { opacity: 0.65; background: #eef4fb; border-radius: 8px; }
+    .drag-handle:hover { color: #7f97ac; }
+    .drag-handle:active { cursor: grabbing; transform: scale(1.15); }
+    /* Étape attrapée : léger soulèvement (ombre + agrandissement) */
+    .point-row.dragging {
+      opacity: 0.95;
+      background: #f4f9ff;
+      border-radius: 10px;
+      box-shadow: 0 6px 16px rgba(33,150,243,0.18);
+      transform: scale(1.015);
+      z-index: 5;
+      transition: box-shadow 0.15s ease, transform 0.15s ease;
+    }
+    /* Les autres étapes glissent doucement à leur nouvelle place (animation FLIP) */
+    .point-row.sliding { transition: transform 0.18s ease; }
 
     /* Bouton */
     .btn {
@@ -925,14 +938,33 @@ function onDragMove(e) {
     const rect = r.getBoundingClientRect();
     if (e.clientY < rect.top + rect.height / 2) { ref = r; break; }
   }
+  // Rien à faire si l'ordre ne change pas.
+  if (dragRow.nextElementSibling === ref) return;
+  // FLIP : on mémorise les positions avant, on réordonne, puis on anime le décalage.
+  const before = others.map(r => ({ el: r, top: r.getBoundingClientRect().top }));
   if (ref) container.insertBefore(dragRow, ref);
   else container.appendChild(dragRow);
   refreshPoints();
+  before.forEach(({ el, top }) => {
+    const delta = top - el.getBoundingClientRect().top;
+    if (!delta) return;
+    el.classList.remove('sliding');
+    el.style.transform = `translateY(${delta}px)`;
+    requestAnimationFrame(() => {
+      el.classList.add('sliding');
+      el.style.transform = '';
+    });
+  });
 }
 function endDrag() {
   if (dragRow) dragRow.classList.remove('dragging');
   dragRow = null;
   document.removeEventListener('pointermove', onDragMove);
+  // Nettoie les animations de décalage.
+  pointsEl().querySelectorAll('.point-row').forEach(r => {
+    r.classList.remove('sliding');
+    r.style.transform = '';
+  });
   resetResultat();
 }
 
