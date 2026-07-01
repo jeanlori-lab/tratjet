@@ -1658,17 +1658,19 @@ async function calculer() {
     if (station) {
       cheapestNote.textContent = '';
 
-      const header = document.createElement('div');
-      header.className = 'cheapest-header';
-      const icon = document.createElement('span');
-      icon.className = 'cheapest-icon';
-      icon.textContent = '⛽';
-      header.appendChild(icon);
-      const title = document.createElement('span');
-      title.className = 'cheapest-title';
-      title.textContent = 'Station la moins chère près du départ';
-      header.appendChild(title);
-      cheapestNote.appendChild(header);
+const header = document.createElement('div');
+header.className = 'cheapest-header';
+const icon = document.createElement('span');
+icon.className = 'cheapest-icon';
+icon.textContent = '🐀';
+header.appendChild(icon);
+const title = document.createElement('span');
+title.className = 'cheapest-title';
+title.style.fontSize = '1.05em';
+title.textContent = 'Station la moins chère près du départ';
+header.appendChild(title);
+
+cheapestNote.appendChild(header);
 
       const detail = document.createElement('div');
       detail.className = 'cheapest-detail';
