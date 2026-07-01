@@ -89,6 +89,14 @@
     .param-row:last-child { border-bottom: none; }
     /* Séparation un peu plus marquée entre le bloc Carburant/Conso et Départ/Destination */
     /* Plus d'air autour du trait pour bien détacher les deux blocs */
+    .param-icon {
+      font-size: 16px;
+      width: 22px;
+      text-align: center;
+      flex-shrink: 0;
+      line-height: 1;
+      transform: translateY(-2px);
+    }
     .param-label {
       font-size: 15px;
       font-weight: 600;
@@ -179,8 +187,29 @@
       line-height: 1;
       white-space: nowrap;
     }
-    .conso-value #consoVal { font-size: 18px; font-weight: 600; color: #1b5e20; }
     .conso-value .roulette-unit { font-size: 10px; font-weight: 600; color: #607080; }
+    /* Sur ordinateur, la valeur devient un champ éditable au clic (pas d'encadré
+       visible, juste un très léger fond au focus pour indiquer qu'on peut taper). */
+    #consoVal.conso-val-input {
+      width: 46px;
+      padding: 1px 2px;
+      border: none;
+      border-radius: 5px;
+      background: transparent;
+      font-family: inherit;
+      font-size: 18px;
+      font-weight: 600;
+      color: #1b5e20;
+      text-align: right;
+      outline: none;
+      box-shadow: none;
+      cursor: text;
+    }
+    #consoVal.conso-val-input:focus {
+      background: rgba(46,125,50,0.06);
+      box-shadow: none;
+    }
+    #consoVal.conso-val-input[readonly] { cursor: default; }
 
     /* Desktop : flèches +/- de part et d'autre de la valeur, au lieu de la règle */
     .conso-arrow {
@@ -291,6 +320,7 @@
       /* Recentre les flèches pile entre les deux encadrés (layout empilé) */
       #swapBtn { transform: translateY(calc(-50% + 11px)); }
       #swapBtn:active { transform: translateY(calc(-50% + 11px)) scale(0.9); }
+      .param-icon { width: 20px; font-size: 15px; }
       input[type="text"], input[type="number"], select { font-size: 15px; padding: 9px 11px; }
       /* Mobile : on garde la règle glissable, les flèches disparaissent. */
       .conso-line .conso-roulette { display: block; }
@@ -627,6 +657,7 @@
     <!-- Bloc Carburant / Consommation -->
     <div class="section">
     <div class="param-row carburant-row">
+      <div class="param-icon">⛽</div>
       <div class="param-label">Carburant</div>
       <div class="param-input">
         <select id="carburant" onchange="resetResultat(); chargerPrix();">
@@ -641,6 +672,7 @@
     </div>
 
     <div class="param-row conso-row">
+      <div class="param-icon">🚗</div>
       <div class="param-label">Consommation</div>
       <div class="param-input">
         <input type="hidden" id="conso" value="7.5">
@@ -650,7 +682,7 @@
             <div class="roulette-center"></div>
           </div>
           <button type="button" class="conso-arrow" id="consoMinus" aria-label="Diminuer la consommation">−</button>
-          <div class="conso-value"><span id="consoVal">7,5</span> <span class="roulette-unit">L / 100 km</span></div>
+          <div class="conso-value"><input type="text" id="consoVal" class="conso-val-input" value="7,5" inputmode="decimal" readonly aria-label="Consommation au 100 km, modifiable"> <span class="roulette-unit">L / 100 km</span></div>
           <button type="button" class="conso-arrow" id="consoPlus" aria-label="Augmenter la consommation">+</button>
         </div>
       </div>
@@ -658,8 +690,12 @@
     </div>
   </div>
 
-  <!-- Astuce retour haptique iOS 17.4+ (switch caché) -->
-  <label id="hapticSwitch" aria-hidden="true" style="position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none;"><input type="checkbox" switch tabindex="-1"></label>
+  <!-- Astuce retour haptique iOS 17.4+ (switch natif caché) : l'élément doit rester
+       « à l'écran » (pas de display:none, pas de position très hors-champ) pour que
+       WebKit instancie réellement le contrôle natif et déclenche le taptic. -->
+  <div aria-hidden="true" style="position:absolute; top:0; left:0; width:1px; height:1px; overflow:hidden; opacity:0.02; pointer-events:none;">
+    <input type="checkbox" switch id="hapticSwitch" tabindex="-1">
+  </div>
 
   <button class="btn" id="calcBtn" onclick="calculer()">Calculer le coût du trajet</button>
   <div class="loader" id="loader">⏳ Calcul en cours…</div>
@@ -826,7 +862,7 @@ function consoSet(v, doReset) {
   v = Math.min(CONSO_MAX, Math.max(CONSO_MIN, Math.round(v * 10) / 10));
   document.getElementById('conso').value = v.toFixed(1);
   const disp = document.getElementById('consoVal');
-  if (disp) disp.textContent = v.toFixed(1).replace('.', ',');
+  if (disp) disp.value = v.toFixed(1).replace('.', ',');
   const track = document.getElementById('rouletteTrack');
   const box = document.getElementById('consoRoulette');
   if (track && box) {
@@ -883,6 +919,22 @@ function consoInit() {
   const plusBtn = document.getElementById('consoPlus');
   if (minusBtn) minusBtn.addEventListener('click', () => consoSet(consoValeur() - 0.1, true));
   if (plusBtn) plusBtn.addEventListener('click', () => consoSet(consoValeur() + 0.1, true));
+
+  // Valeur éditable à la main, uniquement sur ordinateur (la règle pilote sur mobile).
+  const valInput = document.getElementById('consoVal');
+  const isDesktop = () => window.matchMedia('(min-width: 481px)').matches;
+  const syncEditable = () => { if (valInput) valInput.readOnly = !isDesktop(); };
+  syncEditable();
+  window.addEventListener('resize', syncEditable);
+  if (valInput) {
+    valInput.addEventListener('focus', () => { if (!valInput.readOnly) valInput.select(); });
+    valInput.addEventListener('keydown', e => { if (e.key === 'Enter') valInput.blur(); });
+    valInput.addEventListener('blur', () => {
+      if (valInput.readOnly) return;
+      const parsed = parseFloat(valInput.value.replace(',', '.'));
+      consoSet(isNaN(parsed) ? consoValeur() : parsed, true);
+    });
+  }
 }
 consoInit();
 
