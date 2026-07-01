@@ -87,7 +87,7 @@
     /* Plus d'air autour du trait pour bien détacher les deux blocs */
     /* padding-top réserve la place de la valeur (sortie du flux, au-dessus de la
        règle) : ainsi l'icône et « Consommation » s'alignent sur la règle. */
-    .conso-row { border-bottom: 1.5px solid #d4dbe4; padding-top: 24px; padding-bottom: 15px; }
+    .conso-row { padding-top: 24px; }
     .conso-row .param-input { position: relative; }
 
     .param-icon {
@@ -160,7 +160,8 @@
     }
     /* La ligne de prix est sortie du flux (position absolue) : ainsi l'icône, le
        mot « Carburant » et la liste déroulante restent centrés ensemble. */
-    .carburant-row { padding-bottom: 26px; }
+    /* Trait séparateur entre le bloc Départ/Destination (au-dessus) et Carburant/Conso */
+    .carburant-row { border-top: 1.5px solid #d4dbe4; margin-top: 7px; padding-top: 15px; padding-bottom: 26px; }
     .carburant-row .param-input { position: relative; }
     .carburant-row .prix-actuel {
       position: absolute;
@@ -290,7 +291,7 @@
       padding: 4px 0;
     }
     .link-btn:hover { text-decoration: underline; }
-    .points-wrap { position: relative; margin-top: 7px; }
+    .points-wrap { position: relative; }
 
     /* Flèches d'inversion : à droite, chevauchent le coin des encadrés, discrètes */
     .swap-btn {
@@ -559,6 +560,17 @@
   <div class="card">
     <div class="card-title">Paramètres du trajet</div>
 
+    <!-- Points du trajet (départ, étapes, destination) — réordonnables -->
+    <div class="points-wrap">
+      <div id="points"></div>
+      <!-- Inverser départ ↔ destination (visible seulement sans étape) -->
+      <button type="button" class="swap-btn" id="swapBtn" onclick="swapItinerary()" title="Inverser départ et destination" aria-label="Inverser départ et destination">⇅</button>
+    </div>
+
+    <div class="itinerary-controls">
+      <button type="button" class="link-btn" onclick="addPoint()">➕ Ajouter une étape</button>
+    </div>
+
     <div class="param-row carburant-row">
       <div class="param-icon">⛽</div>
       <div class="param-label">Carburant</div>
@@ -585,17 +597,6 @@
           <div class="roulette-center"></div>
         </div>
       </div>
-    </div>
-
-    <!-- Points du trajet (départ, étapes, destination) — réordonnables -->
-    <div class="points-wrap">
-      <div id="points"></div>
-      <!-- Inverser départ ↔ destination (visible seulement sans étape) -->
-      <button type="button" class="swap-btn" id="swapBtn" onclick="swapItinerary()" title="Inverser départ et destination" aria-label="Inverser départ et destination">⇅</button>
-    </div>
-
-    <div class="itinerary-controls">
-      <button type="button" class="link-btn" onclick="addPoint()">➕ Ajouter une étape</button>
     </div>
   </div>
 
