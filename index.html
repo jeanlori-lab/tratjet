@@ -94,27 +94,8 @@
        d'espace vertical et un trait un peu plus visible et plus long. */
     .carburant-row, .conso-row, .passagers-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
     /* Resserre le bloc en haut et en bas (garde l'espacement entre les 3 lignes). */
+    .carburant-row { padding-top: 8px; }
     .passagers-row { padding-bottom: 8px; }
-
-    /* Carburant et Consommation côte à côte (ordi) : émoji à côté du titre,
-       champ en dessous, ligne verticale entre les deux colonnes. Passagers
-       reste en dessous, sur sa propre ligne. */
-    .fuel-conso-cols { display: flex; align-items: flex-start; }
-    .fuel-conso-cols .carburant-row,
-    .fuel-conso-cols .conso-row {
-      flex: 1;
-      min-width: 0;
-      flex-wrap: wrap;
-      row-gap: 8px;
-      border-bottom: none;
-      padding-top: 8px;
-    }
-    .fuel-conso-cols .param-icon,
-    .fuel-conso-cols .param-label { line-height: 22px; }
-    .fuel-conso-cols .param-label { width: auto; }
-    .fuel-conso-cols .param-input { flex: 1 0 100%; }
-    .fuel-conso-cols .conso-row { border-left: 1.5px solid #cfd8e0; padding-left: 14px; margin-left: 14px; }
-    .fuel-conso-cols + .passagers-row { margin-top: 14px; }
     /* Séparation un peu plus marquée entre le bloc Carburant/Conso et Départ/Destination */
     /* Plus d'air autour du trait pour bien détacher les deux blocs */
     .param-icon {
@@ -206,7 +187,7 @@
     }
 
     /* Règle + valeur sur une seule ligne (valeur à droite) */
-    .conso-line { display: flex; align-items: center; gap: 6px; justify-content: center; }
+    .conso-line { display: flex; align-items: center; gap: 6px; justify-content: space-between; width: 210px; margin: 0 auto; }
     .conso-line .conso-roulette { flex: 1; }
     .conso-value {
       flex-shrink: 0;
@@ -260,8 +241,9 @@
     .conso-arrow:hover, .pass-arrow:hover { background: #e3f5e4; }
     .conso-arrow:active, .pass-arrow:active { transform: scale(0.9); }
 
-    /* Nombre de passagers : compteur +/-, même style que la consommation. */
-    .passagers-line { display: flex; align-items: center; justify-content: center; gap: 12px; }
+    /* Nombre de passagers : compteur +/-, aligné avec les boutons +/- de la
+       consommation juste au-dessus (même largeur de ligne, même position). */
+    .passagers-line { display: flex; align-items: center; justify-content: space-between; width: 210px; margin: 0 auto; }
     .passagers-value { font-size: 18px; font-weight: 600; color: #1b5e20; min-width: 1.5ch; text-align: center; }
 
     /* Règle / roulette de consommation (glisser horizontal, souris + doigt) */
@@ -360,15 +342,9 @@
       .conso-line .conso-roulette { display: block; }
       .conso-arrow { display: none; }
       .conso-value { width: 92px; }
-      /* Carburant/Consommation restent empilés sur mobile (pas de côte à côte,
-         trop étroit). Passagers reste sur sa propre ligne, inchangé. */
-      .fuel-conso-cols { flex-direction: column; }
-      .fuel-conso-cols .carburant-row,
-      .fuel-conso-cols .conso-row {
-        border-bottom: 1.5px solid #cfd8e0;
-      }
-      .fuel-conso-cols .conso-row { border-left: none; padding-left: 0; margin-left: 0; padding-top: 15px; }
-      .fuel-conso-cols + .passagers-row { margin-top: 0; }
+      /* L'alignement conso/passagers ne concerne que l'ordi (pas de règle sur mobile). */
+      .conso-line { justify-content: center; width: auto; margin: 0; }
+      .passagers-line { justify-content: center; width: auto; margin: 0; gap: 12px; }
     }
 
     /* Autocomplete */
@@ -781,7 +757,6 @@
 
     <!-- Bloc Carburant / Consommation -->
     <div class="section">
-    <div class="fuel-conso-cols">
     <div class="param-row carburant-row">
       <div class="param-icon">⛽</div>
       <div class="param-label">Carburant</div>
@@ -812,7 +787,6 @@
           <button type="button" class="conso-arrow" id="consoPlus" aria-label="Augmenter la consommation">+</button>
         </div>
       </div>
-    </div>
     </div>
 
     <div class="param-row passagers-row">
