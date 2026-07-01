@@ -87,8 +87,6 @@
     /* Plus d'air autour du trait pour bien détacher les deux blocs */
     /* padding-top réserve la place de la valeur (sortie du flux, au-dessus de la
        règle) : ainsi l'icône et « Consommation » s'alignent sur la règle. */
-    .conso-row { padding-top: 24px; }
-    .conso-row .param-input { position: relative; }
 
     .param-icon {
       font-size: 16px;
@@ -103,7 +101,7 @@
     .param-label {
       font-size: 13px;
       color: #455060;
-      width: 130px;
+      width: 106px;
       flex-shrink: 0;
       line-height: 1.2;
     }
@@ -157,6 +155,10 @@
     .prix-actuel #prixAffiche {
       font-weight: 700;
       color: #2e7d32;
+      background: #e6f6e9;
+      padding: 2px 9px;
+      border-radius: 20px;
+      margin-left: 2px;
     }
     /* La ligne de prix est sortie du flux (position absolue) : ainsi l'icône, le
        mot « Carburant » et la liste déroulante restent centrés ensemble. */
@@ -170,31 +172,42 @@
       margin: 0;
     }
 
-    /* Valeur sélectionnée, au-dessus de la règle (indépendante) */
+    /* Règle + valeur sur une seule ligne (valeur à droite) */
+    .conso-line { display: flex; align-items: center; gap: 6px; }
+    .conso-line .conso-roulette { flex: 1; }
     .conso-value {
-      position: absolute;
-      bottom: calc(100% + 5px);
-      left: 0; right: 0;
-      text-align: center;
-      font-weight: 700;
+      flex-shrink: 0;
+      width: 64px;
+      text-align: left;
+      font-weight: 800;
       color: #1b5e20;
       font-size: 15px;
       line-height: 1;
+      white-space: nowrap;
     }
-    .conso-value .roulette-unit { font-size: 11px; font-weight: 600; color: #6f8a72; }
+    .conso-value .roulette-unit { font-size: 10px; font-weight: 600; color: #6f8a72; }
 
     /* Règle / roulette de consommation (glisser horizontal, souris + doigt) */
     .conso-roulette {
       position: relative;
       width: 100%;
-      height: 30px;
+      height: 32px;
       border: 1.5px solid #c8e6c9;
       border-radius: 10px;
-      background: #f1fdf1;
+      background: linear-gradient(#fbfffb, #eef9ee);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
       overflow: hidden;
       cursor: grab;
       touch-action: none;
       user-select: none;
+    }
+    /* Fenêtre masquée : effet « tambour » (les graduations s'estompent sur les bords) */
+    .roulette-viewport {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 13%, #000 87%, transparent 100%);
+      mask-image: linear-gradient(90deg, transparent 0, #000 13%, #000 87%, transparent 100%);
     }
     .conso-roulette:active { cursor: grabbing; }
     .roulette-track {
@@ -234,13 +247,23 @@
       background: #2e7d32;
       transform: translateX(-50%);
       pointer-events: none;
+      z-index: 2;
     }
+    .roulette-center::before, .roulette-center::after {
+      content: '';
+      position: absolute;
+      left: 50%; transform: translateX(-50%);
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+    }
+    .roulette-center::before { top: -1px; border-top: 5px solid #2e7d32; }
+    .roulette-center::after { bottom: -1px; border-bottom: 5px solid #2e7d32; }
     @media (max-width: 768px) {
       input[type="text"], input[type="number"], select { font-size: 16px; }
     }
 
     @media (max-width: 480px) {
-      .param-label { width: 90px; font-size: 12px; }
+      .param-label { width: 84px; font-size: 12px; }
       .param-icon { width: 22px; font-size: 15px; }
       input[type="text"], input[type="number"], select { font-size: 12px; padding: 7px 8px; }
       .auto-field { font-size: 12px; padding: 7px 8px; }
@@ -278,7 +301,8 @@
     .itinerary-controls {
       display: flex;
       align-items: center;
-      padding: 6px 0 2px;
+      padding: 0 0 2px;
+      margin-top: -2px;
     }
     .link-btn {
       background: none;
@@ -591,10 +615,12 @@
       <div class="param-label">Consommation</div>
       <div class="param-input">
         <input type="hidden" id="conso" value="7.5">
-        <div class="conso-value"><span id="consoVal">7,5</span> <span class="roulette-unit">L / 100 km</span></div>
-        <div class="conso-roulette" id="consoRoulette" role="slider" aria-label="Consommation au 100 km" aria-valuemin="1" aria-valuemax="30" tabindex="0">
-          <div class="roulette-track" id="rouletteTrack"></div>
-          <div class="roulette-center"></div>
+        <div class="conso-line">
+          <div class="conso-roulette" id="consoRoulette" role="slider" aria-label="Consommation au 100 km" aria-valuemin="1" aria-valuemax="30" tabindex="0">
+            <div class="roulette-viewport"><div class="roulette-track" id="rouletteTrack"></div></div>
+            <div class="roulette-center"></div>
+          </div>
+          <div class="conso-value"><span id="consoVal">7,5</span> <span class="roulette-unit">L/100</span></div>
         </div>
       </div>
     </div>
