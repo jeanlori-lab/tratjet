@@ -182,8 +182,10 @@
     .conso-line .conso-roulette { flex: 1; }
     .conso-value {
       flex-shrink: 0;
-      width: 92px;
-      text-align: center;
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 4px;
       line-height: 1;
       white-space: nowrap;
     }
@@ -191,7 +193,7 @@
     /* Sur ordinateur, la valeur devient un champ éditable au clic (pas d'encadré
        visible, juste un très léger fond au focus pour indiquer qu'on peut taper). */
     #consoVal.conso-val-input {
-      width: 46px;
+      width: 4ch;
       padding: 1px 2px;
       border: none;
       border-radius: 5px;
@@ -200,7 +202,7 @@
       font-size: 18px;
       font-weight: 600;
       color: #1b5e20;
-      text-align: right;
+      text-align: center;
       outline: none;
       box-shadow: none;
       cursor: text;
@@ -325,6 +327,7 @@
       /* Mobile : on garde la règle glissable, les flèches disparaissent. */
       .conso-line .conso-roulette { display: block; }
       .conso-arrow { display: none; }
+      .conso-value { width: 92px; }
     }
 
     /* Autocomplete */
