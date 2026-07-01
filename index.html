@@ -646,6 +646,9 @@
     </div>
   </div>
 
+  <!-- Astuce retour haptique iOS 17.4+ (switch caché) -->
+  <label id="hapticSwitch" aria-hidden="true" style="position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none;"><input type="checkbox" switch tabindex="-1"></label>
+
   <button class="btn" id="calcBtn" onclick="calculer()">Calculer le coût du trajet</button>
   <div class="loader" id="loader">⏳ Calcul en cours…</div>
   <div class="error" id="error"></div>
@@ -792,6 +795,18 @@ function hideError() { document.getElementById('error').style.display='none'; }
 function setLoading(on) { document.getElementById('loader').style.display=on?'block':'none'; document.getElementById('calcBtn').disabled=on; }
 function resetResultat() { document.getElementById('sectionResultats').style.display='none'; hideError(); }
 
+// Petit retour haptique (mobile). Android : API Vibration. iOS 17.4+ : astuce
+// du switch caché (Safari ne supporte pas navigator.vibrate).
+let _lastHaptic = 0, _hapticSwitch = null;
+function hapticTick() {
+  const now = Date.now();
+  if (now - _lastHaptic < 20) return; // throttle : évite la surchauffe en drag rapide
+  _lastHaptic = now;
+  if (typeof navigator !== 'undefined' && navigator.vibrate) { navigator.vibrate(3); return; }
+  if (!_hapticSwitch) _hapticSwitch = document.getElementById('hapticSwitch');
+  if (_hapticSwitch) { try { _hapticSwitch.click(); } catch (e) {} }
+}
+
 // --- Roulette de consommation (1 à 30, pas de 0,1) ---
 const CONSO_MIN = 1, CONSO_MAX = 30, CONSO_PPU = 60; // px par L/100km
 function consoValeur() { return parseFloat(document.getElementById('conso').value) || 7.5; }
@@ -830,7 +845,9 @@ function consoInit() {
   });
   box.addEventListener('pointermove', e => {
     if (!dragging) return;
+    const prev = consoValeur();
     consoSet(startVal - (e.clientX - startX) / CONSO_PPU, true);
+    if (consoValeur() !== prev) hapticTick(); // petite vibration à chaque cran
   });
   const end = () => {
     if (!dragging) return;
