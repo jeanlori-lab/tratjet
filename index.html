@@ -268,9 +268,12 @@
       /* Mobile : le libellé passe au-dessus, l'encadré prend toute la largeur */
       .card { padding: 16px; }
       .section { padding: 6px 12px; }
-      .param-row { flex-wrap: wrap; row-gap: 3px; }
+      .param-row { flex-wrap: wrap; row-gap: 7px; }
       .param-label { width: auto; flex: none; font-size: 13px; }
       .param-input { flex: 1 0 100%; }
+      /* Recentre les flèches pile entre les deux encadrés (layout empilé) */
+      #swapBtn { transform: translateY(calc(-50% + 11px)); }
+      #swapBtn:active { transform: translateY(calc(-50% + 11px)) scale(0.9); }
       .param-icon { width: 20px; font-size: 15px; }
       input[type="text"], input[type="number"], select { font-size: 15px; padding: 9px 11px; }
     }
