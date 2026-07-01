@@ -101,7 +101,7 @@
     .param-label {
       font-size: 13px;
       color: #455060;
-      width: 130px;
+      width: 106px;
       flex-shrink: 0;
       line-height: 1.2;
     }
@@ -173,12 +173,12 @@
     }
 
     /* Règle + valeur sur une seule ligne (valeur à droite) */
-    .conso-line { display: flex; align-items: center; gap: 10px; }
+    .conso-line { display: flex; align-items: center; gap: 6px; }
     .conso-line .conso-roulette { flex: 1; }
     .conso-value {
       flex-shrink: 0;
-      width: 66px;
-      text-align: right;
+      width: 64px;
+      text-align: left;
       font-weight: 800;
       color: #1b5e20;
       font-size: 15px;
@@ -263,7 +263,7 @@
     }
 
     @media (max-width: 480px) {
-      .param-label { width: 90px; font-size: 12px; }
+      .param-label { width: 84px; font-size: 12px; }
       .param-icon { width: 22px; font-size: 15px; }
       input[type="text"], input[type="number"], select { font-size: 12px; padding: 7px 8px; }
       .auto-field { font-size: 12px; padding: 7px 8px; }
@@ -301,7 +301,8 @@
     .itinerary-controls {
       display: flex;
       align-items: center;
-      padding: 6px 0 2px;
+      padding: 0 0 2px;
+      margin-top: -2px;
     }
     .link-btn {
       background: none;
