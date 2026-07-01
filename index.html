@@ -271,6 +271,9 @@
       .param-row { flex-wrap: wrap; row-gap: 7px; }
       .param-label { width: auto; flex: none; font-size: 13px; }
       .param-input { flex: 1 0 100%; }
+      /* Étapes : pas de ligne de libellé (numéro en placeholder), encadré + ✕ sur une ligne */
+      .is-stop .param-icon, .is-stop .param-label { display: none; }
+      .is-stop .param-input { flex: 1 1 auto; }
       /* Recentre les flèches pile entre les deux encadrés (layout empilé) */
       #swapBtn { transform: translateY(calc(-50% + 11px)); }
       #swapBtn:active { transform: translateY(calc(-50% + 11px)) scale(0.9); }
@@ -913,12 +916,16 @@ function refreshPoints() {
     if (i === 0) {
       icon.textContent = '🏠'; label.textContent = 'Départ';
       input.placeholder = 'Adresse de départ'; rm.style.display = 'none';
+      row.classList.remove('is-stop');
     } else if (i === rows.length - 1) {
       icon.textContent = '🏁'; label.textContent = 'Destination';
       input.placeholder = 'Lieu de vacances'; rm.style.display = 'none';
+      row.classList.remove('is-stop');
     } else {
-      icon.textContent = '📍'; label.textContent = 'Étape ' + i;
-      input.placeholder = 'Arrêt'; rm.style.display = '';
+      // Étape : le numéro passe en placeholder dans l'encadré, ✕ à droite.
+      icon.textContent = '📍'; label.textContent = '';
+      input.placeholder = 'Étape ' + i; rm.style.display = '';
+      row.classList.add('is-stop');
     }
   });
   // Les flèches d'inversion n'ont de sens que sans étape (départ + destination).
