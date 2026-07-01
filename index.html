@@ -662,21 +662,47 @@
     .res-table tr.total-standalone td:nth-child(3) { border-right: 1px solid #dbe3ec; }
 
     .cheapest-note {
-      font-size: 12px;
-      color: #607080;
-      text-align: center;
-      padding: 8px 4px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      text-align: left;
+      background: #f5f8fb;
+      border: 1px solid #eef2f6;
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-top: 16px;
     }
-    .cheapest-note strong { color: #2e7d32; }
-    .cheapest-title { font-weight: 600; color: #455060; margin-bottom: 2px; }
+    .cheapest-icon {
+      flex-shrink: 0;
+      width: 30px; height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      background: #fff;
+      border: 1px solid #eef2f6;
+      border-radius: 10px;
+    }
+    .cheapest-body { flex: 1; min-width: 0; }
+    .cheapest-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #90a4ae;
+      margin-bottom: 4px;
+    }
+    .cheapest-detail { font-size: 13px; color: #455060; line-height: 1.4; }
+    .cheapest-detail strong { color: #2e7d32; font-size: 15px; }
     .cheapest-link {
       display: inline-block;
-      margin-top: 4px;
-      font-size: 11px;
-      color: #90a4ae;
+      margin-top: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #1976d2;
       text-decoration: none;
     }
-    .cheapest-link:hover { color: #1976d2; text-decoration: underline; }
+    .cheapest-link:hover { text-decoration: underline; }
 
     .maps-wrap {
       text-align: center;
@@ -1208,7 +1234,11 @@ async function fetchStationMoinsChere(lat, lon, type) {
       const sLon = geo ? geo[0] : (f.longitude !== undefined ? parseFloat(f.longitude) : null);
       // Filtre client en plus du rayon serveur (sécurité si l'API renvoie plus large).
       if (sLat !== null && sLon !== null && distKm(lat, lon, sLat, sLon) > STATION_RAYON_KM) continue;
-      if (!best || prix < best.prix) best = { prix, nom: f.nom || '', ville: f.ville || '', lat: sLat, lon: sLon };
+      if (!best || prix < best.prix) {
+        // Le champ "nom" (enseigne) est rarement renseigné dans ce jeu de données ;
+        // on affiche l'adresse quand elle est disponible, pour situer précisément.
+        best = { prix, nom: f.nom || '', adresse: f.adresse || '', ville: f.ville || '', lat: sLat, lon: sLon };
+      }
     }
     return best;
   } catch (e) { return null; }
@@ -1639,22 +1669,34 @@ async function calculer() {
     const station = await fetchStationMoinsChere(c1[1], c1[0], carburantType);
     if (station) {
       cheapestNote.textContent = '';
+
+      const icon = document.createElement('div');
+      icon.className = 'cheapest-icon';
+      icon.textContent = '⛽';
+      cheapestNote.appendChild(icon);
+
+      const body = document.createElement('div');
+      body.className = 'cheapest-body';
+
       const title = document.createElement('div');
       title.className = 'cheapest-title';
-      title.textContent = '⛽ Station la moins chère près du départ';
-      cheapestNote.appendChild(title);
+      title.textContent = 'Station la moins chère près du départ';
+      body.appendChild(title);
 
       const detail = document.createElement('div');
+      detail.className = 'cheapest-detail';
       const strong = document.createElement('strong');
       strong.textContent = station.prix.toFixed(3) + ' €/L';
       detail.appendChild(strong);
-      const lieu = [station.nom, station.ville].filter(Boolean).join(' — ');
+      // Précision du lieu : enseigne si connue, puis adresse, puis ville
+      // (l'enseigne est rarement renseignée dans ce jeu de données public).
+      const lieu = [station.nom, station.adresse, station.ville].filter(Boolean).join(', ');
       if (lieu) detail.appendChild(document.createTextNode(' à ' + lieu));
       if (station.lat !== null && station.lon !== null) {
         const dKm = distKm(c1[1], c1[0], station.lat, station.lon);
         if (isFinite(dKm)) detail.appendChild(document.createTextNode(' (' + dKm.toFixed(1) + ' km)'));
       }
-      cheapestNote.appendChild(detail);
+      body.appendChild(detail);
 
       if (station.lat !== null && station.lon !== null) {
         const link = document.createElement('a');
@@ -1662,9 +1704,11 @@ async function calculer() {
         link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${station.lat},${station.lon}`;
         link.target = '_blank';
         link.textContent = 'Itinéraire vers cette station →';
-        cheapestNote.appendChild(link);
+        body.appendChild(link);
       }
-      cheapestNote.style.display = 'block';
+
+      cheapestNote.appendChild(body);
+      cheapestNote.style.display = 'flex';
     } else {
       cheapestNote.style.display = 'none';
     }
