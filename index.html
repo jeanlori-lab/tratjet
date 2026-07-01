@@ -88,16 +88,9 @@
       position: relative;
     }
     .param-row:last-child { border-bottom: none; }
-    /* Carburant / Consommation / Passagers en mini-cartes blanches, bien séparées. */
-    .carburant-row, .conso-row, .passagers-row {
-      background: #fff;
-      border: 1px solid #eef2f6;
-      border-radius: 12px;
-      padding: 12px 14px;
-      margin-bottom: 5px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-    }
-    .section .passagers-row.passagers-row { border-bottom: 1px solid #eef2f6; margin-bottom: 0; }
+    /* Séparations plus marquées entre Carburant / Consommation / Passagers : plus
+       d'espace vertical et un trait un peu plus visible et plus long. */
+    .carburant-row, .conso-row, .passagers-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
     /* Séparation un peu plus marquée entre le bloc Carburant/Conso et Départ/Destination */
     /* Plus d'air autour du trait pour bien détacher les deux blocs */
     .param-icon {
@@ -179,8 +172,6 @@
       padding: 4px 14px;
       margin-bottom: 12px;
     }
-    /* Élargit un peu les mini-cartes Carburant/Consommation/Passagers vers les bords. */
-    .section:has(.carburant-row) { padding-left: 8px; padding-right: 8px; }
     .carburant-row { padding-bottom: 26px; }
     .carburant-row .param-input { position: relative; }
     .carburant-row .prix-actuel {
