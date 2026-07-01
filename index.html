@@ -87,6 +87,8 @@
       position: relative;
     }
     .param-row:last-child { border-bottom: none; }
+    /* Séparations un peu plus marquées entre Carburant / Consommation / Passagers */
+    .carburant-row, .conso-row { border-bottom-color: #dbe3ec; }
     /* Séparation un peu plus marquée entre le bloc Carburant/Conso et Départ/Destination */
     /* Plus d'air autour du trait pour bien détacher les deux blocs */
     .param-icon {
@@ -678,7 +680,7 @@
 
     .maps-wrap {
       text-align: center;
-      padding-top: 14px;
+      padding-top: 22px;
     }
     .maps-link {
       display: inline-flex;
@@ -1188,11 +1190,15 @@ async function fetchStationMoinsChere(lat, lon, type) {
   const field = (type === 'sp95') ? 'e10_prix' : CARB_FIELD[type];
   if (!field) return null;
   try {
-    const url = `https://data.economie.gouv.fr/api/records/1.0/search/?dataset=prix-des-carburants-en-france-flux-instantane-v2&geofilter.distance=${lat},${lon},${STATION_RAYON_KM * 1000}&rows=20&sort=${field}`;
+    // Le tri "sort" de l'API porte sur un champ texte : il n'est pas fiable pour
+    // classer les prix numériquement (ex. "1.9" avant "1.85"). On récupère donc
+    // toutes les stations du rayon et on calcule nous-mêmes le minimum.
+    const url = `https://data.economie.gouv.fr/api/records/1.0/search/?dataset=prix-des-carburants-en-france-flux-instantane-v2&geofilter.distance=${lat},${lon},${STATION_RAYON_KM * 1000}&rows=100`;
     const r = await fetch(url);
     if (!r.ok) return null;
     const d = await r.json();
     if (!d.records || !d.records.length) return null;
+    let best = null;
     for (const rec of d.records) {
       const f = rec.fields || {};
       const prix = parseFloat(f[field]);
@@ -1202,9 +1208,9 @@ async function fetchStationMoinsChere(lat, lon, type) {
       const sLon = geo ? geo[0] : (f.longitude !== undefined ? parseFloat(f.longitude) : null);
       // Filtre client en plus du rayon serveur (sécurité si l'API renvoie plus large).
       if (sLat !== null && sLon !== null && distKm(lat, lon, sLat, sLon) > STATION_RAYON_KM) continue;
-      return { prix, nom: f.nom || '', ville: f.ville || '', lat: sLat, lon: sLon };
+      if (!best || prix < best.prix) best = { prix, nom: f.nom || '', ville: f.ville || '', lat: sLat, lon: sLon };
     }
-    return null;
+    return best;
   } catch (e) { return null; }
 }
 
@@ -1616,8 +1622,16 @@ async function calculer() {
     document.getElementById('mapsLink').href = mapsUrl;
     const startObj = JSON.stringify({place: depart, lat: c1[1], lng: c1[0]});
     const endObj = JSON.stringify({place: arrivee, lat: c2[1], lng: c2[0]});
-    document.getElementById('vinciLink').href =
-      `https://www.vinci-autoroutes.com/fr/mon-trajet/?area=service&filter-status=0&start=${encodeURIComponent(startObj)}&end=${encodeURIComponent(endObj)}`;
+    const vinciLink = document.getElementById('vinciLink');
+    // Le calculateur de péages Vinci ne gère qu'un trajet direct départ→arrivée :
+    // on masque le bouton dès qu'il y a au moins une étape intermédiaire.
+    if (lieux.length > 2) {
+      vinciLink.style.display = 'none';
+    } else {
+      vinciLink.style.display = '';
+      vinciLink.href =
+        `https://www.vinci-autoroutes.com/fr/mon-trajet/?area=service&filter-status=0&start=${encodeURIComponent(startObj)}&end=${encodeURIComponent(endObj)}`;
+    }
 
     // Station la moins chère à proximité du départ (best-effort, ne bloque rien).
     const carburantType = document.getElementById('carburant').value;
