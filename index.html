@@ -232,6 +232,10 @@
     .conso-arrow:hover { background: #e3f5e4; }
     .conso-arrow:active { transform: scale(0.9); }
 
+    /* Nombre de passagers : compteur +/-, même style que la consommation. */
+    .passagers-line { display: flex; align-items: center; justify-content: center; gap: 12px; }
+    .passagers-value { font-size: 18px; font-weight: 600; color: #1b5e20; min-width: 1.5ch; text-align: center; }
+
     /* Règle / roulette de consommation (glisser horizontal, souris + doigt) */
     .conso-roulette {
       position: relative;
@@ -414,6 +418,53 @@
       flex-shrink: 0;
     }
     .stop-remove:hover { color: #8e0000; }
+
+    /* Étoile favori : superposée dans l'encadré (départ/destination/étape), pour
+       rester à droite du champ quel que soit le retour à la ligne en mobile. */
+    .point-row .param-input { position: relative; }
+    .autocomplete-wrap .point-input { padding-right: 34px; }
+    .fav-star {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 24px; height: 24px;
+      padding: 0;
+      border: none;
+      background: none;
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      color: #b6c0cb;
+      z-index: 3;
+      transition: color 0.15s, transform 0.1s;
+    }
+    .fav-star:hover { color: #f0c419; }
+    .fav-star.active { color: #ffc107; }
+    .fav-star:active { transform: translateY(-50%) scale(0.85); }
+
+    /* Petit texte d'info qui apparaît brièvement quand on enregistre un favori. */
+    .fav-hint {
+      position: absolute;
+      right: 0;
+      top: 100%;
+      margin-top: 4px;
+      background: #1a2433;
+      color: #fff;
+      font-size: 11px;
+      line-height: 1.3;
+      padding: 6px 10px;
+      border-radius: 8px;
+      max-width: 220px;
+      text-align: right;
+      z-index: 20;
+      opacity: 0;
+      transform: translateY(-4px);
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+    }
+    .fav-hint.show { opacity: 1; transform: translateY(0); }
+
     /* Poignée sortie du flux : centrée dans la marge à gauche de l'emoji. */
     .drag-handle {
       position: absolute;
@@ -536,6 +587,10 @@
     .total-standalone td:first-child { border-radius: 10px 0 0 10px; }
     .total-standalone td:nth-child(3) { border-radius: 0 10px 10px 0; }
 
+    /* Ligne Coût par personne (partage de frais) : même traitement isolé, en plus discret */
+    .per-person-row td:first-child { border-radius: 10px 0 0 10px; }
+    .per-person-row td:nth-child(3) { border-radius: 0 10px 10px 0; }
+
     /* Message péage indisponible (occupe les 2 colonnes de la ligne Péages) */
     .res-table td.peage-msg {
       border-right: 1px solid #dbe3ec;
@@ -593,6 +648,14 @@
     .res-table tr.total-standalone td:first-child { border-left: 1px solid #dbe3ec; }
     .res-table tr.group-row td:nth-child(3),
     .res-table tr.total-standalone td:nth-child(3) { border-right: 1px solid #dbe3ec; }
+
+    .cheapest-note {
+      font-size: 12px;
+      color: #607080;
+      text-align: center;
+      padding: 8px 4px 0;
+    }
+    .cheapest-note strong { color: #2e7d32; }
 
     .maps-wrap {
       text-align: center;
@@ -690,6 +753,19 @@
         </div>
       </div>
     </div>
+
+    <div class="param-row passagers-row">
+      <div class="param-icon">👥</div>
+      <div class="param-label">Passagers</div>
+      <div class="param-input">
+        <input type="hidden" id="passagers" value="1">
+        <div class="passagers-line">
+          <button type="button" class="conso-arrow" id="passMinus" aria-label="Moins de passagers">−</button>
+          <div class="passagers-value"><span id="passagersVal">1</span></div>
+          <button type="button" class="conso-arrow" id="passPlus" aria-label="Plus de passagers">+</button>
+        </div>
+      </div>
+    </div>
     </div>
   </div>
 
@@ -753,8 +829,15 @@
           <td id="r-total-a">—</td>
           <td id="r-total-ar">—</td>
         </tr>
+        <tr class="total-spacer" id="perPersonSpacer" style="display:none;"><td colspan="3"></td></tr>
+        <tr class="group-row per-person-row" id="perPersonRow" style="display:none;">
+          <td>Coût par personne</td>
+          <td id="r-per-a">—</td>
+          <td id="r-per-ar">—</td>
+        </tr>
       </tbody>
     </table>
+    <div class="cheapest-note" id="cheapestNote" style="display:none;"></div>
     <div class="maps-wrap" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
     <a class="maps-link" id="mapsLink" href="#" target="_blank"
        style="width:220px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;">
@@ -797,6 +880,82 @@ function isEurope(feature) {
   return EUROPE_COUNTRIES.has(cc);
 }
 
+// --- Lieux favoris (départ/destination/étapes) : mémorisés dans le navigateur,
+// proposés en premier dans l'autocomplétion avant même d'avoir tapé un caractère.
+const FAV_PLACES_KEY = 'favPlaces';
+const FAV_PLACES_MAX = 30;
+function getFavPlaces() {
+  try { return JSON.parse(localStorage.getItem(FAV_PLACES_KEY) || '[]'); } catch (e) { return []; }
+}
+function setFavPlaces(arr) {
+  try { localStorage.setItem(FAV_PLACES_KEY, JSON.stringify(arr)); } catch (e) {}
+}
+function isFavPlace(text) {
+  const key = text.trim().toLowerCase();
+  if (!key) return false;
+  return getFavPlaces().some(f => f.trim().toLowerCase() === key);
+}
+function updateStarUI(star, active) {
+  star.classList.toggle('active', active);
+  star.textContent = active ? '★' : '☆';
+  star.title = active ? 'Retirer des favoris' : 'Enregistrer en favori';
+}
+function syncStarForInput(input) {
+  const row = input.closest('.point-row');
+  const star = row && row.querySelector('.fav-star');
+  if (star) updateStarUI(star, isFavPlace(input.value));
+}
+function showFavHint(star) {
+  const row = star.closest('.point-row');
+  if (!row) return;
+  const hint = document.createElement('div');
+  hint.className = 'fav-hint';
+  hint.textContent = 'Enregistré ! Retrouvez vos favoris en cliquant dans un champ vide.';
+  row.appendChild(hint);
+  requestAnimationFrame(() => hint.classList.add('show'));
+  setTimeout(() => {
+    hint.classList.remove('show');
+    setTimeout(() => hint.remove(), 250);
+  }, 2600);
+}
+function toggleFavPlace(text, star) {
+  const val = text.trim();
+  if (!val) return;
+  const key = val.toLowerCase();
+  let favs = getFavPlaces();
+  const idx = favs.findIndex(f => f.trim().toLowerCase() === key);
+  let added;
+  if (idx >= 0) { favs.splice(idx, 1); added = false; }
+  else { favs = [val, ...favs].slice(0, FAV_PLACES_MAX); added = true; }
+  setFavPlaces(favs);
+  updateStarUI(star, added);
+  if (added) showFavHint(star);
+}
+// Propose les favoris dans la liste de suggestions quand le champ est vide et
+// prend le focus (avant même d'avoir tapé un caractère).
+function showFavoritesIfEmpty(input) {
+  if (input.value.trim().length > 0) return;
+  const list = input.parentElement.querySelector('.autocomplete-list');
+  if (!list) return;
+  const favs = getFavPlaces();
+  if (!favs.length) return;
+  list.innerHTML = '';
+  favs.slice(0, 6).forEach(label => {
+    const div = document.createElement('div');
+    div.className = 'autocomplete-item';
+    div.textContent = '★ ' + label;
+    div.addEventListener('mousedown', e => {
+      e.preventDefault();
+      input.value = label;
+      list.style.display = 'none';
+      resetResultat();
+      syncStarForInput(input);
+    });
+    list.appendChild(div);
+  });
+  list.style.display = 'block';
+}
+
 // Autocomplétion d'adresses pour un champ donné (suggestions ORS, France d'abord).
 async function onAutoComplete(input) {
   const list = input.parentElement.querySelector('.autocomplete-list');
@@ -832,6 +991,7 @@ async function onAutoComplete(input) {
           input.value = label;
           list.style.display = 'none';
           resetResultat();
+          syncStarForInput(input);
         });
         list.appendChild(div);
       });
@@ -954,6 +1114,24 @@ function consoInit() {
 }
 consoInit();
 
+// --- Nombre de passagers (partage de frais, 1 à 20) ---
+const PASS_MIN = 1, PASS_MAX = 20;
+function passagersValeur() { return parseInt(document.getElementById('passagers').value, 10) || 1; }
+function passagersSet(v) {
+  v = Math.min(PASS_MAX, Math.max(PASS_MIN, Math.round(v)));
+  document.getElementById('passagers').value = v;
+  const disp = document.getElementById('passagersVal');
+  if (disp) disp.textContent = v;
+  resetResultat();
+}
+function passagersInit() {
+  const minusBtn = document.getElementById('passMinus');
+  const plusBtn = document.getElementById('passPlus');
+  if (minusBtn) minusBtn.addEventListener('click', () => passagersSet(passagersValeur() - 1));
+  if (plusBtn) plusBtn.addEventListener('click', () => passagersSet(passagersValeur() + 1));
+}
+passagersInit();
+
 async function fetchPrix(field) {
   const url = `https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?select=avg(${field})%20as%20prix&limit=1&where=${field}%20is%20not%20null`;
   const r = await fetch(url);
@@ -986,6 +1164,43 @@ async function chargerPrix() {
 }
 chargerPrix();
 
+// Distance à vol d'oiseau (km), pour situer la station la moins chère trouvée.
+function distKm(lat1, lon1, lat2, lon2) {
+  const R = 6371, toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.asin(Math.sqrt(a));
+}
+
+// Station la moins chère à proximité du départ (rayon 15 km), pour le carburant
+// choisi. Best-effort : en cas d'échec (API indisponible, aucune station dans le
+// rayon…), on masque simplement la note, sans bloquer le reste du calcul.
+async function fetchStationMoinsChere(lat, lon, type) {
+  const field = (type === 'sp95') ? 'e10_prix' : CARB_FIELD[type];
+  if (!field) return null;
+  try {
+    const url = `https://data.economie.gouv.fr/api/records/1.0/search/?dataset=prix-des-carburants-en-france-flux-instantane-v2&geofilter.distance=${lat},${lon},15000&rows=20&sort=${field}`;
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const d = await r.json();
+    if (!d.records || !d.records.length) return null;
+    for (const rec of d.records) {
+      const f = rec.fields || {};
+      const prix = parseFloat(f[field]);
+      if (isNaN(prix) || prix <= 0) continue;
+      const geo = rec.geometry && rec.geometry.coordinates; // [lon, lat]
+      return {
+        prix,
+        nom: f.nom || '',
+        ville: f.ville || '',
+        lat: geo ? geo[1] : (f.latitude !== undefined ? parseFloat(f.latitude) : null),
+        lon: geo ? geo[0] : (f.longitude !== undefined ? parseFloat(f.longitude) : null),
+      };
+    }
+    return null;
+  } catch (e) { return null; }
+}
+
 const DEPART_FIXE = '60 rue de Dantzig, Paris';
 
 // --- Points du trajet (départ, étapes, destination), réordonnables ---
@@ -1000,10 +1215,16 @@ function makePointRow(value) {
     '<div class="param-input"><div class="autocomplete-wrap">' +
       '<input type="text" class="point-input" autocomplete="off" oninput="onPointInput(this)">' +
       '<div class="autocomplete-list"></div>' +
-    '</div></div>' +
+    '</div>' +
+    '<button type="button" class="fav-star" title="Enregistrer en favori">☆</button></div>' +
     '<button type="button" class="stop-remove" onclick="removePoint(this)" title="Supprimer cette étape">✕</button>';
-  if (value) row.querySelector('input').value = value;
+  const input = row.querySelector('.point-input');
+  if (value) input.value = value;
   row.querySelector('.drag-handle').addEventListener('pointerdown', startDrag);
+  const star = row.querySelector('.fav-star');
+  star.addEventListener('click', () => toggleFavPlace(input.value, star));
+  input.addEventListener('focus', () => showFavoritesIfEmpty(input));
+  syncStarForInput(input);
   return row;
 }
 
@@ -1058,7 +1279,7 @@ function removePoint(btn) {
 
 function onPointInput(el) {
   resetResultat();
-  if (el) onAutoComplete(el);
+  if (el) { onAutoComplete(el); syncStarForInput(el); }
 }
 
 // Échange départ ↔ destination (disponible uniquement sans étape).
@@ -1068,6 +1289,7 @@ function swapItinerary() {
   const tmp = inputs[0].value;
   inputs[0].value = inputs[1].value;
   inputs[1].value = tmp;
+  inputs.forEach(syncStarForInput);
   resetResultat();
 }
 
@@ -1367,8 +1589,24 @@ async function calculer() {
     }
     const totalA  = peage !== null ? coutA + peage : null;
     const totalAR = peage !== null ? (coutA + peage) * 2 : null;
-    document.getElementById('r-total-a').textContent  = totalA  !== null ? fmtEurPeage(totalA)  : fmtEurPeage(coutA);
-    document.getElementById('r-total-ar').textContent = totalAR !== null ? fmtEurPeage(totalAR) : fmtEurPeage(coutA * 2);
+    const totalAFinal  = totalA  !== null ? totalA  : coutA;
+    const totalARFinal = totalAR !== null ? totalAR : coutA * 2;
+    document.getElementById('r-total-a').textContent  = fmtEurPeage(totalAFinal);
+    document.getElementById('r-total-ar').textContent = fmtEurPeage(totalARFinal);
+
+    // Partage de frais entre passagers (si plus d'une personne).
+    const passagers = passagersValeur();
+    const perPersonRow = document.getElementById('perPersonRow');
+    const perPersonSpacer = document.getElementById('perPersonSpacer');
+    if (passagers > 1) {
+      document.getElementById('r-per-a').textContent  = fmtEurPeage(totalAFinal / passagers);
+      document.getElementById('r-per-ar').textContent = fmtEurPeage(totalARFinal / passagers);
+      perPersonRow.style.display = '';
+      perPersonSpacer.style.display = '';
+    } else {
+      perPersonRow.style.display = 'none';
+      perPersonSpacer.style.display = 'none';
+    }
 
     const fmtKm = n => Math.round(n).toLocaleString('fr-FR') + ' km';
     document.getElementById('r-dist-a').textContent    = fmtKm(distA);
@@ -1393,6 +1631,27 @@ async function calculer() {
     const endObj = JSON.stringify({place: arrivee, lat: c2[1], lng: c2[0]});
     document.getElementById('vinciLink').href =
       `https://www.vinci-autoroutes.com/fr/mon-trajet/?area=service&filter-status=0&start=${encodeURIComponent(startObj)}&end=${encodeURIComponent(endObj)}`;
+
+    // Station la moins chère à proximité du départ (best-effort, ne bloque rien).
+    const carburantType = document.getElementById('carburant').value;
+    const cheapestNote = document.getElementById('cheapestNote');
+    const station = await fetchStationMoinsChere(c1[1], c1[0], carburantType);
+    if (station) {
+      cheapestNote.textContent = '';
+      cheapestNote.appendChild(document.createTextNode('⛽ Moins cher près du départ : '));
+      const strong = document.createElement('strong');
+      strong.textContent = station.prix.toFixed(3) + ' €/L';
+      cheapestNote.appendChild(strong);
+      const lieu = [station.nom, station.ville].filter(Boolean).join(' — ');
+      if (lieu) cheapestNote.appendChild(document.createTextNode(' à ' + lieu));
+      if (station.lat !== null && station.lon !== null) {
+        const dKm = distKm(c1[1], c1[0], station.lat, station.lon);
+        if (isFinite(dKm)) cheapestNote.appendChild(document.createTextNode(' (' + dKm.toFixed(1) + ' km)'));
+      }
+      cheapestNote.style.display = 'block';
+    } else {
+      cheapestNote.style.display = 'none';
+    }
 
     document.getElementById('sectionResultats').style.display = 'block';
     document.getElementById('sectionResultats').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
