@@ -358,6 +358,11 @@
       /* L'alignement conso/passagers ne concerne que l'ordi (pas de règle sur mobile). */
       .conso-line { justify-content: center; width: auto; margin: 0; }
       .passagers-line { justify-content: center; width: auto; margin: 0; gap: 12px; }
+      /* Resserre les lignes de résultats (trop de blanc vertical sur petit écran). */
+      .res-table { border-spacing: 0 3px; }
+      .res-table tbody tr td { padding: 6px 10px; }
+      #r-cout-a.has-per-person, #r-cout-ar.has-per-person { padding-bottom: 24px; }
+      .per-person-note { bottom: 3px; }
     }
 
     /* Autocomplete */
