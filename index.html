@@ -1561,7 +1561,9 @@ function onDragMove(e) {
     const outside = (rect.bottom + dy) < cardRect.top || (rect.top + dy) > cardRect.bottom;
     const msg = ensureDragOutsideMsg();
     if (outside) {
-      msg.style.left = e.clientX + 'px';
+      // Centré horizontalement (pas sur le curseur) : sur mobile, suivre le
+      // doigt peut coller le message contre le bord de l'écran et le tronquer.
+      msg.style.left = '50%';
       msg.style.top = (e.clientY - 34) + 'px';
       msg.classList.add('show');
     } else {

@@ -905,7 +905,7 @@
     .res-table thead th {
       font-family: 'Chewy', cursive !important;
       font-weight: 400 !important;
-      font-size: 16px !important;
+      font-size: 17px !important;
       text-transform: none !important;
       letter-spacing: 0.01em !important;
     }
@@ -913,7 +913,7 @@
       color: #8447d6 !important;
       background: none !important;
     }
-    .res-table tbody tr td { background: #fdf6e3 !important; color: #1d1d1b !important; font-weight: 700 !important; }
+    .res-table tbody tr td { background: #fff8e1 !important; color: #1d1d1b !important; font-weight: 700 !important; font-size: 14.5px !important; }
     .res-table tr.group-header td { background: none !important; }
     .res-table tbody tr td:first-child { color: #1d1d1b !important; font-weight: 700 !important; }
     .res-table tr.group-header td:first-child { color: #8447d6 !important; }
@@ -921,11 +921,11 @@
     .res-table tbody tr td:nth-child(3) { background: #e2f6e4 !important; }
     .res-table tr.group-header td:nth-child(2), .res-table tr.group-header td:nth-child(3) { background: none !important; }
     .res-table tr.group-row td { border-color: #1d1d1b !important; border-width: 1.25px !important; }
-    .per-person-note { color: #5b5b56 !important; }
+    .per-person-note { color: #5b5b56 !important; font-size: 10.5px !important; }
 
     .cheapest-note {
       background: #fff8e1 !important;
-      border: 1.5px solid #1d1d1b !important;
+      border: 1.75px solid #f4a900 !important;
       border-radius: 16px 10px 16px 10px / 10px 16px 10px 16px !important;
     }
     .cheapest-title { color: #1d1d1b !important; }
@@ -1724,7 +1724,9 @@ function onDragMove(e) {
     const outside = (rect.bottom + dy) < cardRect.top || (rect.top + dy) > cardRect.bottom;
     const msg = ensureDragOutsideMsg();
     if (outside) {
-      msg.style.left = e.clientX + 'px';
+      // Centré horizontalement (pas sur le curseur) : sur mobile, suivre le
+      // doigt peut coller le message contre le bord de l'écran et le tronquer.
+      msg.style.left = '50%';
       msg.style.top = (e.clientY - 34) + 'px';
       msg.classList.add('show');
     } else {
