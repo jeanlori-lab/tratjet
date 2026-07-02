@@ -892,6 +892,14 @@
       box-shadow: 3px 3px 0 rgba(29,29,27,0.7) !important;
       letter-spacing: 0.03em !important;
     }
+    /* Bouton teinté pendant le calcul (sinon le fond jaune plein masquait l'état "disabled"). */
+    .btn:disabled {
+      background: #ffe9b8 !important;
+      color: #a89860 !important;
+      border-color: #cbbf94 !important;
+      box-shadow: none !important;
+      cursor: not-allowed !important;
+    }
 
     .link-btn { color: #2f6de0 !important; font-weight: 700 !important; }
     .swap-btn { background: #fff !important; border: 1.25px solid #1d1d1b !important; color: #8447d6 !important; }
