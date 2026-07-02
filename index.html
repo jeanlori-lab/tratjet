@@ -351,7 +351,7 @@
       /* Resserre les lignes de résultats (trop de blanc vertical sur petit écran). */
       .res-table { border-spacing: 0 3px; }
       .res-table tbody tr td { padding: 6px 10px; }
-      #r-cout-a.has-per-person, #r-cout-ar.has-per-person { padding-bottom: 24px; }
+      #r-cout.has-per-person { padding-bottom: 24px; }
       .per-person-note { bottom: 3px; }
     }
 
@@ -603,19 +603,43 @@
       border-collapse: separate;
       border-spacing: 0 6px;
     }
-    .res-table thead th {
-      font-size: 13px;
+
+    /* Bascule Aller simple / Aller-retour : remplace les deux colonnes du
+       tableau par une seule valeur, qu'on peut basculer d'un mode à
+       l'autre (seul le coût carburant garde un rappel de l'autre mode). */
+    .ar-toggle {
+      display: flex;
+      background: #eef2f6;
+      border-radius: 999px;
+      padding: 3px;
+      margin-bottom: 12px;
+    }
+    .ar-toggle-btn {
+      flex: 1;
+      text-align: center;
+      padding: 7px 0;
+      font-size: 12.5px;
       font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: #90a4ae;
-      padding: 0 10px 0;
+      border-radius: 999px;
+      cursor: pointer;
+      color: #607080;
+      background: none;
+      border: none;
+      font-family: inherit;
+      transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+    .ar-toggle-btn.active {
+      background: #2196f3;
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(33,150,243,0.35);
+    }
+    .cost-callout {
+      margin-top: 6px;
+      font-size: 11.5px;
+      color: #607080;
       text-align: center;
     }
-    /* Rapproche encore l'en-tête (Aller simple/Aller-retour) du bloc Trajet
-       juste en dessous, en compensant le border-spacing vertical du tableau. */
-    .res-table thead tr { transform: translateY(6px); }
-    .res-table thead th:first-child { text-align: left; }
+    .cost-callout strong { color: #1a2433; }
 
     .res-table tbody tr td {
       padding: 10px 12px;
@@ -631,20 +655,15 @@
       font-weight: 600;
       color: #1a2433;
     }
-    .res-table tbody tr td:nth-child(2) {
+    .res-table tbody tr td:last-child {
       background: #e8f4ff;
-    }
-    .res-table tbody tr td:nth-child(3) {
-      background: #e8f8ee;
       border-radius: 0 10px 10px 0;
     }
-    .res-table thead th:nth-child(2) { color: #1976d2; }
-    .res-table thead th:nth-child(3) { color: #2e7d32; }
 
     /* Coût par personne (partage de frais) : sous-ligne discrète dans la même
        cellule que le coût carburant, plutôt qu'une ligne séparée. */
-    #r-cout-a, #r-cout-ar { position: relative; }
-    #r-cout-a.has-per-person, #r-cout-ar.has-per-person { padding-bottom: 34px; }
+    #r-cout { position: relative; }
+    #r-cout.has-per-person { padding-bottom: 34px; }
     .per-person-note {
       position: absolute;
       left: 4px; right: 4px;
@@ -714,21 +733,21 @@
       color: #90a4ae;
       border-bottom: none;
     }
-    /* Rapproche "Aller simple"/"Aller-retour" du bloc Trajet juste en dessous. */
+    /* Rapproche le bandeau "Trajet" du haut du tableau. */
     .res-table tbody tr.group-header:first-of-type td { padding-top: 0; }
     .res-table tr.group-row td { border-radius: 0; }
     .res-table tr.group-row td:first-child { border-radius: 0; }
-    .res-table tr.group-row td:nth-child(3) { border-radius: 0; }
+    .res-table tr.group-row td:last-child { border-radius: 0; }
     .res-table tr.group-first td:first-child { border-radius: 10px 0 0 0; }
-    .res-table tr.group-first td:nth-child(3) { border-radius: 0 10px 0 0; }
+    .res-table tr.group-first td:last-child { border-radius: 0 10px 0 0; }
     .res-table tr.group-last td:first-child { border-radius: 0 0 0 10px; }
-    .res-table tr.group-last td:nth-child(3) { border-radius: 0 0 10px 0; }
+    .res-table tr.group-last td:last-child { border-radius: 0 0 10px 0; }
 
     /* Contours subtils pour séparer visuellement les blocs Trajet et Coût & conso.
        Bordure continue autour de chaque ligne (pas de trait vertical interne). */
     .res-table tr.group-row td { border-top: 1px solid #dbe3ec; border-bottom: 1px solid #dbe3ec; }
     .res-table tr.group-row td:first-child { border-left: 1px solid #dbe3ec; }
-    .res-table tr.group-row td:nth-child(3) { border-right: 1px solid #dbe3ec; }
+    .res-table tr.group-row td:last-child { border-right: 1px solid #dbe3ec; }
 
     .cheapest-note {
       text-align: left;
@@ -888,43 +907,37 @@
   <!-- Résultats -->
   <div class="card resultats" id="sectionResultats" style="margin-top:14px;">
     <div class="card-title">Résultats</div>
+    <div class="ar-toggle" id="arToggle">
+      <button type="button" class="ar-toggle-btn" data-mode="simple" onclick="setResultMode('simple')">Aller simple</button>
+      <button type="button" class="ar-toggle-btn active" data-mode="ar" onclick="setResultMode('ar')">Aller-retour</button>
+    </div>
     <table class="res-table">
-      <thead>
-        <tr>
-          <th></th>
-          <th>Aller simple</th>
-          <th>Aller-retour</th>
-        </tr>
-      </thead>
       <tbody>
         <tr class="group-header">
-          <td colspan="3">Trajet</td>
+          <td colspan="2">Trajet</td>
         </tr>
         <tr class="group-row group-first">
           <td>Distance</td>
-          <td id="r-dist-a">—</td>
-          <td id="r-dist-ar">—</td>
+          <td id="r-dist">—</td>
         </tr>
         <tr class="group-row group-last">
           <td>Durée</td>
-          <td id="r-duree-a">—</td>
-          <td id="r-duree-ar">—</td>
+          <td id="r-duree">—</td>
         </tr>
         <tr class="group-header">
-          <td colspan="3">Coût & conso</td>
+          <td colspan="2">Coût & conso</td>
         </tr>
         <tr class="group-row group-first">
           <td>Coût carburant</td>
-          <td id="r-cout-a">—</td>
-          <td id="r-cout-ar">—</td>
+          <td id="r-cout">—</td>
         </tr>
         <tr class="group-row group-last">
           <td>Litres consommés</td>
-          <td id="r-litres-a">—</td>
-          <td id="r-litres-ar">—</td>
+          <td id="r-litres">—</td>
         </tr>
       </tbody>
     </table>
+    <div class="cost-callout" id="costCallout"></div>
     <div class="maps-wrap" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
     <a class="maps-link" id="mapsLink" href="#" target="_blank"
        style="width:220px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;">
@@ -1784,6 +1797,51 @@ function formatDuree(sec) {
   return h > 0 ? `${h}h${String(m).padStart(2,'0')}` : `${m} min`;
 }
 
+function fmtKm(n)  { return Math.round(n).toLocaleString('fr-FR') + ' km'; }
+function fmtEur(n) { return n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €'; }
+function fmtL(n)   { return n.toLocaleString('fr-FR', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' L'; }
+
+// --- Bascule Aller simple / Aller-retour dans le tableau de résultats ---
+let resultMode = 'ar'; // 'simple' | 'ar'
+let lastResultData = null;
+
+function setResultMode(mode) {
+  resultMode = mode;
+  document.querySelectorAll('.ar-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  if (lastResultData) renderResultMode();
+}
+
+function renderResultMode() {
+  const d = lastResultData;
+  const isAR = resultMode === 'ar';
+  document.getElementById('r-dist').textContent   = fmtKm(isAR ? d.distA * 2 : d.distA);
+  document.getElementById('r-duree').textContent  = formatDuree(isAR ? d.dureeSec * 2 : d.dureeSec);
+  document.getElementById('r-litres').textContent = fmtL(isAR ? d.litresA * 2 : d.litresA);
+
+  // Coût carburant : seule valeur qui garde un rappel de l'autre mode
+  // (c'est la donnée jugée pertinente à comparer aller vs aller-retour).
+  const coutAffiche = isAR ? d.coutA * 2 : d.coutA;
+  const rCout = document.getElementById('r-cout');
+  rCout.textContent = fmtEur(coutAffiche);
+  rCout.classList.toggle('has-per-person', d.passagers === 0 || d.passagers > 1);
+  if (d.passagers === 0) {
+    const note = document.createElement('div');
+    note.className = 'per-person-note';
+    note.textContent = '0 € / pers., la voiture voyage seule 🥲';
+    rCout.appendChild(note);
+  } else if (d.passagers > 1) {
+    const note = document.createElement('div');
+    note.className = 'per-person-note';
+    note.textContent = fmtEur(coutAffiche / d.passagers) + ' / pers.';
+    rCout.appendChild(note);
+  }
+
+  const callout = document.getElementById('costCallout');
+  callout.innerHTML = isAR
+    ? 'Aller simple : <strong>' + fmtEur(d.coutA) + '</strong> · ' + fmtL(d.litresA)
+    : 'Aller-retour : <strong>' + fmtEur(d.coutA * 2) + '</strong> · ' + fmtL(d.litresA * 2);
+}
+
 async function calculer() {
   hideError();
   const apiKey  = document.getElementById('apiKey').value.trim();
@@ -1810,45 +1868,10 @@ async function calculer() {
     const distA   = route.distanceKm;
     const litresA = (distA * conso) / 100;
     const coutA   = litresA * prixActuel;
-
-    const fmtKm = n => Math.round(n).toLocaleString('fr-FR') + ' km';
-    document.getElementById('r-dist-a').textContent    = fmtKm(distA);
-    document.getElementById('r-dist-ar').textContent   = fmtKm(distA * 2);
-    document.getElementById('r-duree-a').textContent   = formatDuree(route.dureeSec);
-    document.getElementById('r-duree-ar').textContent  = formatDuree(route.dureeSec * 2);
-    const fmtEur = n => n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
-    const rCoutA  = document.getElementById('r-cout-a');
-    const rCoutAR = document.getElementById('r-cout-ar');
-    rCoutA.textContent  = fmtEur(coutA);
-    rCoutAR.textContent = fmtEur(coutA * 2);
-
-    // Partage de frais entre passagers : sous-ligne discrète dans la cellule du coût carburant.
     const passagers = passagersValeur();
-    rCoutA.classList.toggle('has-per-person', passagers === 0 || passagers > 1);
-    rCoutAR.classList.toggle('has-per-person', passagers === 0 || passagers > 1);
-    if (passagers === 0) {
-      const soloMsg = '0 € / pers., la voiture voyage seule 🥲';
-      const noteA = document.createElement('div');
-      noteA.className = 'per-person-note';
-      noteA.textContent = soloMsg;
-      rCoutA.appendChild(noteA);
-      const noteAR = document.createElement('div');
-      noteAR.className = 'per-person-note';
-      noteAR.textContent = soloMsg;
-      rCoutAR.appendChild(noteAR);
-    } else if (passagers > 1) {
-      const noteA = document.createElement('div');
-      noteA.className = 'per-person-note';
-      noteA.textContent = fmtEur(coutA / passagers) + ' / pers.';
-      rCoutA.appendChild(noteA);
-      const noteAR = document.createElement('div');
-      noteAR.className = 'per-person-note';
-      noteAR.textContent = fmtEur((coutA * 2) / passagers) + ' / pers.';
-      rCoutAR.appendChild(noteAR);
-    }
-    const fmtL = n => n.toLocaleString('fr-FR', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' L';
-    document.getElementById('r-litres-a').textContent  = fmtL(litresA);
-    document.getElementById('r-litres-ar').textContent = fmtL(litresA * 2);
+
+    lastResultData = { distA, dureeSec: route.dureeSec, litresA, coutA, passagers };
+    renderResultMode();
 
     // Itinéraire Maps : force le mode voiture (travelmode=driving) + étapes.
     const origin = encodeURIComponent(lieux[0]);
