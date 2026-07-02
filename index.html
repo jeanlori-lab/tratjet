@@ -416,6 +416,25 @@
     }
     .swap-btn:hover { background: #eef4fb; color: #1976d2; border-color: #cfe0f3; box-shadow: 0 0 0 3px rgba(33,150,243,0.10); }
     .swap-btn:active { transform: translateY(-50%) scale(0.9); }
+    /* Info-bulle instantanée (pas d'attente contrairement au title natif du navigateur). */
+    .swap-btn::after {
+      content: attr(aria-label);
+      position: absolute;
+      bottom: calc(100% + 7px);
+      right: 0;
+      background: #1a2433;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 9px;
+      border-radius: 6px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.08s ease;
+      z-index: 30;
+    }
+    .swap-btn:hover::after, .swap-btn:focus-visible::after { opacity: 1; }
     /* Effet sympa : survoler les flèches éclaire les deux encadrés */
     .points-wrap:has(.swap-btn:hover) .point-input {
       border-color: #93b8e6;
@@ -749,7 +768,7 @@
       <div class="points-wrap">
         <div id="points"></div>
         <!-- Inverser départ ↔ destination (visible seulement sans étape) -->
-        <button type="button" class="swap-btn" id="swapBtn" onclick="swapItinerary()" title="Inverser départ et destination" aria-label="Inverser départ et destination">⇅</button>
+        <button type="button" class="swap-btn" id="swapBtn" onclick="swapItinerary()" aria-label="Inverser départ et destination">⇅</button>
       </div>
 
       <div class="itinerary-controls">
