@@ -532,6 +532,23 @@
     }
     /* Les autres étapes glissent doucement à leur nouvelle place (animation FLIP) */
     .point-row.sliding { transition: transform 0.18s ease; }
+    /* Message qui suit le doigt/curseur quand une étape est glissée hors du bloc Paramètres. */
+    .drag-outside-msg {
+      position: fixed;
+      transform: translate(-50%, -100%);
+      background: #1a2433;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 12px;
+      border-radius: 8px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease;
+      z-index: 999;
+    }
+    .drag-outside-msg.show { opacity: 1; }
 
     /* Bouton */
     .btn {
@@ -1282,10 +1299,31 @@ function showPassMaxMessage() {
   clearTimeout(passMaxMsgTimer);
   passMaxMsgTimer = setTimeout(() => bubble.classList.remove('show'), 2600);
 }
+// Message quand on clique sur - alors qu'on est déjà à 0.
+const PASS_MIN_MESSAGE = "Ta voiture voyage seule ?";
+let passMinMsgTimer = null;
+function showPassMinMessage() {
+  const minusBtn = document.getElementById('passMinus');
+  if (!minusBtn || !minusBtn.parentElement) return;
+  let bubble = document.getElementById('passMinMsg');
+  if (!bubble) {
+    bubble = document.createElement('div');
+    bubble.id = 'passMinMsg';
+    bubble.className = 'pass-max-msg';
+    minusBtn.parentElement.appendChild(bubble);
+  }
+  bubble.textContent = PASS_MIN_MESSAGE;
+  bubble.classList.add('show');
+  clearTimeout(passMinMsgTimer);
+  passMinMsgTimer = setTimeout(() => bubble.classList.remove('show'), 2600);
+}
 function passagersInit() {
   const minusBtn = document.getElementById('passMinus');
   const plusBtn = document.getElementById('passPlus');
-  holdRepeat(minusBtn, () => passagersSet(passagersValeur() - 1));
+  holdRepeat(minusBtn, () => {
+    if (passagersValeur() <= PASS_MIN) { showPassMinMessage(); return; }
+    passagersSet(passagersValeur() - 1);
+  });
   holdRepeat(plusBtn, () => {
     if (passagersValeur() >= PASS_MAX) { showPassMaxMessage(); return; }
     passagersSet(passagersValeur() + 1);
@@ -1505,11 +1543,39 @@ function onDragMove(e) {
   const rect = dragRow.getBoundingClientRect();
   const dy = (e.clientY - dragGrabOffset) - (rect.top + rect.height / 2);
   dragRow.style.transform = `translateY(${dy}px) scale(1.02)`;
+  // On ne bloque pas le glisser hors du bloc Paramètres (on peut descendre
+  // jusqu'en bas de la page), mais on prévient avec un message qui suit le curseur.
+  const card = dragRow.closest('.card');
+  if (card) {
+    const cardRect = card.getBoundingClientRect();
+    const outside = (rect.bottom + dy) < cardRect.top || (rect.top + dy) > cardRect.bottom;
+    const msg = ensureDragOutsideMsg();
+    if (outside) {
+      msg.style.left = e.clientX + 'px';
+      msg.style.top = (e.clientY - 34) + 'px';
+      msg.classList.add('show');
+    } else {
+      msg.classList.remove('show');
+    }
+  }
+}
+function ensureDragOutsideMsg() {
+  let el = document.getElementById('dragOutsideMsg');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'dragOutsideMsg';
+    el.className = 'drag-outside-msg';
+    el.textContent = 'Non mais tu vas où comme ça ?';
+    document.body.appendChild(el);
+  }
+  return el;
 }
 function endDrag() {
   const dr = dragRow;
   dragRow = null;
   document.removeEventListener('pointermove', onDragMove);
+  const outMsg = document.getElementById('dragOutsideMsg');
+  if (outMsg) outMsg.classList.remove('show');
   // La ligne se replace en douceur à son emplacement final.
   if (dr) {
     dr.style.transition = 'transform 0.15s ease';
