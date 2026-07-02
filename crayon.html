@@ -581,9 +581,12 @@
       text-transform: uppercase;
       letter-spacing: 0.07em;
       color: #90a4ae;
-      padding: 0 10px 4px;
+      padding: 0 10px 0;
       text-align: center;
     }
+    /* Rapproche encore l'en-tête (Aller simple/Aller-retour) du bloc Trajet
+       juste en dessous, en compensant le border-spacing vertical du tableau. */
+    .res-table thead tr { transform: translateY(6px); }
     .res-table thead th:first-child { text-align: left; }
 
     .res-table tbody tr td {
