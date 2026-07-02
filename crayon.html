@@ -1647,7 +1647,14 @@ function removePoint(btn) {
 
 function onPointInput(el) {
   resetResultat();
-  if (el) { onAutoComplete(el); syncStarForInput(el); }
+  if (el) {
+    // Champ vidé (efface tout le texte) : montre directement les favoris,
+    // sans attendre que l'utilisateur sorte du champ et reclique dedans.
+    // (onAutoComplete masquerait sinon la liste pour un texte trop court.)
+    if (el.value.trim().length === 0) showFavoritesIfEmpty(el);
+    else onAutoComplete(el);
+    syncStarForInput(el);
+  }
 }
 
 // Échange départ ↔ destination (disponible uniquement sans étape).
