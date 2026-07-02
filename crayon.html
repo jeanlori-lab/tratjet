@@ -775,18 +775,17 @@
       border-radius: 12px 20px 12px 20px / 20px 12px 20px 12px !important;
       position: relative !important;
     }
-    /* Contour "dessiné à la main" : deux traits légèrement décalés/tournés
-       plutôt qu'un seul contour parfaitement net. */
-    .section::before, .section::after {
+    /* Contour "dessiné à la main" : un seul trait, très légèrement tourné,
+       plutôt qu'un contour parfaitement net. */
+    .section::before {
       content: '' !important;
       position: absolute !important;
       inset: 0 !important;
       border: 1.25px solid #f4a900 !important;
       border-radius: inherit !important;
       pointer-events: none !important;
+      transform: rotate(-0.45deg) !important;
     }
-    .section::before { transform: rotate(-0.6deg) scale(1.004) !important; }
-    .section::after { transform: rotate(0.5deg) scale(0.996) !important; opacity: 0.6 !important; }
     .param-label { color: #1d1d1b !important; font-weight: 700 !important; font-size: 16px !important; }
 
     input[type="text"], input[type="number"], select {
