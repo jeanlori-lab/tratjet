@@ -639,6 +639,8 @@
       color: #90a4ae;
       border-bottom: none;
     }
+    /* Rapproche "Aller simple"/"Aller-retour" du bloc Trajet juste en dessous. */
+    .res-table tbody tr.group-header:first-of-type td { padding-top: 0; }
     .res-table tr.group-row td { border-radius: 0; }
     .res-table tr.group-row td:first-child { border-radius: 0; }
     .res-table tr.group-row td:nth-child(3) { border-radius: 0; }
@@ -659,7 +661,7 @@
       border: 1px solid #eef2f6;
       border-radius: 14px;
       padding: 12px 14px;
-      margin-top: 16px;
+      margin-top: 22px;
     }
     .cheapest-header {
       display: flex;
@@ -848,7 +850,6 @@
         </tr>
       </tbody>
     </table>
-    <div class="cheapest-note" id="cheapestNote" style="display:none;"></div>
     <div class="maps-wrap" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
     <a class="maps-link" id="mapsLink" href="#" target="_blank"
        style="width:220px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;">
@@ -861,6 +862,7 @@
         Voir le prix des péages
     </a>
 </div>
+    <div class="cheapest-note" id="cheapestNote" style="display:none;"></div>
   </div>
 
 </div>
