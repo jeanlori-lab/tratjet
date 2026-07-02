@@ -1380,7 +1380,7 @@ function refreshPoints() {
       label.textContent = '';
       input.placeholder = 'Étape ' + i; rm.style.display = '';
       row.classList.add('is-stop');
-      row.classList.remove('shift-for-handles');
+      row.classList.toggle('shift-for-handles', showHandles);
     }
   });
   // Les flèches d'inversion n'ont de sens que sans étape (départ + destination).
