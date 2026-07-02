@@ -89,7 +89,10 @@
       position: relative;
     }
     .param-row:last-child { border-bottom: none; }
-    .point-row { border-bottom: none; }
+    .point-row { border-bottom: none; transition: margin-left 0.15s ease; }
+    /* Départ/Arrivée décalés légèrement dès qu'il y a une étape, pour laisser
+       un peu d'air aux poignées de glisser-déposer (sinon collées au bord). */
+    .point-row.shift-for-handles { margin-left: 8px; }
     /* Séparations plus marquées entre Carburant / Consommation / Passagers : plus
        d'espace vertical et un trait un peu plus visible et plus long. */
     .carburant-row, .conso-row, .passagers-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
@@ -1366,15 +1369,18 @@ function refreshPoints() {
       label.textContent = 'Départ';
       input.placeholder = 'Adresse de départ'; rm.style.display = 'none';
       row.classList.remove('is-stop');
+      row.classList.toggle('shift-for-handles', showHandles);
     } else if (i === rows.length - 1) {
       label.textContent = 'Arrivée';
       input.placeholder = 'Lieu de vacances'; rm.style.display = 'none';
       row.classList.remove('is-stop');
+      row.classList.toggle('shift-for-handles', showHandles);
     } else {
       // Étape : le numéro passe en placeholder dans l'encadré, ✕ à droite.
       label.textContent = '';
       input.placeholder = 'Étape ' + i; rm.style.display = '';
       row.classList.add('is-stop');
+      row.classList.remove('shift-for-handles');
     }
   });
   // Les flèches d'inversion n'ont de sens que sans étape (départ + destination).
