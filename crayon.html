@@ -639,6 +639,8 @@
       color: #90a4ae;
       border-bottom: none;
     }
+    /* Rapproche "Aller simple"/"Aller-retour" du bloc Trajet juste en dessous. */
+    .res-table tbody tr.group-header:first-of-type td { padding-top: 0; }
     .res-table tr.group-row td { border-radius: 0; }
     .res-table tr.group-row td:first-child { border-radius: 0; }
     .res-table tr.group-row td:nth-child(3) { border-radius: 0; }
@@ -750,9 +752,22 @@
 
     .section {
       background: #fff8e1 !important;
-      border: 1.25px solid #f4a900 !important;
+      border: none !important;
       border-radius: 12px 20px 12px 20px / 20px 12px 20px 12px !important;
+      position: relative !important;
     }
+    /* Contour "dessiné à la main" : deux traits légèrement décalés/tournés
+       plutôt qu'un seul contour parfaitement net. */
+    .section::before, .section::after {
+      content: '' !important;
+      position: absolute !important;
+      inset: 0 !important;
+      border: 1.25px solid #f4a900 !important;
+      border-radius: inherit !important;
+      pointer-events: none !important;
+    }
+    .section::before { transform: rotate(-0.6deg) scale(1.004) !important; }
+    .section::after { transform: rotate(0.5deg) scale(0.996) !important; opacity: 0.6 !important; }
     .param-label { color: #1d1d1b !important; font-weight: 700 !important; font-size: 16px !important; }
 
     input[type="text"], input[type="number"], select {
