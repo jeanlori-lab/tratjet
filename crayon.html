@@ -876,7 +876,7 @@
     #consoMinus, #passMinus { color: #e63946 !important; }
     #consoPlus, #passPlus { color: #2a9d3a !important; }
     .conso-arrow:hover, .pass-arrow:hover { background: #fff3cd !important; }
-    #consoVal.conso-val-input, .passagers-value { color: #5b5b56 !important; font-weight: 700 !important; font-family: 'Comic Neue', sans-serif !important; background: transparent !important; border-width: 0.5px !important; font-size: 20px !important; }
+    #consoVal.conso-val-input, .passagers-value { color: #5b5b56 !important; font-weight: 700 !important; font-family: 'Comic Neue', sans-serif !important; background: transparent !important; border-width: 0.5px !important; font-size: 21px !important; }
     .conso-value .roulette-unit { color: #5b5b56 !important; }
     .carburant-row, .conso-row, .passagers-row { border-bottom: 2px dotted #b9b4a5 !important; }
     .passagers-row { border-bottom: none !important; }
@@ -1460,7 +1460,7 @@ function showPassMaxMessage() {
   passMaxMsgIndex++;
   bubble.classList.add('show');
   clearTimeout(passMaxMsgTimer);
-  passMaxMsgTimer = setTimeout(() => bubble.classList.remove('show'), 2600);
+  passMaxMsgTimer = setTimeout(() => bubble.classList.remove('show'), 4000);
 }
 // Message quand on clique sur - alors qu'on est déjà à 0.
 const PASS_MIN_MESSAGE = "Ta voiture voyage seule ?";
