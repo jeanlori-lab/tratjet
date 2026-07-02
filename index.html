@@ -7,7 +7,7 @@
   <title>Copilote budget 2</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Chewy&family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -711,6 +711,126 @@
     }
     .maps-link:hover { background: #bbdefb; }
     #vinciLink:hover { background: #cce8cc !important; }
+
+    /* ============ THÈME "CRAYONS D'ÉCOLIER" ============ */
+    body {
+      font-family: 'Comic Neue', sans-serif !important;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(244,169,0,0.14) 0 90px, transparent 91px),
+        radial-gradient(circle at 88% 30%, rgba(47,109,224,0.12) 0 70px, transparent 71px),
+        radial-gradient(circle at 20% 85%, rgba(42,157,58,0.12) 0 80px, transparent 81px),
+        radial-gradient(circle at 85% 80%, rgba(230,57,70,0.10) 0 60px, transparent 61px),
+        #fefaf0 !important;
+      color: #1d1d1b !important;
+    }
+    .header h1 {
+      font-family: 'Chewy', cursive !important;
+      font-weight: 400 !important;
+      font-size: 38px !important;
+      color: #e63946 !important;
+      text-shadow: 2.5px 2.5px 0 #ffd166 !important;
+    }
+    .header p { color: #5b5b56 !important; font-weight: 700 !important; }
+
+    /* Le truc "dessiné à la main" : rayons volontairement irréguliers */
+    .card {
+      background: #ffffff !important;
+      border: 3px solid #1d1d1b !important;
+      border-radius: 255px 18px 225px 18px / 18px 225px 18px 255px !important;
+      box-shadow: 4px 5px 0 rgba(29,29,27,0.85) !important;
+    }
+    .card-title { color: #8447d6 !important; letter-spacing: 0.1em !important; }
+
+    .section {
+      background: #fff8e1 !important;
+      border: 2px dashed #f4a900 !important;
+      border-radius: 18px 225px 18px 255px / 255px 18px 225px 18px !important;
+    }
+    .param-label { color: #1d1d1b !important; font-weight: 700 !important; font-size: 16px !important; }
+
+    input[type="text"], input[type="number"], select {
+      background: #fff !important;
+      border: 2.5px solid #1d1d1b !important;
+      color: #1d1d1b !important;
+      border-radius: 255px 12px 225px 12px / 12px 225px 12px 255px !important;
+      font-weight: 700 !important;
+      font-family: 'Comic Neue', sans-serif !important;
+    }
+    input[type="text"]::placeholder { color: #a8a49a !important; font-weight: 400 !important; }
+    input[type="text"]:focus, select:focus {
+      border-color: #2f6de0 !important;
+      box-shadow: 0 0 0 3px rgba(47,109,224,0.2) !important;
+    }
+
+    .prix-actuel { color: #5b5b56 !important; font-weight: 700 !important; }
+    .prix-actuel #prixAffiche { color: #2a9d3a !important; }
+
+    .conso-arrow, .pass-arrow {
+      background: #fff !important;
+      border: 2.5px solid #1d1d1b !important;
+      box-shadow: 2px 2px 0 rgba(29,29,27,0.8) !important;
+      border-radius: 255px 10px 225px 10px / 10px 225px 10px 255px !important;
+      font-weight: 700 !important;
+    }
+    #consoMinus, #passMinus { color: #e63946 !important; }
+    #consoPlus, #passPlus { color: #2a9d3a !important; }
+    .conso-arrow:hover, .pass-arrow:hover { background: #fff3cd !important; }
+    #consoVal.conso-val-input, .passagers-value { color: #2f6de0 !important; font-weight: 700 !important; font-family: 'Comic Neue', sans-serif !important; background: transparent !important; }
+    .conso-value .roulette-unit { color: #5b5b56 !important; }
+    .carburant-row, .conso-row, .passagers-row { border-bottom: 2px dotted #b9b4a5 !important; }
+    .passagers-row { border-bottom: none !important; }
+
+    .btn {
+      background: #ffd166 !important;
+      color: #1d1d1b !important;
+      font-family: 'Chewy', cursive !important;
+      font-weight: 400 !important;
+      font-size: 19px !important;
+      border: 3px solid #1d1d1b !important;
+      border-radius: 255px 20px 225px 20px / 20px 225px 20px 255px !important;
+      box-shadow: 4px 4px 0 rgba(29,29,27,0.85) !important;
+      letter-spacing: 0.03em !important;
+    }
+
+    .link-btn { color: #2f6de0 !important; font-weight: 700 !important; }
+    .swap-btn { background: #fff !important; border: 2px solid #1d1d1b !important; color: #8447d6 !important; }
+    .fav-star { color: #b9b4a5 !important; }
+    .fav-star.active { color: #f4a900 !important; }
+    .drag-handle { color: #b9b4a5 !important; }
+
+    .res-table thead th:nth-child(2) { color: #2f6de0 !important; }
+    .res-table thead th:nth-child(3) { color: #2a9d3a !important; }
+    .res-table tr.group-header td { color: #8447d6 !important; }
+    .res-table tbody tr td { background: #fdf6e3 !important; color: #1d1d1b !important; font-weight: 700 !important; }
+    .res-table tbody tr td:first-child { color: #1d1d1b !important; font-weight: 700 !important; }
+    .res-table tbody tr td:nth-child(2) { background: #e3edff !important; }
+    .res-table tbody tr td:nth-child(3) { background: #e2f6e4 !important; }
+    .res-table tr.group-row td { border-color: #1d1d1b !important; border-width: 2px !important; }
+    .per-person-note { color: #5b5b56 !important; }
+
+    .cheapest-note {
+      background: #fff8e1 !important;
+      border: 2.5px solid #1d1d1b !important;
+      border-radius: 255px 14px 225px 14px / 14px 225px 14px 255px !important;
+    }
+    .cheapest-title { color: #1d1d1b !important; }
+    .cheapest-detail { color: #5b5b56 !important; font-weight: 700 !important; }
+    .cheapest-detail strong { color: #2a9d3a !important; }
+    .cheapest-link { background: #e3edff !important; color: #2f6de0 !important; border: 2px solid #1d1d1b !important; }
+
+    .maps-link {
+      background: #e3edff !important; color: #2f6de0 !important;
+      border: 2.5px solid #1d1d1b !important;
+      box-shadow: 3px 3px 0 rgba(29,29,27,0.8) !important;
+      border-radius: 255px 16px 225px 16px / 16px 225px 16px 255px !important;
+      font-weight: 700 !important;
+    }
+    #vinciLink { background: #e2f6e4 !important; color: #2a9d3a !important; }
+
+    .loader { color: #5b5b56 !important; }
+    .autocomplete-list { background: #fff !important; border: 2.5px solid #1d1d1b !important; }
+    .autocomplete-item { color: #1d1d1b !important; font-weight: 700 !important; }
+    .autocomplete-item:hover { background: #fff3cd !important; }
   </style>
   <!-- PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes">
