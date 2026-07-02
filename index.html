@@ -1033,9 +1033,14 @@ async function onAutoComplete(input) {
     const apiKey = document.getElementById('apiKey').value.trim();
     // Pas de « , France » forcé : on récupère large (villes + adresses) puis on
     // remonte les résultats français en tête, sans exclure l'étranger.
+    // /geocode/autocomplete (pas /search) : endpoint pensé pour la saisie
+    // incomplète (préfixe), qui évite les correspondances floues aberrantes
+    // (ex. "anger" -> un hameau nommé "Colère") que /search peut renvoyer.
+    // On exclut la couche "venue" (lieux/commerces) qui ramenait des noms
+    // sans rapport avec la saisie.
     const texteGeo = val;
     try {
-      const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(texteGeo)}&size=10&focus.point.lon=2.3522&focus.point.lat=48.8566`;
+      const url = `https://api.openrouteservice.org/geocode/autocomplete?api_key=${apiKey}&text=${encodeURIComponent(texteGeo)}&size=10&layers=locality,localadmin,borough,neighbourhood,county,region,address,street&focus.point.lon=2.3522&focus.point.lat=48.8566`;
       const r = await fetch(url);
       if (!r.ok) { list.style.display = 'none'; return; }
       const d = await r.json();
