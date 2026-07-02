@@ -445,7 +445,9 @@
       transition: opacity 0.08s ease;
       z-index: 1000;
     }
-    .swap-btn:hover::after, .swap-btn:focus-visible::after { opacity: 1; }
+    @media (hover: hover) and (pointer: fine) {
+      .swap-btn:hover::after, .swap-btn:focus-visible::after { opacity: 1; }
+    }
     /* Effet sympa : survoler les flèches éclaire les deux encadrés */
     .points-wrap:has(.swap-btn:hover) .point-input {
       border-color: #93b8e6;
