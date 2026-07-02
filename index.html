@@ -1050,6 +1050,25 @@ function hapticTick() {
   navigator.vibrate(3);
 }
 
+// Rester appuyé sur un bouton +/- répète l'action en rafale (premier cran
+// immédiat, puis pause avant le défilement continu).
+function holdRepeat(el, action) {
+  if (!el) return;
+  let timeout = null, interval = null;
+  const stop = () => {
+    clearTimeout(timeout); clearInterval(interval);
+    timeout = null; interval = null;
+  };
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    action();
+    timeout = setTimeout(() => { interval = setInterval(action, 90); }, 400);
+  });
+  el.addEventListener('pointerup', stop);
+  el.addEventListener('pointerleave', stop);
+  el.addEventListener('pointercancel', stop);
+}
+
 // --- Roulette de consommation (1 à 30, pas de 0,1) ---
 const CONSO_MIN = 1, CONSO_MAX = 30, CONSO_PPU = 60; // px par L/100km
 function consoValeur() { return parseFloat(document.getElementById('conso').value) || 7.5; }
@@ -1109,11 +1128,11 @@ function consoInit() {
   window.addEventListener('resize', () => consoSet(consoValeur(), false));
   consoSet(consoValeur(), false);
 
-  // Flèches (desktop) : mêmes crans que le clavier.
+  // Flèches (desktop) : mêmes crans que le clavier. Rester appuyé défile en rafale.
   const minusBtn = document.getElementById('consoMinus');
   const plusBtn = document.getElementById('consoPlus');
-  if (minusBtn) minusBtn.addEventListener('click', () => consoSet(consoValeur() - 0.1, true));
-  if (plusBtn) plusBtn.addEventListener('click', () => consoSet(consoValeur() + 0.1, true));
+  holdRepeat(minusBtn, () => consoSet(consoValeur() - 0.1, true));
+  holdRepeat(plusBtn, () => consoSet(consoValeur() + 0.1, true));
 
   // Valeur éditable à la main, uniquement sur ordinateur (la règle pilote sur mobile).
   const valInput = document.getElementById('consoVal');
@@ -1146,8 +1165,8 @@ function passagersSet(v) {
 function passagersInit() {
   const minusBtn = document.getElementById('passMinus');
   const plusBtn = document.getElementById('passPlus');
-  if (minusBtn) minusBtn.addEventListener('click', () => passagersSet(passagersValeur() - 1));
-  if (plusBtn) plusBtn.addEventListener('click', () => passagersSet(passagersValeur() + 1));
+  holdRepeat(minusBtn, () => passagersSet(passagersValeur() - 1));
+  holdRepeat(plusBtn, () => passagersSet(passagersValeur() + 1));
 }
 passagersInit();
 
