@@ -1109,6 +1109,43 @@ function isEurope(feature) {
   return EUROPE_COUNTRIES.has(cc);
 }
 
+// --- Autocomplétion (Photon/komoot) : mêmes idées que frenchFirst/isEurope
+// ci-dessus mais Photon utilise des codes pays ISO 3166-1 alpha-2 ("FR")
+// au lieu des codes alpha-3 ("FRA") renvoyés par ORS/Pelias pour le
+// géocodage final. On duplique donc la logique avec le bon format de code.
+const EUROPE_COUNTRIES_2 = new Set([
+  'AX','AL','AD','AT','BE','BG','BA','BY','CH','CY','CZ','DE','DK',
+  'ES','EE','FI','FR','FO','GB','GG','GI','GR','HR','HU','IM','IE',
+  'IS','IT','JE','LI','LT','LU','LV','MC','MD','MK','MT','ME','NL',
+  'NO','PL','PT','RO','SM','RS','SK','SI','SE','UA','VA','XK',
+]);
+function isEuropePhoton(feature) {
+  const cc = feature.properties && feature.properties.countrycode;
+  return EUROPE_COUNTRIES_2.has(cc);
+}
+function frenchFirstPhoton(features) {
+  return features.slice().sort((a, b) => {
+    const fa = (a.properties && a.properties.countrycode === 'FR') ? 0 : 1;
+    const fb = (b.properties && b.properties.countrycode === 'FR') ? 0 : 1;
+    return fa - fb;
+  });
+}
+// Construit un libellé lisible à partir des propriétés Photon (ville, code
+// postal, rue… selon ce qui est disponible), sur le même principe que le
+// libellé enrichi qu'ORS fournissait déjà tout formé dans "label".
+function photonLabel(p) {
+  const parts = [];
+  if (p.housenumber && p.street) parts.push(p.housenumber + ' ' + p.street);
+  else if (p.street) parts.push(p.street);
+  else if (p.name) parts.push(p.name);
+  const ville = p.city || p.district;
+  if (ville && !parts.includes(ville)) parts.push(ville);
+  const zone = p.state || p.county;
+  if (zone && zone !== ville && !parts.includes(zone)) parts.push(zone);
+  if (p.country && !parts.includes(p.country)) parts.push(p.country);
+  return parts.filter(Boolean).join(', ');
+}
+
 // --- Lieux favoris (départ/destination/étapes) : mémorisés dans le navigateur,
 // proposés en premier dans l'autocomplétion avant même d'avoir tapé un caractère.
 const FAV_PLACES_KEY = 'favPlaces';
@@ -1193,35 +1230,30 @@ async function onAutoComplete(input) {
   clearTimeout(autoTimers.get(input));
   if (val.length < 3) { list.style.display = 'none'; return; }
   autoTimers.set(input, setTimeout(async () => {
-    const apiKey = document.getElementById('apiKey').value.trim();
-    // Pas de « , France » forcé : on récupère large (villes + adresses) puis on
-    // remonte les résultats français en tête, sans exclure l'étranger.
-    // /geocode/autocomplete (pas /search) : endpoint pensé pour la saisie
-    // incomplète (préfixe), qui évite les correspondances floues aberrantes
-    // (ex. "anger" -> un hameau nommé "Colère") que /search peut renvoyer.
-    // On exclut la couche "venue" (lieux/commerces) qui ramenait des noms
-    // sans rapport avec la saisie.
+    // Photon (komoot) au lieu d'ORS pour la saisie live : moteur pensé pour
+    // l'autocomplétion, qui pondère fortement la notoriété (population,
+    // hiérarchie administrative) et remonte donc les villes connues avant
+    // les hameaux obscurs — contrairement à ORS/Pelias qui matchait parfois
+    // par simple proximité textuelle (ex. "anger" -> un hameau "Colère").
+    // Pas de « , France » forcé : on récupère large puis on remonte les
+    // résultats français en tête, sans exclure l'étranger (Berlin reste
+    // proposé en Allemagne, par exemple).
     const texteGeo = val;
     try {
-      const url = `https://api.openrouteservice.org/geocode/autocomplete?api_key=${apiKey}&text=${encodeURIComponent(texteGeo)}&size=10&layers=locality,localadmin,borough,neighbourhood,county,region,address,street&focus.point.lon=2.3522&focus.point.lat=48.8566`;
+      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(texteGeo)}&limit=10&lang=fr&lat=48.8566&lon=2.3522`;
       const r = await fetch(url);
       if (!r.ok) { list.style.display = 'none'; return; }
       const d = await r.json();
       if (!d.features || d.features.length === 0) { list.style.display = 'none'; return; }
       list.innerHTML = '';
       const vus = new Set();
-      frenchFirst(d.features.filter(isEurope)).forEach(f => {
+      frenchFirstPhoton(d.features.filter(isEuropePhoton)).forEach(f => {
         if (list.children.length >= 6) return; // limite l'affichage
         // Libellé enrichi avec le département/la région : indispensable pour
         // distinguer les homonymes (ex. Vanne en Haute-Saône vs Vannes dans le
         // Morbihan), et le texte choisi désambiguïse aussi le géocodage final.
-        const p = f.properties;
-        const zone = p.county || p.region || p.state;
-        let label = p.label;
-        if (p.name && zone && zone !== p.name && !p.label.includes(zone)) {
-          const ville = (p.locality && p.locality !== p.name) ? p.locality : null;
-          label = [p.name, ville, zone, p.country].filter(Boolean).join(', ');
-        }
+        const label = photonLabel(f.properties);
+        if (!label) return;
         // Le géocodeur renvoie parfois plusieurs résultats au même libellé : on dédoublonne.
         const cle = label.trim().toLowerCase();
         if (vus.has(cle)) return;
