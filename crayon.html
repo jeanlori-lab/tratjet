@@ -397,6 +397,7 @@
     /* Flèches d'inversion : à droite, chevauchent le coin des encadrés, discrètes */
     .swap-btn {
       position: absolute;
+      z-index: 25;
       right: -10px; /* centré sur le bord droit des encadrés (carré à cheval) */
       top: 50%;
       transform: translateY(-50%);
@@ -432,7 +433,7 @@
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.08s ease;
-      z-index: 30;
+      z-index: 1000;
     }
     .swap-btn:hover::after, .swap-btn:focus-visible::after { opacity: 1; }
     /* Effet sympa : survoler les flèches éclaire les deux encadrés */
@@ -616,16 +617,41 @@
     /* Coût par personne (partage de frais) : sous-ligne discrète dans la même
        cellule que le coût carburant, plutôt qu'une ligne séparée. */
     #r-cout-a, #r-cout-ar { position: relative; }
-    #r-cout-a.has-per-person, #r-cout-ar.has-per-person { padding-bottom: 22px; }
+    #r-cout-a.has-per-person, #r-cout-ar.has-per-person { padding-bottom: 34px; }
     .per-person-note {
       position: absolute;
-      left: 0; right: 0;
-      bottom: 5px;
-      line-height: 1;
-      font-size: 10px;
+      left: 4px; right: 4px;
+      bottom: 4px;
+      line-height: 1.25;
+      font-size: 9.5px;
       font-weight: 600;
-      opacity: 0.75;
+      opacity: 0.8;
     }
+
+    /* Message rotatif quand on clique sur + alors qu'on est déjà au maximum de
+       passagers (même style que l'info-bulle des flèches d'inversion). */
+    .passagers-line { position: relative; }
+    .pass-max-msg {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%) translateY(4px);
+      background: #1a2433;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.4;
+      padding: 7px 11px;
+      border-radius: 8px;
+      width: max-content;
+      max-width: 230px;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      z-index: 40;
+    }
+    .pass-max-msg.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
     /* Message péage indisponible (occupe les 2 colonnes de la ligne Péages) */
     .res-table td.peage-msg {
@@ -1328,9 +1354,12 @@ function consoInit() {
 }
 consoInit();
 
-// --- Nombre de passagers (partage de frais, 1 à 20) ---
-const PASS_MIN = 1, PASS_MAX = 20;
-function passagersValeur() { return parseInt(document.getElementById('passagers').value, 10) || 1; }
+// --- Nombre de passagers (partage de frais, 0 à 9) ---
+const PASS_MIN = 0, PASS_MAX = 9;
+function passagersValeur() {
+  const v = parseInt(document.getElementById('passagers').value, 10);
+  return isNaN(v) ? 1 : v;
+}
 function passagersSet(v) {
   v = Math.min(PASS_MAX, Math.max(PASS_MIN, Math.round(v)));
   document.getElementById('passagers').value = v;
@@ -1338,11 +1367,38 @@ function passagersSet(v) {
   if (disp) disp.textContent = v;
   resetResultat();
 }
+// Messages rotatifs quand on clique sur + alors qu'on est déjà au maximum.
+const PASS_MAX_MESSAGES = [
+  "Alors, plus de 9 en voiture ça va être compliqué…",
+  "Pour un conducteur de métro bien sûr y'a pas de sujets",
+  "Ou à la limite si tu es le capitaine d'un canoë de sauvetage de migrants…",
+];
+let passMaxMsgIndex = 0;
+let passMaxMsgTimer = null;
+function showPassMaxMessage() {
+  const plusBtn = document.getElementById('passPlus');
+  if (!plusBtn || !plusBtn.parentElement) return;
+  let bubble = document.getElementById('passMaxMsg');
+  if (!bubble) {
+    bubble = document.createElement('div');
+    bubble.id = 'passMaxMsg';
+    bubble.className = 'pass-max-msg';
+    plusBtn.parentElement.appendChild(bubble);
+  }
+  bubble.textContent = PASS_MAX_MESSAGES[passMaxMsgIndex % PASS_MAX_MESSAGES.length];
+  passMaxMsgIndex++;
+  bubble.classList.add('show');
+  clearTimeout(passMaxMsgTimer);
+  passMaxMsgTimer = setTimeout(() => bubble.classList.remove('show'), 2600);
+}
 function passagersInit() {
   const minusBtn = document.getElementById('passMinus');
   const plusBtn = document.getElementById('passPlus');
   holdRepeat(minusBtn, () => passagersSet(passagersValeur() - 1));
-  holdRepeat(plusBtn, () => passagersSet(passagersValeur() + 1));
+  holdRepeat(plusBtn, () => {
+    if (passagersValeur() >= PASS_MAX) { showPassMaxMessage(); return; }
+    passagersSet(passagersValeur() + 1);
+  });
 }
 passagersInit();
 
@@ -1791,9 +1847,19 @@ async function calculer() {
 
     // Partage de frais entre passagers : sous-ligne discrète dans la cellule du coût carburant.
     const passagers = passagersValeur();
-    rCoutA.classList.toggle('has-per-person', passagers > 1);
-    rCoutAR.classList.toggle('has-per-person', passagers > 1);
-    if (passagers > 1) {
+    rCoutA.classList.toggle('has-per-person', passagers === 0 || passagers > 1);
+    rCoutAR.classList.toggle('has-per-person', passagers === 0 || passagers > 1);
+    if (passagers === 0) {
+      const soloMsg = '0 € / pers., la voiture voyage seule 🥲';
+      const noteA = document.createElement('div');
+      noteA.className = 'per-person-note';
+      noteA.textContent = soloMsg;
+      rCoutA.appendChild(noteA);
+      const noteAR = document.createElement('div');
+      noteAR.className = 'per-person-note';
+      noteAR.textContent = soloMsg;
+      rCoutAR.appendChild(noteAR);
+    } else if (passagers > 1) {
       const noteA = document.createElement('div');
       noteA.className = 'per-person-note';
       noteA.textContent = fmtEur(coutA / passagers) + ' / pers.';
