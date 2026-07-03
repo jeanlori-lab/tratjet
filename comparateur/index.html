@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Kikoute — voiture, train, avion ou covoit ?</title>
+  <meta name="description" content="Ce que ton trajet coûte vraiment, porte à porte : voiture, train, avion ou covoiturage, en € et en CO₂.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚖️</text></svg>">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #e8f5e9 0%, #e3f2fd 100%);
+      min-height: 100vh;
+      padding: 24px 16px;
+      color: #1a2433;
+    }
+    .page { max-width: 480px; margin: 0 auto; }
+
+    .header { text-align: center; margin-bottom: 20px; }
+    .header h1 {
+      font-size: 34px;
+      font-weight: 800;
+      color: #1a2433;
+      letter-spacing: -0.01em;
+    }
+    .header h1 .k { color: #1976d2; }
+    .header p {
+      font-size: 14px;
+      color: #607080;
+      margin-top: 8px;
+      line-height: 1.5;
+      padding: 0 12px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      padding: 22px;
+      margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      color: #1a2433;
+    }
+
+    .field { margin-bottom: 12px; }
+    .field label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #455060;
+      margin-bottom: 5px;
+    }
+    input[type="text"], input[type="number"], input[type="date"], select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid #dbe3ec;
+      border-radius: 12px;
+      background: #fbfcfe;
+      font-size: 15px;
+      font-family: inherit;
+      color: #1a2433;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus, select:focus { border-color: #2196f3; box-shadow: 0 0 0 3px rgba(33,150,243,0.12); }
+
+    .autocomplete-wrap { position: relative; }
+    .autocomplete-list {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0; right: 0;
+      background: #fff;
+      border: 1.5px solid #dbe3ec;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+      z-index: 999;
+      overflow: hidden;
+      display: none;
+    }
+    .autocomplete-item {
+      padding: 9px 13px;
+      font-size: 13px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f4f8;
+    }
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item:hover { background: #eef6ff; }
+
+    .two-cols { display: flex; gap: 10px; }
+    .two-cols .field { flex: 1; }
+
+    /* Voyageurs */
+    .pax-line { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 4px 0; }
+    .pax-btn {
+      width: 34px; height: 34px;
+      border-radius: 10px;
+      border: 1.5px solid #dbe3ec;
+      background: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #1976d2;
+      font-family: inherit;
+    }
+    .pax-btn:hover { background: #eef6ff; }
+    .pax-val { font-size: 17px; font-weight: 800; min-width: 1.5ch; text-align: center; }
+    .pax-lbl { text-align: center; font-size: 11px; color: #90a4ae; margin-top: 2px; }
+
+    /* Priorité */
+    .prio-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .prio-chip {
+      flex: 1 1 calc(50% - 4px);
+      padding: 10px 8px;
+      border-radius: 12px;
+      border: 1.5px solid #dbe3ec;
+      background: #fbfcfe;
+      font-size: 13px;
+      font-weight: 700;
+      color: #455060;
+      cursor: pointer;
+      text-align: center;
+      font-family: inherit;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .prio-chip.active {
+      border-color: #1976d2;
+      background: #1976d2;
+      color: #fff;
+    }
+
+    /* Bloc voiture repliable */
+    .car-toggle {
+      width: 100%;
+      background: none;
+      border: none;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 700;
+      color: #455060;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+    .car-toggle .chev { transition: transform 0.2s; color: #90a4ae; }
+    .car-toggle.open .chev { transform: rotate(180deg); }
+    .car-body { display: none; padding-top: 10px; }
+    .car-body.open { display: block; }
+    .prix-note { font-size: 11.5px; color: #607080; margin-top: 4px; }
+    .prix-note strong { color: #2e7d32; }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #2196f3, #1565c0);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0.02em;
+      box-shadow: 0 4px 14px rgba(33,150,243,0.35);
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:hover { opacity: 0.92; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { background: linear-gradient(135deg, #90caf9, #78a9d1); box-shadow: none; cursor: not-allowed; }
+
+    .loader { display: none; text-align: center; padding: 12px; font-size: 13px; color: #607080; }
+    .error {
+      display: none;
+      background: #fff5f5;
+      border: 1.5px solid #ffcdd2;
+      color: #c62828;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+
+    /* ===== Résultats : cartes classées ===== */
+    .results { display: none; }
+    .res-head { font-size: 15px; font-weight: 800; }
+    .res-sub { font-size: 12px; color: #90a4ae; margin: 3px 0 16px; }
+
+    .mode-card {
+      border: 1.5px solid #e3e9ef;
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+    }
+    .mode-card.winner { border-color: #2e7d32; background: #f3faf3; }
+    .win-badge {
+      position: absolute;
+      top: -10px; left: 14px;
+      background: #2e7d32;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 999px;
+      letter-spacing: 0.04em;
+    }
+    .mode-ico { font-size: 26px; width: 36px; text-align: center; flex-shrink: 0; }
+    .mode-body { flex: 1; min-width: 0; }
+    .mode-name { font-size: 14px; font-weight: 700; }
+    .mode-meta { font-size: 11px; color: #607080; margin-top: 3px; line-height: 1.5; }
+    .co2chip {
+      display: inline-block;
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 1px 8px;
+      border-radius: 999px;
+      margin-top: 4px;
+    }
+    .co2-low { background: #e2f6e4; color: #2e7d32; }
+    .co2-mid { background: #fff3cd; color: #a07800; }
+    .co2-high { background: #ffe3e3; color: #c62828; }
+    .mode-price { text-align: right; flex-shrink: 0; max-width: 46%; }
+    .mode-price .pp { font-size: 18px; font-weight: 800; white-space: nowrap; }
+    .mode-price .pp .u { font-size: 10px; font-weight: 700; color: #607080; }
+    .mode-price .tot { font-size: 10px; color: #90a4ae; margin-top: 1px; line-height: 1.4; }
+    .mode-cta {
+      display: inline-block;
+      font-size: 10.5px;
+      color: #1976d2;
+      font-weight: 700;
+      text-decoration: none;
+      margin-top: 4px;
+    }
+    .mode-cta:hover { text-decoration: underline; }
+
+    .why-note {
+      font-size: 11px;
+      color: #607080;
+      text-align: center;
+      margin-top: 2px;
+      margin-bottom: 14px;
+    }
+    .why-note b { color: #1976d2; }
+
+    .methodo {
+      font-size: 10px;
+      color: #90a4ae;
+      line-height: 1.6;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid #f0f4f8;
+    }
+
+    .footer { text-align: center; font-size: 10.5px; color: #90a4ae; margin-top: 18px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <h1><span class="k">Ki</span>koute</h1>
+    <p>Voiture, train, avion ou covoit ?<br>Ce que ton trajet coûte <b>vraiment</b>, porte à porte.</p>
+  </div>
+
+  <!-- ===== Paramètres ===== -->
+  <div class="card">
+    <div class="card-title">Ton trajet</div>
+
+    <div class="field">
+      <label>Départ</label>
+      <div class="autocomplete-wrap">
+        <input type="text" id="depart" placeholder="Ville ou adresse de départ" autocomplete="off" oninput="onPlaceInput(this)">
+        <div class="autocomplete-list"></div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Arrivée</label>
+      <div class="autocomplete-wrap">
+        <input type="text" id="arrivee" placeholder="Ville ou adresse d'arrivée" autocomplete="off" oninput="onPlaceInput(this)">
+        <div class="autocomplete-list"></div>
+      </div>
+    </div>
+
+    <div class="two-cols">
+      <div class="field">
+        <label>Date (indicatif)</label>
+        <input type="date" id="dateTrajet">
+      </div>
+      <div class="field">
+        <label>Voyageurs</label>
+        <div class="pax-line">
+          <button type="button" class="pax-btn" id="paxMinus">−</button>
+          <div><div class="pax-val" id="paxVal">2</div></div>
+          <button type="button" class="pax-btn" id="paxPlus">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Le plus important pour toi</label>
+      <div class="prio-chips" id="prioChips">
+        <button type="button" class="prio-chip" data-prio="prix">💰 Prix</button>
+        <button type="button" class="prio-chip" data-prio="rapidite">⚡ Rapidité</button>
+        <button type="button" class="prio-chip" data-prio="confort">🛋️ Confort</button>
+        <button type="button" class="prio-chip active" data-prio="equilibre">⚖️ Équilibré</button>
+      </div>
+    </div>
+
+    <button type="button" class="car-toggle" id="carToggle" onclick="toggleCar()">
+      <span>🚗 Ta voiture (pour un calcul précis)</span>
+      <span class="chev">▼</span>
+    </button>
+    <div class="car-body" id="carBody">
+      <div class="two-cols">
+        <div class="field">
+          <label>Carburant</label>
+          <select id="carburant" onchange="onCarburantChange()">
+            <option value="gazole_prix">Gazole</option>
+            <option value="sp95_prix" selected>Sans plomb 95</option>
+            <option value="e10_prix">SP95 E10</option>
+            <option value="sp98_prix">Sans plomb 98</option>
+            <option value="e85_prix">E85</option>
+            <option value="gplc_prix">GPL</option>
+            <option value="elec">⚡ Électrique</option>
+          </select>
+        </div>
+        <div class="field">
+          <label id="consoLabel">Conso (L/100 km)</label>
+          <input type="number" id="conso" value="6.5" step="0.1" min="1">
+        </div>
+      </div>
+      <div class="prix-note" id="prixNote">Prix moyen actuel : <strong id="prixAffiche">chargement…</strong></div>
+    </div>
+  </div>
+
+  <button class="btn" id="cmpBtn" onclick="comparer()">Comparer les options</button>
+  <div class="loader" id="loader">⏳ Calcul en cours…</div>
+  <div class="error" id="error"></div>
+
+  <!-- ===== Résultats ===== -->
+  <div class="card results" id="results">
+    <div class="res-head" id="resHead">—</div>
+    <div class="res-sub" id="resSub">—</div>
+    <div class="why-note" id="whyNote"></div>
+    <div id="modeCards"></div>
+    <div class="methodo" id="methodo">
+      <b>Méthodologie (v1)</b> — Voiture : itinéraire réel + prix carburant temps réel (data.gouv) + péages estimés (~0,09 €/km d'autoroute) ; le coût complet inclut usure, entretien et décote (barème kilométrique). Train &amp; avion : fourchettes estimées à vérifier via les liens (prix réels bientôt). Avion : temps porte à porte incluant trajets aéroport + 2h d'avance. CO₂ : facteurs ADEME.
+    </div>
+  </div>
+
+  <div class="footer">Kikoute est indépendant : aucun mode de transport ne nous paie pour gagner.<br>Comparaison honnête, porte à porte.</div>
+
+  <input type="hidden" id="apiKey" value="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY1NjRiM2M4Yjc0OTQ0ZDlhNmNjM2FiOWQzNjFhNTE2IiwiaCI6Im11cm11cjY0In0=">
+</div>
+
+<script>
+// ============================================================
+// Kikoute v1 — comparateur honnête voiture / train / avion / covoit
+// ============================================================
+
+// ---------- Géocodage + autocomplétion (Photon/komoot) ----------
+const EUROPE_CC = new Set(['AX','AL','AD','AT','BE','BG','BA','BY','CH','CY','CZ','DE','DK','ES','EE','FI','FR','FO','GB','GG','GI','GR','HR','HU','IM','IE','IS','IT','JE','LI','LT','LU','LV','MC','MD','MK','MT','ME','NL','NO','PL','PT','RO','SM','RS','SK','SI','SE','UA','VA','XK']);
+const autoTimers = new Map();
+
+function photonLabel(p) {
+  const parts = [];
+  if (p.housenumber && p.street) parts.push(p.housenumber + ' ' + p.street);
+  else if (p.street) parts.push(p.street);
+  else if (p.name) parts.push(p.name);
+  const ville = p.city || p.district;
+  if (ville && !parts.includes(ville)) parts.push(ville);
+  const zone = p.state || p.county;
+  if (zone && zone !== ville && !parts.includes(zone)) parts.push(zone);
+  if (p.country && !parts.includes(p.country)) parts.push(p.country);
+  return parts.filter(Boolean).join(', ');
+}
+
+function onPlaceInput(input) {
+  const list = input.parentElement.querySelector('.autocomplete-list');
+  const val = input.value.trim();
+  input.dataset.lat = ''; input.dataset.lng = '';
+  clearTimeout(autoTimers.get(input));
+  if (val.length < 3) { list.style.display = 'none'; return; }
+  autoTimers.set(input, setTimeout(async () => {
+    try {
+      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(val)}&limit=8&lang=fr&lat=48.8566&lon=2.3522`;
+      const r = await fetch(url);
+      if (!r.ok) { list.style.display = 'none'; return; }
+      const d = await r.json();
+      list.innerHTML = '';
+      const vus = new Set();
+      (d.features || [])
+        .filter(f => EUROPE_CC.has(f.properties.countrycode))
+        .sort((a, b) => ((a.properties.countrycode === 'FR') ? 0 : 1) - ((b.properties.countrycode === 'FR') ? 0 : 1))
+        .forEach(f => {
+          if (list.children.length >= 6) return;
+          const label = photonLabel(f.properties);
+          if (!label) return;
+          const cle = label.toLowerCase();
+          if (vus.has(cle)) return;
+          vus.add(cle);
+          const div = document.createElement('div');
+          div.className = 'autocomplete-item';
+          div.textContent = label;
+          div.addEventListener('mousedown', e => {
+            e.preventDefault();
+            input.value = label;
+            input.dataset.lat = f.geometry.coordinates[1];
+            input.dataset.lng = f.geometry.coordinates[0];
+            input.dataset.city = f.properties.city || f.properties.name || '';
+            list.style.display = 'none';
+            hideResults();
+          });
+          list.appendChild(div);
+        });
+      list.style.display = list.children.length ? 'block' : 'none';
+    } catch (e) { list.style.display = 'none'; }
+  }, 300));
+}
+document.addEventListener('click', e => {
+  document.querySelectorAll('.autocomplete-list').forEach(l => {
+    if (!l.parentElement.contains(e.target)) l.style.display = 'none';
+  });
+});
+
+async function geocode(input) {
+  if (input.dataset.lat && input.dataset.lng) {
+    return { lat: parseFloat(input.dataset.lat), lng: parseFloat(input.dataset.lng), city: input.dataset.city || input.value };
+  }
+  const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(input.value.trim())}&limit=5&lang=fr&lat=48.8566&lon=2.3522`);
+  if (!r.ok) throw new Error('Géocodage impossible pour « ' + input.value + ' »');
+  const d = await r.json();
+  const feats = (d.features || []).filter(f => EUROPE_CC.has(f.properties.countrycode));
+  feats.sort((a, b) => ((a.properties.countrycode === 'FR') ? 0 : 1) - ((b.properties.countrycode === 'FR') ? 0 : 1));
+  if (!feats.length) throw new Error('Adresse introuvable en Europe : « ' + input.value + ' »');
+  const f = feats[0];
+  return { lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0], city: f.properties.city || f.properties.name || input.value };
+}
+
+// ---------- Prix carburant temps réel (data.gouv) ----------
+let prixCarburant = null;   // €/L
+const PRIX_ELEC = 0.30;     // €/kWh, mix domicile/autoroute par défaut
+
+async function fetchPrix() {
+  const field = document.getElementById('carburant').value;
+  const note = document.getElementById('prixAffiche');
+  if (field === 'elec') { prixCarburant = PRIX_ELEC; note.textContent = PRIX_ELEC.toFixed(2) + ' €/kWh (mix estimé)'; return; }
+  note.textContent = 'chargement…';
+  try {
+    const url = `https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?select=avg(${field})%20as%20prix&limit=1&where=${field}%20is%20not%20null`;
+    const r = await fetch(url);
+    const d = await r.json();
+    prixCarburant = d.results && d.results[0] ? parseFloat(d.results[0].prix) : null;
+    note.textContent = prixCarburant ? prixCarburant.toFixed(3) + ' €/L' : 'indisponible';
+  } catch (e) { prixCarburant = null; note.textContent = 'indisponible'; }
+}
+function onCarburantChange() {
+  const isElec = document.getElementById('carburant').value === 'elec';
+  document.getElementById('consoLabel').textContent = isElec ? 'Conso (kWh/100 km)' : 'Conso (L/100 km)';
+  document.getElementById('conso').value = isElec ? 17 : 6.5;
+  fetchPrix();
+}
+fetchPrix();
+
+// ---------- Voyageurs ----------
+let pax = 2;
+function setPax(n) {
+  pax = Math.min(9, Math.max(1, n));
+  document.getElementById('paxVal').textContent = pax;
+  // Recalcul en direct si un résultat est affiché : on voit le classement
+  // basculer avec le nombre de voyageurs (l'insight clé du comparateur).
+  if (lastData) renderResults();
+}
+document.getElementById('paxMinus').addEventListener('click', () => setPax(pax - 1));
+document.getElementById('paxPlus').addEventListener('click', () => setPax(pax + 1));
+
+// ---------- Priorité ----------
+let priorite = 'equilibre';
+const POIDS = {
+  prix:      { prix: 0.70, temps: 0.15, confort: 0.15 },
+  rapidite:  { prix: 0.15, temps: 0.70, confort: 0.15 },
+  confort:   { prix: 0.15, temps: 0.15, confort: 0.70 },
+  equilibre: { prix: 1/3,  temps: 1/3,  confort: 1/3  },
+};
+const PRIO_LABELS = { prix: 'le prix', rapidite: 'la rapidité', confort: 'le confort', equilibre: 'un équilibre prix / temps / confort' };
+document.querySelectorAll('.prio-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    priorite = chip.dataset.prio;
+    document.querySelectorAll('.prio-chip').forEach(c => c.classList.toggle('active', c === chip));
+    if (lastData) renderResults();
+  });
+});
+
+function toggleCar() {
+  document.getElementById('carToggle').classList.toggle('open');
+  document.getElementById('carBody').classList.toggle('open');
+}
+
+// ---------- Table de liaisons train connues (temps réels, prix typiques) ----------
+// Clé : villes normalisées triées. [heures de train, prix min, prix max]
+const TRAIN_PAIRS = {
+  'lyon|paris': [2.0, 25, 95],       'marseille|paris': [3.2, 35, 120],
+  'bordeaux|paris': [2.2, 30, 110],  'nantes|paris': [2.2, 25, 90],
+  'lille|paris': [1.1, 20, 70],      'paris|strasbourg': [1.8, 30, 100],
+  'paris|toulouse': [4.3, 40, 130],  'nice|paris': [6.0, 45, 140],
+  'paris|rennes': [1.5, 25, 85],     'montpellier|paris': [3.4, 35, 120],
+  'lyon|marseille': [1.7, 20, 70],   'barcelone|paris': [6.8, 59, 149],
+  'londres|paris': [2.3, 55, 180],   'bruxelles|paris': [1.4, 29, 99],
+  'amsterdam|paris': [3.3, 40, 140], 'genève|paris': [3.1, 35, 110],
+  'milan|paris': [7.0, 50, 130],     'francfort-sur-le-main|paris': [3.8, 40, 130],
+  'barcelone|lyon': [5.0, 40, 110],  'marseille|nice': [2.5, 15, 45],
+  'bordeaux|toulouse': [2.1, 15, 45],'lyon|montpellier': [1.8, 20, 60],
+  'nantes|rennes': [1.4, 12, 35],    'lille|londres': [1.4, 50, 160],
+  'bruxelles|lille': [0.6, 15, 45],  'paris|zurich': [4.1, 40, 130],
+  'madrid|paris': [10.5, 80, 200],   'munich|paris': [5.8, 50, 150],
+};
+function normCity(s) {
+  return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+function lookupTrainPair(cityA, cityB) {
+  const a = normCity(cityA), b = normCity(cityB);
+  for (const key of Object.keys(TRAIN_PAIRS)) {
+    const [x, y] = key.split('|').map(normCity);
+    if ((a.includes(x) || x.includes(a)) && (b.includes(y) || y.includes(b))) return TRAIN_PAIRS[key];
+    if ((a.includes(y) || y.includes(a)) && (b.includes(x) || x.includes(b))) return TRAIN_PAIRS[key];
+  }
+  return null;
+}
+
+// ---------- Utilitaires ----------
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371, toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+  const h = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function fmtEur(n) { return n.toLocaleString('fr-FR', {maximumFractionDigits: 0}) + ' €'; }
+function fmtEurRange(a, b) { return Math.round(a) + '–' + Math.round(b) + ' €'; }
+function fmtH(h) {
+  const H = Math.floor(h), M = Math.round((h - H) * 60);
+  return H > 0 ? `${H}h${String(M).padStart(2,'0')}` : `${M} min`;
+}
+function co2Chip(kg) {
+  const cls = kg < 20 ? 'co2-low' : (kg < 120 ? 'co2-mid' : 'co2-high');
+  return `<span class="co2chip ${cls}">≈ ${Math.round(kg)} kg CO₂/pers.</span>`;
+}
+
+// ---------- Itinéraire voiture (ORS) ----------
+async function getRoute(from, to) {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const r = await fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
+    method: 'POST',
+    headers: { 'Authorization': apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ coordinates: [[from.lng, from.lat], [to.lng, to.lat]] })
+  });
+  if (!r.ok) throw new Error('Itinéraire introuvable (réessaie dans un instant)');
+  const d = await r.json();
+  const s = d.routes[0].summary;
+  return { distKm: s.distance / 1000, dureeH: s.duration / 3600 };
+}
+
+// ---------- Le cœur : construire les 4 options ----------
+let lastData = null;
+
+async function comparer() {
+  hideError(); hideResults();
+  const depInput = document.getElementById('depart');
+  const arrInput = document.getElementById('arrivee');
+  if (!depInput.value.trim() || !arrInput.value.trim()) return showError('⚠️ Remplis le départ et l\'arrivée.');
+  const conso = parseFloat(document.getElementById('conso').value);
+  if (isNaN(conso) || conso <= 0) return showError('⚠️ Consommation invalide.');
+
+  setLoading(true);
+  try {
+    const [from, to] = await Promise.all([geocode(depInput), geocode(arrInput)]);
+    const route = await getRoute(from, to);
+    const crowKm = haversineKm(from.lat, from.lng, to.lat, to.lng);
+    const isElec = document.getElementById('carburant').value === 'elec';
+    const prixU = prixCarburant || (isElec ? PRIX_ELEC : 1.85);
+
+    // --- Voiture ---
+    const carFuel = route.distKm * conso / 100 * prixU;
+    const motorwayShare = route.distKm > 80 ? 0.72 : 0.15;
+    const carToll = route.distKm * motorwayShare * 0.092;
+    const carVehicule = carFuel + carToll;
+    const carFull = route.distKm * 0.60 + carToll; // barème km (usure, entretien, décote incl. carburant)
+    const carCO2vehicule = route.distKm * (isElec ? 0.103 : 0.218);
+
+    // --- Train ---
+    const pair = lookupTrainPair(from.city, to.city);
+    let train;
+    if (pair) {
+      train = { hRail: pair[0], pMin: pair[1], pMax: pair[2], source: 'liaison connue' };
+    } else {
+      const railKm = crowKm * 1.25;
+      const base = 8 + railKm * 0.095;
+      train = { hRail: railKm / 135 + 0.6, pMin: base * 0.6, pMax: base * 1.6, source: 'estimation' };
+    }
+    const trainDoorH = train.hRail + 1.0; // accès gares + marge
+    const trainCO2 = crowKm * 1.2 * 0.0035;
+
+    // --- Avion (si pertinent) ---
+    const planeOk = crowKm > 400;
+    let plane = null;
+    if (planeOk) {
+      const volH = crowKm / 720 + 0.55;
+      const doorH = volH + 3.4; // navettes aéroports + 2h avance + récup bagages
+      const base = 28 + crowKm * 0.055;
+      plane = { volH, doorH, pMin: base * 0.7, pMax: base * 2.3, co2: crowKm * 1.1 * 0.26 };
+    }
+
+    // --- Covoiturage ---
+    const covoitPP = Math.max(5, route.distKm * 0.065);
+    const covoitCO2 = route.distKm * 0.218 / 3;
+
+    lastData = { from, to, route, crowKm, isElec, carFuel, carToll, carVehicule, carFull, carCO2vehicule, train, trainDoorH, trainCO2, plane, covoitPP, covoitCO2 };
+    renderResults();
+  } catch (e) {
+    showError('⚠️ ' + (e.message || 'Erreur inattendue'));
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ---------- Scoring pondéré + rendu ----------
+function comfortCar(h)   { return Math.max(1.3, 4.2 - h * 0.22); }
+function comfortCovoit(h){ return Math.max(1.2, 3.0 - h * 0.12); }
+const COMFORT_TRAIN = 4.6, COMFORT_PLANE = 2.4;
+
+function renderResults() {
+  const d = lastData;
+  const w = POIDS[priorite];
+
+  const options = [];
+  options.push({
+    id: 'voiture', ico: '🚗', name: d.isElec ? 'Ta voiture (électrique)' : 'Ta voiture',
+    pp: d.carVehicule / pax, ppLabel: fmtEur(d.carVehicule / pax),
+    tot: fmtEur(d.carVehicule) + ' à ' + pax + ' · coût complet ' + fmtEur(d.carFull),
+    doorH: d.route.dureeH,
+    meta: fmtH(d.route.dureeH) + ' porte à porte · ' + (d.isElec ? 'recharges' : 'carburant') + ' ' + fmtEur(d.carFuel) + ' + péages ≈ ' + fmtEur(d.carToll),
+    co2: d.carCO2vehicule / pax,
+    confort: comfortCar(d.route.dureeH),
+    cta: null,
+  });
+  options.push({
+    id: 'train', ico: '🚄', name: 'Train',
+    pp: (d.train.pMin + d.train.pMax) / 2, ppLabel: fmtEurRange(d.train.pMin, d.train.pMax) ,
+    tot: (d.train.source === 'estimation' ? 'estimation · ' : '') + fmtEurRange(d.train.pMin * pax, d.train.pMax * pax) + ' à ' + pax,
+    doorH: d.trainDoorH,
+    meta: fmtH(d.train.hRail) + ' de train · ≈ ' + fmtH(d.trainDoorH) + ' porte à porte',
+    co2: d.trainCO2,
+    confort: COMFORT_TRAIN,
+    cta: { txt: 'Prix réels SNCF Connect ›', url: 'https://www.sncf-connect.com/' },
+  });
+  if (d.plane) {
+    options.push({
+      id: 'avion', ico: '✈️', name: 'Avion',
+      pp: (d.plane.pMin + d.plane.pMax) / 2, ppLabel: fmtEurRange(d.plane.pMin, d.plane.pMax),
+      tot: 'estimation, hors bagages',
+      doorH: d.plane.doorH,
+      meta: 'Vol ' + fmtH(d.plane.volH) + ' · ≈ ' + fmtH(d.plane.doorH) + ' porte à porte (navettes + 2h aéroport)',
+      co2: d.plane.co2,
+      confort: COMFORT_PLANE,
+      cta: { txt: 'Voir les vols ›', url: 'https://www.google.com/travel/flights?q=' + encodeURIComponent('vols de ' + d.from.city + ' à ' + d.to.city) },
+    });
+  }
+  options.push({
+    id: 'covoit', ico: '🚗💨', name: 'Covoiturage',
+    pp: d.covoitPP, ppLabel: '≈ ' + fmtEur(d.covoitPP),
+    tot: '≈ ' + fmtEur(d.covoitPP * pax) + ' à ' + pax,
+    doorH: d.route.dureeH + 0.4,
+    meta: '≈ ' + fmtH(d.route.dureeH + 0.4) + ' porte à porte · selon les annonces',
+    co2: d.covoitCO2,
+    confort: comfortCovoit(d.route.dureeH),
+    cta: { txt: 'Voir sur Blablacar ›', url: 'https://www.blablacar.fr/search?fn=' + encodeURIComponent(d.from.city) + '&tn=' + encodeURIComponent(d.to.city) },
+  });
+
+  // Score pondéré : ratio au meilleur sur chaque critère (1 = meilleur).
+  const minPP = Math.min(...options.map(o => o.pp));
+  const minH  = Math.min(...options.map(o => o.doorH));
+  options.forEach(o => {
+    o.score = w.prix * (minPP / o.pp) + w.temps * (minH / o.doorH) + w.confort * (o.confort / 5);
+  });
+  options.sort((a, b) => b.score - a.score);
+
+  // Rendu
+  document.getElementById('resHead').textContent = d.from.city + ' → ' + d.to.city;
+  document.getElementById('resSub').textContent =
+    Math.round(d.route.distKm).toLocaleString('fr-FR') + ' km par la route · ' + pax + ' voyageur' + (pax > 1 ? 's' : '');
+  document.getElementById('whyNote').innerHTML = 'Classement selon ta priorité : <b>' + PRIO_LABELS[priorite] + '</b>';
+
+  const wrap = document.getElementById('modeCards');
+  wrap.innerHTML = '';
+  options.forEach((o, i) => {
+    const card = document.createElement('div');
+    card.className = 'mode-card' + (i === 0 ? ' winner' : '');
+    card.innerHTML =
+      (i === 0 ? '<div class="win-badge">LE MEILLEUR POUR TOI</div>' : '') +
+      '<div class="mode-ico">' + o.ico + '</div>' +
+      '<div class="mode-body">' +
+        '<div class="mode-name">' + o.name + '</div>' +
+        '<div class="mode-meta">' + o.meta + '<br>' + co2Chip(o.co2) + '</div>' +
+      '</div>' +
+      '<div class="mode-price">' +
+        '<div class="pp">' + o.ppLabel + '<span class="u">/pers.</span></div>' +
+        '<div class="tot">' + o.tot + '</div>' +
+        (o.cta ? '<a class="mode-cta" href="' + o.cta.url + '" target="_blank" rel="noopener">' + o.cta.txt + '</a>' : '') +
+      '</div>';
+    wrap.appendChild(card);
+  });
+
+  document.getElementById('results').style.display = 'block';
+}
+
+// ---------- Divers ----------
+function setLoading(on) {
+  document.getElementById('loader').style.display = on ? 'block' : 'none';
+  document.getElementById('cmpBtn').disabled = on;
+}
+function showError(msg) { const e = document.getElementById('error'); e.textContent = msg; e.style.display = 'block'; }
+function hideError()   { document.getElementById('error').style.display = 'none'; }
+function hideResults() { document.getElementById('results').style.display = 'none'; lastData = null; }
+
+document.addEventListener('keydown', e => { if (e.key === 'Enter') comparer(); });
+// Date par défaut : samedi prochain (usage typique week-end)
+(function() {
+  const d = new Date();
+  d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7 || 7));
+  document.getElementById('dateTrajet').value = d.toISOString().slice(0, 10);
+})();
+</script>
+</body>
+</html>
