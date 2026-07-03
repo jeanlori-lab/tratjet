@@ -1655,12 +1655,12 @@ async function fetchStationMoinsChere(lat, lon, type, rayonKm) {
 
 // Recherche + affichage de la station la moins chère, indépendants du reste
 // du calcul du trajet : le curseur de rayon ne relance que cet encadré.
-let lastStationSearch = null; // { lat, lon, type, rayon }
+let lastStationSearch = null; // { lat, lon, type, rayon, depart, arrivee }
 
 async function rechercherStationMoinsChere() {
   const cheapestNote = document.getElementById('cheapestNote');
   if (!lastStationSearch) { cheapestNote.style.display = 'none'; return; }
-  const { lat, lon, type, rayon } = lastStationSearch;
+  const { lat, lon, type, rayon, depart, arrivee } = lastStationSearch;
   cheapestNote.classList.add('loading');
   const station = await fetchStationMoinsChere(lat, lon, type, rayon);
   cheapestNote.classList.remove('loading');
@@ -1697,9 +1697,11 @@ async function rechercherStationMoinsChere() {
     if (station.lat !== null && station.lon !== null) {
       const link = document.createElement('a');
       link.className = 'cheapest-link';
-      link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${station.lat},${station.lon}`;
+      const origin = encodeURIComponent(depart || `${lat},${lon}`);
+      const destination = encodeURIComponent(arrivee || `${station.lat},${station.lon}`);
+      link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}&waypoints=${station.lat},${station.lon}`;
       link.target = '_blank';
-      link.textContent = 'Aller à cette station →';
+      link.textContent = 'Ajouter cette station à mon trajet';
       cheapestNote.appendChild(link);
     }
   } else {
@@ -2211,7 +2213,7 @@ async function calculer() {
 
     // Station la moins chère à proximité du départ (best-effort, ne bloque rien).
     const carburantType = document.getElementById('carburant').value;
-    lastStationSearch = { lat: c1[1], lon: c1[0], type: carburantType, rayon: STATION_RAYON_KM };
+    lastStationSearch = { lat: c1[1], lon: c1[0], type: carburantType, rayon: STATION_RAYON_KM, depart, arrivee };
     await rechercherStationMoinsChere();
 
     document.getElementById('sectionResultats').style.display = 'block';
