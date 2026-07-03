@@ -354,10 +354,7 @@
       .conso-line { justify-content: center; width: auto; margin: 0; }
       .passagers-line { justify-content: center; width: auto; margin: 0; gap: 12px; }
       /* Resserre les lignes de résultats (trop de blanc vertical sur petit écran). */
-      .res-table { border-spacing: 0 3px; }
-      .res-table tbody tr td { padding: 6px 10px; }
-      #r-cout.has-per-person { padding-bottom: 24px; }
-      .per-person-note { bottom: 3px; }
+      .res-row { padding: 6px 0; }
     }
 
     /* Autocomplete */
@@ -603,11 +600,31 @@
     /* Résultats */
     .card.resultats { display: none; }
 
-    .res-table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0 6px;
+    /* Sous-blocs résultats (Trajet / Coût & conso) : réutilise la charte
+       graphique de la page Paramètres (.section, .param-row) plutôt qu'un
+       tableau à part, pour que les deux pages restent visuellement proches. */
+    .res-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #90a4ae;
+      padding: 0 2px 6px;
     }
+    .res-section-title:not(:first-child) { padding-top: 6px; }
+    .res-section { margin-bottom: 6px; }
+    .res-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f4f8;
+      position: relative;
+    }
+    .res-row:last-child { border-bottom: none; }
+    .res-label { font-size: 14px; font-weight: 600; color: #455060; }
+    .res-value { font-size: 14.5px; font-weight: 700; color: #1a2433; text-align: right; }
 
     /* Bascule Aller simple / Aller-retour : remplace les deux colonnes du
        tableau par une seule valeur, qu'on peut basculer d'un mode à
@@ -646,37 +663,17 @@
     }
     .cost-callout strong { color: #1a2433; }
 
-    .res-table tbody tr td {
-      padding: 10px 12px;
-      font-size: 13px;
-      background: #f5f7fa;
-    }
-    .res-table tbody tr td:first-child {
-      border-radius: 10px 0 0 10px;
-      color: #455060;
-    }
-    .res-table tbody tr td:not(:first-child) {
-      text-align: center;
-      font-weight: 600;
-      color: #1a2433;
-    }
-    .res-table tbody tr td:last-child {
-      background: #e8f4ff;
-      border-radius: 0 10px 10px 0;
-    }
-
-    /* Coût par personne (partage de frais) : sous-ligne discrète dans la même
-       cellule que le coût carburant, plutôt qu'une ligne séparée. */
-    #r-cout { position: relative; }
-    #r-cout.has-per-person { padding-bottom: 34px; }
+    /* Coût par personne (partage de frais) : sous-ligne discrète sous le
+       montant. En flux normal (plus besoin de positionnement absolu
+       maintenant que la ligne n'est plus une cellule de tableau). */
+    #r-cout { text-align: right; }
     .per-person-note {
-      position: absolute;
-      left: 4px; right: 4px;
-      bottom: 4px;
+      margin-top: 2px;
       line-height: 1.25;
       font-size: 9.5px;
       font-weight: 600;
-      opacity: 0.8;
+      color: #607080;
+      opacity: 0.85;
     }
 
     /* Message rotatif quand on clique sur + alors qu'on est déjà au maximum de
@@ -725,40 +722,6 @@
       font-weight: 400;
       color: #aab4bf;
     }
-
-    /* Sous-blocs résultats */
-    .res-table tr.group-header td {
-      background: none;
-      border-radius: 0;
-      padding: 12px 4px 4px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #90a4ae;
-      border-bottom: none;
-    }
-    /* Le <td colspan="2"> du bandeau est à la fois :first-child et :last-child
-       (cellule unique) : sans ce override, le fond teinté de la colonne
-       valeur (:last-child, plus spécifique par nombre d'éléments) le
-       traversait et surlignait "Trajet"/"Coût & conso". */
-    .res-table tr.group-header td:first-child,
-    .res-table tr.group-header td:last-child { background: none !important; }
-    /* Rapproche le bandeau "Trajet" du haut du tableau. */
-    .res-table tbody tr.group-header:first-of-type td { padding-top: 0; }
-    .res-table tr.group-row td { border-radius: 0; }
-    .res-table tr.group-row td:first-child { border-radius: 0; }
-    .res-table tr.group-row td:last-child { border-radius: 0; }
-    .res-table tr.group-first td:first-child { border-radius: 10px 0 0 0; }
-    .res-table tr.group-first td:last-child { border-radius: 0 10px 0 0; }
-    .res-table tr.group-last td:first-child { border-radius: 0 0 0 10px; }
-    .res-table tr.group-last td:last-child { border-radius: 0 0 10px 0; }
-
-    /* Contours subtils pour séparer visuellement les blocs Trajet et Coût & conso.
-       Bordure continue autour de chaque ligne (pas de trait vertical interne). */
-    .res-table tr.group-row td { border-top: 1px solid #dbe3ec; border-bottom: 1px solid #dbe3ec; }
-    .res-table tr.group-row td:first-child { border-left: 1px solid #dbe3ec; }
-    .res-table tr.group-row td:last-child { border-right: 1px solid #dbe3ec; }
 
     /* Bordure animée "chasing shine" + halo pulsé, pour mettre en valeur
        la station la moins chère. Dégrade proprement (bordure verte fixe)
@@ -949,32 +912,29 @@
       <button type="button" class="ar-toggle-btn active" data-mode="simple" onclick="setResultMode('simple')">Aller simple</button>
       <button type="button" class="ar-toggle-btn" data-mode="ar" onclick="setResultMode('ar')">Aller-retour</button>
     </div>
-    <table class="res-table">
-      <tbody>
-        <tr class="group-header">
-          <td colspan="2">Trajet</td>
-        </tr>
-        <tr class="group-row group-first">
-          <td>Distance</td>
-          <td id="r-dist">—</td>
-        </tr>
-        <tr class="group-row group-last">
-          <td>Durée</td>
-          <td id="r-duree">—</td>
-        </tr>
-        <tr class="group-header">
-          <td colspan="2">Coût & conso</td>
-        </tr>
-        <tr class="group-row group-first">
-          <td>Coût carburant</td>
-          <td id="r-cout">—</td>
-        </tr>
-        <tr class="group-row group-last">
-          <td>Litres consommés</td>
-          <td id="r-litres">—</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="res-section-title">Trajet</div>
+    <div class="section res-section">
+      <div class="res-row">
+        <span class="res-label">Distance</span>
+        <span class="res-value" id="r-dist">—</span>
+      </div>
+      <div class="res-row">
+        <span class="res-label">Durée</span>
+        <span class="res-value" id="r-duree">—</span>
+      </div>
+    </div>
+
+    <div class="res-section-title">Coût & conso</div>
+    <div class="section res-section">
+      <div class="res-row">
+        <span class="res-label">Coût carburant</span>
+        <span class="res-value" id="r-cout">—</span>
+      </div>
+      <div class="res-row">
+        <span class="res-label">Litres consommés</span>
+        <span class="res-value" id="r-litres">—</span>
+      </div>
+    </div>
     <div class="cost-callout" id="costCallout"></div>
     <div class="maps-wrap" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
     <a class="maps-link" id="mapsLink" href="#" target="_blank"
