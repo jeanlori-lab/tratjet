@@ -733,6 +733,12 @@
       color: #90a4ae;
       border-bottom: none;
     }
+    /* Le <td colspan="2"> du bandeau est à la fois :first-child et :last-child
+       (cellule unique) : sans ce override, le fond teinté de la colonne
+       valeur (:last-child, plus spécifique par nombre d'éléments) le
+       traversait et surlignait "Trajet"/"Coût & conso". */
+    .res-table tr.group-header td:first-child,
+    .res-table tr.group-header td:last-child { background: none !important; }
     /* Rapproche le bandeau "Trajet" du haut du tableau. */
     .res-table tbody tr.group-header:first-of-type td { padding-top: 0; }
     .res-table tr.group-row td { border-radius: 0; }
@@ -908,8 +914,8 @@
   <div class="card resultats" id="sectionResultats" style="margin-top:14px;">
     <div class="card-title">Résultats</div>
     <div class="ar-toggle" id="arToggle">
-      <button type="button" class="ar-toggle-btn" data-mode="simple" onclick="setResultMode('simple')">Aller simple</button>
-      <button type="button" class="ar-toggle-btn active" data-mode="ar" onclick="setResultMode('ar')">Aller-retour</button>
+      <button type="button" class="ar-toggle-btn active" data-mode="simple" onclick="setResultMode('simple')">Aller simple</button>
+      <button type="button" class="ar-toggle-btn" data-mode="ar" onclick="setResultMode('ar')">Aller-retour</button>
     </div>
     <table class="res-table">
       <tbody>
@@ -1801,7 +1807,7 @@ function fmtEur(n) { return n.toLocaleString('fr-FR', {minimumFractionDigits:2, 
 function fmtL(n)   { return n.toLocaleString('fr-FR', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' L'; }
 
 // --- Bascule Aller simple / Aller-retour dans le tableau de résultats ---
-let resultMode = 'ar'; // 'simple' | 'ar'
+let resultMode = 'simple'; // 'simple' | 'ar'
 let lastResultData = null;
 
 function setResultMode(mode) {
