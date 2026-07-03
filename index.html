@@ -854,7 +854,7 @@
       <div class="points-wrap">
         <div id="points"></div>
         <!-- Inverser départ ↔ destination (visible seulement sans étape) -->
-        <button type="button" class="swap-btn" id="swapBtn" onclick="swapItinerary()" aria-label="Inverser départ et destination">⇅</button>
+        <button type="button" class="swap-btn" id="swapBtn" onclick="swapItinerary()" aria-label="Inverser départ et arrivée">⇅</button>
       </div>
 
       <div class="itinerary-controls">
@@ -1059,7 +1059,7 @@ function showFavHint(star) {
   if (!row) return;
   const hint = document.createElement('div');
   hint.className = 'fav-hint';
-  hint.textContent = 'Enregistré ! Retrouvez vos favoris en cliquant dans un champ vide.';
+  hint.textContent = 'Enregistré ! Retrouve tes favoris en cliquant dans un champ vide.';
   row.appendChild(hint);
   requestAnimationFrame(() => hint.classList.add('show'));
   setTimeout(() => {
