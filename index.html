@@ -626,6 +626,21 @@
     .res-label { font-size: 14px; font-weight: 600; color: #455060; }
     .res-value { font-size: 14.5px; font-weight: 700; color: #1a2433; text-align: right; }
 
+    /* Trajet : simple ligne de texte compacte (distance/durée), sans carte
+       ni bordures — l'info est secondaire par rapport au coût. */
+    .res-trajet-line {
+      font-size: 13.5px;
+      font-weight: 400;
+      color: #607080;
+      padding: 2px 2px 14px;
+    }
+    .res-trajet-line strong { font-weight: 600; color: #455060; }
+
+    /* Coût & conso : les chiffres qui comptent vraiment, mis en avant en
+       grand et en gras pour qu'on les repère au premier coup d'œil. */
+    .res-value-big { font-size: 29px; font-weight: 900; color: #1565c0; }
+    #r-litres.res-value-big { font-size: 22px; color: #1a2433; }
+
     /* Bascule Aller simple / Aller-retour : remplace les deux colonnes du
        tableau par une seule valeur, qu'on peut basculer d'un mode à
        l'autre (seul le coût carburant garde un rappel de l'autre mode). */
@@ -934,27 +949,17 @@
       <button type="button" class="ar-toggle-btn active" data-mode="simple" onclick="setResultMode('simple')">Aller simple</button>
       <button type="button" class="ar-toggle-btn" data-mode="ar" onclick="setResultMode('ar')">Aller-retour</button>
     </div>
-    <div class="res-section-title">Trajet</div>
-    <div class="section res-section">
-      <div class="res-row">
-        <span class="res-label">Distance</span>
-        <span class="res-value" id="r-dist">—</span>
-      </div>
-      <div class="res-row">
-        <span class="res-label">Durée</span>
-        <span class="res-value" id="r-duree">—</span>
-      </div>
-    </div>
+    <div class="res-trajet-line"><strong id="r-dist">—</strong> · <strong id="r-duree">—</strong></div>
 
     <div class="res-section-title">Coût & conso</div>
     <div class="section res-section">
       <div class="res-row">
         <span class="res-label">Coût carburant</span>
-        <span class="res-value" id="r-cout">—</span>
+        <span class="res-value res-value-big" id="r-cout">—</span>
       </div>
       <div class="res-row">
         <span class="res-label">Litres consommés</span>
-        <span class="res-value" id="r-litres">—</span>
+        <span class="res-value res-value-big" id="r-litres">—</span>
       </div>
     </div>
     <div class="cost-callout" id="costCallout"></div>

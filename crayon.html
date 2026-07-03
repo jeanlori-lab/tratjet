@@ -765,6 +765,27 @@
     .res-table tr.group-row td:first-child { border-left: 1px solid #dbe3ec; }
     .res-table tr.group-row td:last-child { border-right: 1px solid #dbe3ec; }
 
+    /* Trajet : simple ligne de texte compacte (distance/durée), sans carte
+       ni bordures — l'info est secondaire par rapport au coût. */
+    .res-table tr.res-trajet-row td,
+    .res-table tr.res-trajet-row td:first-child,
+    .res-table tr.res-trajet-row td:last-child {
+      background: none !important;
+      border: none !important;
+      border-radius: 0 !important;
+      padding: 2px 4px 14px !important;
+      font-size: 13.5px;
+      font-weight: 400;
+      color: #607080;
+      text-align: left;
+    }
+
+    /* Coût & conso : les chiffres qui comptent vraiment, mis en avant en
+       grand et en gras pour qu'on les repère au premier coup d'œil. */
+    .res-table td.res-value-big { font-weight: 900 !important; }
+    #r-cout.res-value-big { font-size: 25px !important; color: #1565c0 !important; }
+    #r-litres.res-value-big { font-size: 19px !important; color: #1a2433 !important; }
+
     /* Bordure animée "chasing shine" + halo pulsé, pour mettre en valeur
        la station la moins chère. Dégrade proprement (bordure fixe) sur
        les navigateurs sans support de @property/conic-gradient. */
@@ -1006,6 +1027,16 @@
     .res-table tr.group-header td:last-child { background: none !important; }
     .res-table tr.group-row td { border-color: #1d1d1b !important; border-width: 1.25px !important; }
     .per-person-note { color: #5b5b56 !important; font-size: 10.5px !important; }
+    .res-table tr.res-trajet-row td,
+    .res-table tr.res-trajet-row td:first-child,
+    .res-table tr.res-trajet-row td:last-child {
+      background: none !important;
+      font-weight: 400 !important;
+      font-size: 13.5px !important;
+      color: #5b5b56 !important;
+    }
+    #r-cout.res-value-big { color: #8447d6 !important; }
+    #r-litres.res-value-big { color: #1d1d1b !important; }
 
     .cheapest-note {
       background: #fff8e1 !important;
@@ -1140,27 +1171,19 @@
     </div>
     <table class="res-table">
       <tbody>
-        <tr class="group-header">
-          <td colspan="2">Trajet</td>
-        </tr>
-        <tr class="group-row group-first">
-          <td>Distance</td>
-          <td id="r-dist">—</td>
-        </tr>
-        <tr class="group-row group-last">
-          <td>Durée</td>
-          <td id="r-duree">—</td>
+        <tr class="res-trajet-row">
+          <td colspan="2"><span id="r-dist">—</span> · <span id="r-duree">—</span></td>
         </tr>
         <tr class="group-header">
           <td colspan="2">Coût & conso</td>
         </tr>
         <tr class="group-row group-first">
           <td>Coût carburant</td>
-          <td id="r-cout">—</td>
+          <td id="r-cout" class="res-value-big">—</td>
         </tr>
         <tr class="group-row group-last">
           <td>Litres consommés</td>
-          <td id="r-litres">—</td>
+          <td id="r-litres" class="res-value-big">—</td>
         </tr>
       </tbody>
     </table>
