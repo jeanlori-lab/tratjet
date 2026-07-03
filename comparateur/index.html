@@ -91,6 +91,32 @@
     .autocomplete-item:last-child { border-bottom: none; }
     .autocomplete-item:hover { background: #eef6ff; }
 
+    /* Flèches d'inversion départ ↔ arrivée, à cheval entre les deux encadrés */
+    .points-wrap { position: relative; }
+    .swap-btn {
+      position: absolute;
+      z-index: 25;
+      right: 10px;
+      top: 50%;
+      transform: translateY(calc(-50% + 5px));
+      width: 28px; height: 28px;
+      padding: 0;
+      border: 1.5px solid #dbe3ec;
+      border-radius: 9px;
+      background: #fff;
+      color: #1976d2;
+      font-size: 15px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: inherit;
+      transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+    }
+    .swap-btn:hover { background: #eef6ff; box-shadow: 0 0 0 3px rgba(33,150,243,0.10); }
+    .swap-btn:active { transform: translateY(calc(-50% + 5px)) scale(0.9); }
+
     .two-cols { display: flex; gap: 10px; }
     .two-cols .field { flex: 1; }
 
@@ -275,19 +301,22 @@
   <div class="card">
     <div class="card-title">Ton trajet</div>
 
-    <div class="field">
-      <label>Départ</label>
-      <div class="autocomplete-wrap">
-        <input type="text" id="depart" placeholder="Ville ou adresse de départ" autocomplete="off" oninput="onPlaceInput(this)">
-        <div class="autocomplete-list"></div>
+    <div class="points-wrap">
+      <div class="field">
+        <label>Départ</label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="depart" placeholder="Ville ou adresse de départ" autocomplete="off" oninput="onPlaceInput(this)">
+          <div class="autocomplete-list"></div>
+        </div>
       </div>
-    </div>
-    <div class="field">
-      <label>Arrivée</label>
-      <div class="autocomplete-wrap">
-        <input type="text" id="arrivee" placeholder="Ville ou adresse d'arrivée" autocomplete="off" oninput="onPlaceInput(this)">
-        <div class="autocomplete-list"></div>
+      <div class="field">
+        <label>Arrivée</label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="arrivee" placeholder="Ville ou adresse d'arrivée" autocomplete="off" oninput="onPlaceInput(this)">
+          <div class="autocomplete-list"></div>
+        </div>
       </div>
+      <button type="button" class="swap-btn" id="swapBtn" onclick="swapPlaces()" aria-label="Inverser départ et arrivée">⇅</button>
     </div>
 
     <div class="two-cols">
@@ -505,6 +534,17 @@ function toggleCar() {
   document.getElementById('carBody').classList.toggle('open');
 }
 
+// Inverse départ ↔ arrivée (valeurs + coordonnées mémorisées) et efface les résultats.
+function swapPlaces() {
+  const a = document.getElementById('depart');
+  const b = document.getElementById('arrivee');
+  [a.value, b.value] = [b.value, a.value];
+  ['lat', 'lng', 'city'].forEach(k => {
+    const tmp = a.dataset[k]; a.dataset[k] = b.dataset[k] || ''; b.dataset[k] = tmp || '';
+  });
+  hideResults();
+}
+
 // ---------- Table de liaisons train connues (temps réels, prix typiques) ----------
 // Clé : villes normalisées triées. [heures de train, prix min, prix max]
 const TRAIN_PAIRS = {
@@ -553,6 +593,17 @@ function co2Chip(kg) {
   const cls = kg < 20 ? 'co2-low' : (kg < 120 ? 'co2-mid' : 'co2-high');
   return `<span class="co2chip ${cls}">≈ ${Math.round(kg)} kg CO₂/pers.</span>`;
 }
+// Slug de ville pour les URL SNCF Connect (paris, aix-en-provence…)
+function citySlug(s) {
+  return normCity(s).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+function dateChoisie() { return document.getElementById('dateTrajet').value || ''; } // YYYY-MM-DD
+function dateFr() {
+  const iso = dateChoisie();
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
 
 // ---------- Itinéraire voiture (ORS) ----------
 async function getRoute(from, to) {
@@ -596,14 +647,22 @@ async function comparer() {
     const carCO2vehicule = route.distKm * (isElec ? 0.103 : 0.218);
 
     // --- Train ---
+    // Les prix réels varient énormément (anticipation, promo) : on affiche une
+    // fourchette resserrée autour du prix typique plutôt que les extrêmes,
+    // sinon elle est trop large pour aider à décider.
+    const shrink = (min, max) => {
+      const mid = (min + max) / 2;
+      return [min + 0.4 * (mid - min), max - 0.4 * (max - mid)];
+    };
     const pair = lookupTrainPair(from.city, to.city);
     let train;
     if (pair) {
-      train = { hRail: pair[0], pMin: pair[1], pMax: pair[2], source: 'liaison connue' };
+      const [pMin, pMax] = shrink(pair[1], pair[2]);
+      train = { hRail: pair[0], pMin, pMax, source: 'liaison connue' };
     } else {
       const railKm = crowKm * 1.25;
       const base = 8 + railKm * 0.095;
-      train = { hRail: railKm / 135 + 0.6, pMin: base * 0.6, pMax: base * 1.6, source: 'estimation' };
+      train = { hRail: railKm / 135 + 0.6, pMin: base * 0.75, pMax: base * 1.35, source: 'estimation' };
     }
     const trainDoorH = train.hRail + 1.0; // accès gares + marge
     const trainCO2 = crowKm * 1.2 * 0.0035;
@@ -615,7 +674,8 @@ async function comparer() {
       const volH = crowKm / 720 + 0.55;
       const doorH = volH + 3.4; // navettes aéroports + 2h avance + récup bagages
       const base = 28 + crowKm * 0.055;
-      plane = { volH, doorH, pMin: base * 0.7, pMax: base * 2.3, co2: crowKm * 1.1 * 0.26 };
+      // Fourchette resserrée autour du prix typique (comme le train).
+      plane = { volH, doorH, pMin: base * 0.85, pMax: base * 1.7, co2: crowKm * 1.1 * 0.26 };
     }
 
     // --- Covoiturage ---
@@ -659,7 +719,7 @@ function renderResults() {
     meta: fmtH(d.train.hRail) + ' de train · ≈ ' + fmtH(d.trainDoorH) + ' porte à porte',
     co2: d.trainCO2,
     confort: COMFORT_TRAIN,
-    cta: { txt: 'Prix réels SNCF Connect ›', url: 'https://www.sncf-connect.com/' },
+    cta: { txt: 'Prix réels SNCF Connect ›', url: 'https://www.sncf-connect.com/train/horaires/' + citySlug(d.from.city) + '/' + citySlug(d.to.city) },
   });
   if (d.plane) {
     options.push({
@@ -670,7 +730,7 @@ function renderResults() {
       meta: 'Vol ' + fmtH(d.plane.volH) + ' · ≈ ' + fmtH(d.plane.doorH) + ' porte à porte (navettes + 2h aéroport)',
       co2: d.plane.co2,
       confort: COMFORT_PLANE,
-      cta: { txt: 'Voir les vols ›', url: 'https://www.google.com/travel/flights?q=' + encodeURIComponent('vols de ' + d.from.city + ' à ' + d.to.city) },
+      cta: { txt: 'Voir les vols ›', url: 'https://www.google.com/travel/flights?q=' + encodeURIComponent('vols de ' + d.from.city + ' à ' + d.to.city + (dateChoisie() ? ' le ' + dateFr() : '')) },
     });
   }
   options.push({
@@ -681,7 +741,7 @@ function renderResults() {
     meta: '≈ ' + fmtH(d.route.dureeH + 0.4) + ' porte à porte · selon les annonces',
     co2: d.covoitCO2,
     confort: comfortCovoit(d.route.dureeH),
-    cta: { txt: 'Voir sur Blablacar ›', url: 'https://www.blablacar.fr/search?fn=' + encodeURIComponent(d.from.city) + '&tn=' + encodeURIComponent(d.to.city) },
+    cta: { txt: 'Voir sur Blablacar ›', url: 'https://www.blablacar.fr/search?fn=' + encodeURIComponent(d.from.city) + '&tn=' + encodeURIComponent(d.to.city) + (dateChoisie() ? '&db=' + encodeURIComponent(dateFr()) : '') },
   });
 
   // Score pondéré : ratio au meilleur sur chaque critère (1 = meilleur).
