@@ -830,22 +830,28 @@
       transition: background 0.15s;
     }
     .cheapest-link:hover { background: #bbdefb; }
-    .cheapest-widen {
-      display: block;
-      margin-top: 8px;
-      background: none;
-      border: none;
-      font-family: inherit;
+    .cheapest-empty { font-size: 12.5px; color: #90a4ae; font-style: italic; }
+    .cheapest-note.loading { opacity: 0.6; }
+    .cheapest-radius {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #e3e9ef;
+    }
+    .cheapest-radius-label {
       font-size: 11px;
       font-weight: 600;
       color: #607080;
-      cursor: pointer;
-      padding: 2px 0;
-      text-align: left;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
-    .cheapest-widen:hover { color: #1976d2; }
-    .cheapest-widen:disabled { color: #b0bcc8; cursor: default; }
-    .cheapest-empty { font-size: 12.5px; color: #90a4ae; font-style: italic; }
+    .cheapest-slider {
+      flex: 1;
+      accent-color: #1976d2;
+      cursor: pointer;
+    }
 
     .maps-wrap {
       text-align: center;
@@ -1010,9 +1016,10 @@
     .cheapest-detail { color: #5b5b56 !important; font-weight: 700 !important; }
     .cheapest-detail strong { color: #2a9d3a !important; }
     .cheapest-link { background: #e3edff !important; color: #2f6de0 !important; border: 1.25px solid #1d1d1b !important; }
-    .cheapest-widen { color: #5b5b56 !important; font-family: 'Comic Neue', sans-serif !important; }
-    .cheapest-widen:hover { color: #8447d6 !important; }
     .cheapest-empty { color: #5b5b56 !important; }
+    .cheapest-radius { border-top: 1px dashed #c9c2b6 !important; }
+    .cheapest-radius-label { color: #5b5b56 !important; font-family: 'Comic Neue', sans-serif !important; }
+    .cheapest-slider { accent-color: #8447d6 !important; }
 
     .maps-link {
       background: #e3edff !important; color: #2f6de0 !important;
@@ -1612,10 +1619,11 @@ function distKm(lat1, lon1, lat2, lon2) {
 // Station la moins chère à proximité du départ, pour le carburant choisi.
 // Best-effort : en cas d'échec (API indisponible, aucune station dans le
 // rayon…), on masque simplement la note, sans bloquer le reste du calcul.
-// Le rayon peut être élargi par pallier depuis l'encadré résultat, sans
+// Le rayon peut être ajusté via le curseur depuis l'encadré résultat, sans
 // relancer tout le calcul du trajet.
 const STATION_RAYON_KM = 8;
-const STATION_RAYON_PALIERS = [8, 15, 25, 40];
+const STATION_RAYON_MIN = 5;
+const STATION_RAYON_MAX = 50;
 async function fetchStationMoinsChere(lat, lon, type, rayonKm) {
   rayonKm = rayonKm || STATION_RAYON_KM;
   const field = (type === 'sp95') ? 'e10_prix' : CARB_FIELD[type];
@@ -1646,32 +1654,33 @@ async function fetchStationMoinsChere(lat, lon, type, rayonKm) {
 }
 
 // Recherche + affichage de la station la moins chère, indépendants du reste
-// du calcul du trajet : "Élargir le rayon" ne relance que cet encadré.
-let lastStationSearch = null; // { lat, lon, type, rayonIndex }
+// du calcul du trajet : le curseur de rayon ne relance que cet encadré.
+let lastStationSearch = null; // { lat, lon, type, rayon }
 
 async function rechercherStationMoinsChere() {
   const cheapestNote = document.getElementById('cheapestNote');
   if (!lastStationSearch) { cheapestNote.style.display = 'none'; return; }
-  const { lat, lon, type, rayonIndex } = lastStationSearch;
-  const rayonKm = STATION_RAYON_PALIERS[rayonIndex];
-  const station = await fetchStationMoinsChere(lat, lon, type, rayonKm);
+  const { lat, lon, type, rayon } = lastStationSearch;
+  cheapestNote.classList.add('loading');
+  const station = await fetchStationMoinsChere(lat, lon, type, rayon);
+  cheapestNote.classList.remove('loading');
   cheapestNote.textContent = '';
   cheapestNote.style.display = 'block';
 
-  if (station) {
-    const header = document.createElement('div');
-    header.className = 'cheapest-header';
-    const icon = document.createElement('span');
-    icon.className = 'cheapest-icon';
-    icon.textContent = '🐀';
-    header.appendChild(icon);
-    const title = document.createElement('span');
-    title.className = 'cheapest-title';
-    title.style.fontSize = '0.9em';
-    title.textContent = 'Station la moins chère près du départ';
-    header.appendChild(title);
-    cheapestNote.appendChild(header);
+  const header = document.createElement('div');
+  header.className = 'cheapest-header';
+  const icon = document.createElement('span');
+  icon.className = 'cheapest-icon';
+  icon.textContent = '🐀';
+  header.appendChild(icon);
+  const title = document.createElement('span');
+  title.className = 'cheapest-title';
+  title.style.fontSize = '0.9em';
+  title.textContent = 'Station la moins chère près du départ';
+  header.appendChild(title);
+  cheapestNote.appendChild(header);
 
+  if (station) {
     const detail = document.createElement('div');
     detail.className = 'cheapest-detail';
     const strong = document.createElement('strong');
@@ -1694,44 +1703,38 @@ async function rechercherStationMoinsChere() {
       cheapestNote.appendChild(link);
     }
   } else {
-    const header = document.createElement('div');
-    header.className = 'cheapest-header';
-    const icon = document.createElement('span');
-    icon.className = 'cheapest-icon';
-    icon.textContent = '🐀';
-    header.appendChild(icon);
-    const title = document.createElement('span');
-    title.className = 'cheapest-title';
-    title.style.fontSize = '0.9em';
-    title.textContent = 'Station la moins chère près du départ';
-    header.appendChild(title);
-    cheapestNote.appendChild(header);
-
     const empty = document.createElement('div');
     empty.className = 'cheapest-empty';
-    empty.textContent = 'Aucune station trouvée dans un rayon de ' + rayonKm + ' km.';
+    empty.textContent = 'Aucune station trouvée dans un rayon de ' + rayon + ' km.';
     cheapestNote.appendChild(empty);
   }
 
-  // Bouton "Élargir le rayon", tant qu'on n'a pas atteint le dernier palier.
-  if (rayonIndex < STATION_RAYON_PALIERS.length - 1) {
-    const nextRayon = STATION_RAYON_PALIERS[rayonIndex + 1];
-    const widen = document.createElement('button');
-    widen.type = 'button';
-    widen.className = 'cheapest-widen';
-    widen.textContent = 'Élargir la recherche à ' + nextRayon + ' km →';
-    widen.onclick = elargirRayonStation;
-    cheapestNote.appendChild(widen);
-  }
-}
-
-async function elargirRayonStation() {
-  if (!lastStationSearch) return;
-  if (lastStationSearch.rayonIndex >= STATION_RAYON_PALIERS.length - 1) return;
-  lastStationSearch.rayonIndex++;
-  const widenBtn = document.querySelector('.cheapest-widen');
-  if (widenBtn) { widenBtn.disabled = true; widenBtn.textContent = 'Recherche…'; }
-  await rechercherStationMoinsChere();
+  // Curseur pour élargir/réduire le rayon de recherche : recalcule uniquement
+  // au relâchement ("change"), pas à chaque cran glissé ("input").
+  const radiusWrap = document.createElement('div');
+  radiusWrap.className = 'cheapest-radius';
+  const label = document.createElement('span');
+  label.className = 'cheapest-radius-label';
+  label.id = 'cheapestRadiusLabel';
+  label.textContent = 'Rayon : ' + rayon + ' km';
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.className = 'cheapest-slider';
+  slider.min = STATION_RAYON_MIN;
+  slider.max = STATION_RAYON_MAX;
+  slider.step = 1;
+  slider.value = rayon;
+  slider.setAttribute('aria-label', 'Rayon de recherche de la station la moins chère');
+  slider.addEventListener('input', () => {
+    document.getElementById('cheapestRadiusLabel').textContent = 'Rayon : ' + slider.value + ' km';
+  });
+  slider.addEventListener('change', () => {
+    lastStationSearch.rayon = parseInt(slider.value, 10);
+    rechercherStationMoinsChere();
+  });
+  radiusWrap.appendChild(label);
+  radiusWrap.appendChild(slider);
+  cheapestNote.appendChild(radiusWrap);
 }
 
 const DEPART_FIXE = '60 rue de Dantzig, Paris';
@@ -2208,7 +2211,7 @@ async function calculer() {
 
     // Station la moins chère à proximité du départ (best-effort, ne bloque rien).
     const carburantType = document.getElementById('carburant').value;
-    lastStationSearch = { lat: c1[1], lon: c1[0], type: carburantType, rayonIndex: 0 };
+    lastStationSearch = { lat: c1[1], lon: c1[0], type: carburantType, rayon: STATION_RAYON_KM };
     await rechercherStationMoinsChere();
 
     document.getElementById('sectionResultats').style.display = 'block';
