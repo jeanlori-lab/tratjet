@@ -13,7 +13,7 @@
 
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
-      background: linear-gradient(135deg, #e8f5e9 0%, #e3f2fd 100%);
+      background: #eef2f6;
       min-height: 100vh;
       padding: 24px 16px;
       color: #1a2433;
@@ -56,7 +56,7 @@
       border-radius: 18px;
       padding: 20px;
       margin-bottom: 14px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+      box-shadow: 0 6px 22px rgba(15,23,41,0.14);
     }
 
     .card-title {
@@ -130,26 +130,36 @@
     input[type="text"], input[type="number"], select {
       width: 100%;
       padding: 8px 11px;
-      border: 1.5px solid #c8e6c9;
+      border: 2.5px solid #1976d2;
       border-radius: 10px;
-      background: #f1fdf1;
+      background: #ffffff;
       font-size: 13px;
+      font-weight: 600;
       font-family: inherit;
-      color: #1a2433;
+      color: #0f1729;
       outline: none;
+      box-shadow: 0 2px 6px rgba(25,118,210,0.15);
       transition: border-color 0.15s, box-shadow 0.15s;
     }
     input[type="text"]:focus, input[type="number"]:focus, select:focus {
-      border-color: #43a047;
-      box-shadow: 0 0 0 3px rgba(67,160,71,0.13);
+      border-color: #0d47a1;
+      box-shadow: 0 0 0 3px rgba(25,118,210,0.2);
     }
     select {
       appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2390a4ae'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23607080'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 10px center;
       padding-right: 26px;
-      background-color: #f1fdf1;
+      background-color: #ffffff;
+    }
+    .section-carburant input[type="text"], .section-carburant input[type="number"], .section-carburant select {
+      border-color: #e2971a;
+      box-shadow: 0 2px 6px rgba(226,151,26,0.18);
+    }
+    .section-carburant input[type="text"]:focus, .section-carburant input[type="number"]:focus, .section-carburant select:focus {
+      border-color: #c9760a;
+      box-shadow: 0 0 0 3px rgba(226,151,26,0.22);
     }
 
     .auto-field {
@@ -179,11 +189,15 @@
     /* Trait séparateur entre le bloc Départ/Destination (au-dessus) et Carburant/Conso */
     /* Panneaux teintés : un pour Départ/Destination, un pour Carburant/Conso */
     .section {
-      background: #f5f8fb;
-      border: 1px solid #eef2f6;
+      background: #eaf3ff;
+      border: 1.5px solid #bcd9f7;
       border-radius: 14px;
       padding: 4px 14px;
       margin-bottom: 12px;
+    }
+    .section-carburant {
+      background: #fff6e6;
+      border-color: #f3d999;
     }
     .carburant-row { padding-bottom: 26px; }
     .carburant-row .param-input { position: relative; }
@@ -225,7 +239,7 @@
       cursor: text;
     }
     #consoVal.conso-val-input:focus {
-      background: rgba(46,125,50,0.06);
+      background: rgba(226,151,26,0.1);
       box-shadow: none;
     }
     #consoVal.conso-val-input[readonly] { cursor: default; }
@@ -234,11 +248,11 @@
     .conso-arrow, .pass-arrow {
       width: 32px; height: 32px;
       flex-shrink: 0;
-      border: 1.5px solid #c8e6c9;
+      border: 2.5px solid #e2971a;
       border-radius: 10px;
-      background: linear-gradient(#fbfffb, #eef9ee);
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
-      color: #2e7d32;
+      background: #ffffff;
+      box-shadow: 0 2px 6px rgba(226,151,26,0.18);
+      color: #c9760a;
       font-size: 17px;
       font-weight: 700;
       line-height: 1;
@@ -246,7 +260,7 @@
       display: flex; align-items: center; justify-content: center;
       transition: background 0.15s, transform 0.1s;
     }
-    .conso-arrow:hover, .pass-arrow:hover { background: #e3f5e4; }
+    .conso-arrow:hover, .pass-arrow:hover { background: #fff1d6; }
     .conso-arrow:active, .pass-arrow:active { transform: scale(0.9); }
 
     /* Nombre de passagers : compteur +/-, aligné avec les boutons +/- de la
@@ -259,10 +273,10 @@
       position: relative;
       width: 100%;
       height: 32px;
-      border: 1.5px solid #c8e6c9;
+      border: 2.5px solid #e2971a;
       border-radius: 10px;
-      background: linear-gradient(#fbfffb, #eef9ee);
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+      background: #ffffff;
+      box-shadow: 0 2px 6px rgba(226,151,26,0.18);
       overflow: hidden;
       cursor: grab;
       touch-action: none;
@@ -284,7 +298,7 @@
       top: 0; left: 0; height: 100%;
       width: 4000px;
       /* graduations fines tous les 0,1 (6px) */
-      background-image: repeating-linear-gradient(90deg, #bcdcc0 0, #bcdcc0 1px, transparent 1px, transparent 6px);
+      background-image: repeating-linear-gradient(90deg, #f0cf8a 0, #f0cf8a 1px, transparent 1px, transparent 6px);
       background-repeat: repeat-x;
       background-position: 0 100%;
       background-size: 6px 7px;
@@ -299,7 +313,7 @@
       position: absolute;
       left: 0; bottom: 0;
       width: 1.5px; height: 11px;
-      background: #7fae84;
+      background: #c9760a;
       transform: translateX(-50%);
     }
     .rt-major span {
@@ -307,13 +321,13 @@
       bottom: 12px; left: 0;
       transform: translateX(-50%);
       font-size: 9px;
-      color: #6f8a72;
+      color: #8a6417;
     }
     .roulette-center {
       position: absolute;
       left: 50%; top: 0; bottom: 0;
       width: 2px;
-      background: #2e7d32;
+      background: #c9760a;
       transform: translateX(-50%);
       pointer-events: none;
       z-index: 2;
@@ -325,8 +339,8 @@
       border-left: 4px solid transparent;
       border-right: 4px solid transparent;
     }
-    .roulette-center::before { top: -1px; border-top: 5px solid #2e7d32; }
-    .roulette-center::after { bottom: -1px; border-bottom: 5px solid #2e7d32; }
+    .roulette-center::before { top: -1px; border-top: 5px solid #c9760a; }
+    .roulette-center::after { bottom: -1px; border-bottom: 5px solid #c9760a; }
     @media (max-width: 768px) {
       input[type="text"], input[type="number"], select { font-size: 16px; }
     }
@@ -364,7 +378,7 @@
       top: calc(100% + 4px);
       left: 0; right: 0;
       background: #fff;
-      border: 1.5px solid #c8e6c9;
+      border: 1.5px solid #1976d2;
       border-radius: 12px;
       box-shadow: 0 6px 20px rgba(0,0,0,0.12);
       z-index: 999;
@@ -382,7 +396,7 @@
       gap: 8px;
     }
     .autocomplete-item:last-child { border-bottom: none; }
-    .autocomplete-item:hover { background: #f1fdf1; }
+    .autocomplete-item:hover { background: #eaf3ff; }
 
     /* Étapes / inversion */
     .itinerary-controls {
@@ -561,7 +575,7 @@
     .btn {
       width: 100%;
       padding: 13px;
-      background: linear-gradient(135deg, #2196f3, #1565c0);
+      background: linear-gradient(135deg, #2196f3, #0d47a1);
       color: #fff;
       font-size: 14px;
       font-weight: 700;
@@ -569,7 +583,7 @@
       border-radius: 14px;
       cursor: pointer;
       letter-spacing: 0.02em;
-      box-shadow: 0 4px 14px rgba(33,150,243,0.35);
+      box-shadow: 0 6px 18px rgba(13,71,161,0.4);
       transition: opacity 0.15s, transform 0.1s;
     }
     .btn:hover { opacity: 0.92; }
@@ -882,7 +896,7 @@
     </div>
 
     <!-- Bloc Carburant / Consommation -->
-    <div class="section">
+    <div class="section section-carburant">
     <div class="param-row carburant-row">
       <div class="param-icon">⛽</div>
       <div class="param-label">Carburant</div>
