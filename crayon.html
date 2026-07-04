@@ -643,14 +643,6 @@
       color: #fff;
       box-shadow: 0 2px 6px rgba(33,150,243,0.35);
     }
-    .cost-callout {
-      margin-top: 6px;
-      font-size: 11.5px;
-      color: #607080;
-      text-align: center;
-    }
-    .cost-callout strong { color: #1a2433; }
-
     .res-table tbody tr td {
       padding: 10px 12px;
       font-size: 13px;
@@ -1013,8 +1005,6 @@
     .ar-toggle { background: #fff8e1 !important; border: 1.25px solid #1d1d1b !important; }
     .ar-toggle-btn { color: #5b5b56 !important; font-family: 'Comic Neue', sans-serif !important; font-weight: 700 !important; }
     .ar-toggle-btn.active { background: #8447d6 !important; color: #fff !important; box-shadow: none !important; }
-    .cost-callout { color: #5b5b56 !important; font-weight: 700 !important; }
-    .cost-callout strong { color: #1d1d1b !important; }
     .res-table tr.group-header td {
       color: #8447d6 !important;
       background: none !important;
@@ -1187,7 +1177,6 @@
         </tr>
       </tbody>
     </table>
-    <div class="cost-callout" id="costCallout"></div>
     <div class="maps-wrap" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
     <a class="maps-link" id="mapsLink" href="#" target="_blank"
        style="width:220px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;">
@@ -2176,11 +2165,6 @@ function renderResultMode() {
     note.textContent = fmtEur(coutAffiche / d.passagers) + ' / pers.';
     rCout.appendChild(note);
   }
-
-  const callout = document.getElementById('costCallout');
-  callout.innerHTML = isAR
-    ? 'Aller simple : <strong>' + fmtEur(d.coutA) + '</strong> · ' + fmtL(d.litresA)
-    : 'Aller-retour : <strong>' + fmtEur(d.coutA * 2) + '</strong> · ' + fmtL(d.litresA * 2);
 }
 
 async function calculer() {
