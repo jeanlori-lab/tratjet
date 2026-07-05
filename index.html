@@ -1288,11 +1288,23 @@ function resetResultat() { document.getElementById('sectionResultats').style.dis
 
 // Bascule principale : Coût carburant (trajet complet) / Station la moins
 // chère (recherche indépendante autour d'une position donnée).
-function setMainMode(mode) {
+function setMainMode(mode, updateHash) {
   document.querySelectorAll('.main-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mainMode === mode));
   document.getElementById('modeCout').style.display = mode === 'cout' ? '' : 'none';
   document.getElementById('modeStation').style.display = mode === 'station' ? '' : 'none';
+  // Lien distinct par onglet (#cout / #station), pour pouvoir le partager ou
+  // le remettre en favori directement sur le bon onglet.
+  if (updateHash !== false) history.replaceState(null, '', '#' + mode);
 }
+
+// Au chargement (et si l'utilisateur navigue avec les boutons précédent/suivant
+// du navigateur), on ouvre l'onglet indiqué par l'URL.
+function applyMainModeFromHash() {
+  const mode = location.hash === '#station' ? 'station' : 'cout';
+  setMainMode(mode, false);
+}
+applyMainModeFromHash();
+window.addEventListener('hashchange', applyMainModeFromHash);
 
 function showStationError(msg) { const e=document.getElementById('stationError'); e.textContent=msg; e.style.display='block'; }
 function hideStationError() { document.getElementById('stationError').style.display='none'; }
