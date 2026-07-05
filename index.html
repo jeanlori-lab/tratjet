@@ -4,7 +4,7 @@
 <link rel="icon" type="image/png" href="logo budget trajet.png">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Copilote budget 2</title>
+  <title>Trajet</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
@@ -40,6 +40,13 @@
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
+    }
+    .header h1 .rat-mascot {
+      display: inline-block;
+      transform: scaleY(0.893); /* contre le scaleY(1.12) du h1 parent */
+      font-size: 0.85em;
+      margin-right: 2px;
+      vertical-align: -0.08em;
     }
     .header p {
       font-size: 14.5px;
@@ -888,9 +895,9 @@
   <!-- PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Carburant">
+  <meta name="apple-mobile-web-app-title" content="Trajet">
   <meta name="theme-color" content="#1565c0">
-  <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkNvw7t0IGNhcmJ1cmFudCB0cmFqZXQiLAogICJzaG9ydF9uYW1lIjogIkNhcmJ1cmFudCIsCiAgImRlc2NyaXB0aW9uIjogIkNhbGN1bGF0ZXVyIGRlIGNvw7t0IGNhcmJ1cmFudCBwb3VyIHVuIHRyYWpldCIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZThmNWU5IiwKICAidGhlbWVfY29sb3IiOiAiIzE1NjVjMCIsCiAgIm9yaWVudGF0aW9uIjogInBvcnRyYWl0IiwKICAiaWNvbnMiOiBbCiAgICB7InNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSFpwWlhkQ2IzZzlJakFnTUNBMU1USWdOVEV5SWo0OGNtVmpkQ0IzYVdSMGFEMGlOVEV5SWlCb1pXbG5hSFE5SWpVeE1pSWdjbmc5SWpFeE5TSWdabWxzYkQwaUl6RTFOalZqTUNJdlBqeDBaWGgwSUhrOUlqTTBNQ0lnZUQwaU1qVTJJaUIwWlhoMExXRnVZMmh2Y2owaWJXbGtaR3hsSWlCbWIyNTBMWE5wZW1VOUlqTXdNQ0lnWm05dWRDMW1ZVzFwYkhrOUluTmxjbWxtSWo3aW03MDhMM1JsZUhRK1BDOXpkbWMrIiwgInNpemVzIjogIjUxMng1MTIiLCAidHlwZSI6ICJpbWFnZS9zdmcreG1sIiwgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIn0KICBdCn0=">
+  <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIlRyYWpldCIsCiAgInNob3J0X25hbWUiOiAiVHJhamV0IiwKICAiZGVzY3JpcHRpb24iOiAiQ2/Du3QgY2FyYnVyYW50IGV0IHN0YXRpb24gbGEgbW9pbnMgY2jDqHJlIHBvdXIgdW4gdHJhamV0IiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNlZWYyZjYiLAogICJ0aGVtZV9jb2xvciI6ICIjMTU2NWMwIiwKICAib3JpZW50YXRpb24iOiAicG9ydHJhaXQiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSFpwWlhkQ2IzZzlJakFnTUNBMU1USWdOVEV5SWo0OGNtVmpkQ0IzYVdSMGFEMGlOVEV5SWlCb1pXbG5hSFE5SWpVeE1pSWdjbmc5SWpFeE5TSWdabWxzYkQwaUl6RTFOalZqTUNJdlBqeDBaWGgwSUhrOUlqTTBNQ0lnZUQwaU1qVTJJaUIwWlhoMExXRnVZMmh2Y2owaWJXbGtaR3hsSWlCbWIyNTBMWE5wZW1VOUlqSTJNQ0lnWm05dWRDMW1ZVzFwYkhrOUluTmxjbWxtSWo3d241Q0FQQzkwWlhoMFBqd3ZjM1puUGc9PSIsCiAgICAgICJzaXplcyI6ICI1MTJ4NTEyIiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIsCiAgICAgICJwdXJwb3NlIjogImFueSBtYXNrYWJsZSIKICAgIH0KICBdCn0=">
   <link rel="apple-touch-icon" href="logo budget trajet.png">
   <script>
     if ('serviceWorker' in navigator) {
@@ -904,7 +911,7 @@
 <div class="page">
 
   <div class="header">
-    <h1>Copilote budget 2</h1>
+    <h1><span class="rat-mascot">🐀</span> Trajet</h1>
     <p>Entrez les paramètres de votre trajet, on s'occupe des calculs : coût du carburant et litres consommés. <br><span class="intro-bonus">⭐ En bonus : on vous trouve la station la moins chère et la plus proche de votre départ !</span></p>
   </div>
 
