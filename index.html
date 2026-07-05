@@ -684,6 +684,39 @@
       color: #fff;
       box-shadow: 0 2px 6px rgba(33,150,243,0.35);
     }
+
+    /* Bascule principale Coût carburant / Station la moins chère, en haut de
+       page. Classes dédiées (pas .ar-toggle-btn) pour ne pas être affectées
+       par le toggle Aller simple/Aller-retour, qui recible tous les
+       .ar-toggle-btn de la page. */
+    .main-toggle {
+      display: flex;
+      background: #e2e8ee;
+      border-radius: 999px;
+      padding: 3px;
+      margin-bottom: 16px;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .main-toggle-btn {
+      flex: 1;
+      text-align: center;
+      padding: 10px 0;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 999px;
+      cursor: pointer;
+      color: #607080;
+      background: none;
+      border: none;
+      font-family: inherit;
+      transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+    .main-toggle-btn.active {
+      background: #0d47a1;
+      color: #fff;
+      box-shadow: 0 3px 10px rgba(13,71,161,0.35);
+    }
+
     /* Coût par personne (partage de frais) : sous-ligne discrète sous le
        montant. En flux normal (plus besoin de positionnement absolu
        maintenant que la ligne n'est plus une cellule de tableau). */
@@ -877,6 +910,13 @@
 
   <input type="hidden" id="apiKey" value="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY1NjRiM2M4Yjc0OTQ0ZDlhNmNjM2FiOWQzNjFhNTE2IiwiaCI6Im11cm11cjY0In0=">
 
+  <!-- Bascule Coût carburant (trajet) / Station la moins chère (près de moi) -->
+  <div class="main-toggle" id="mainToggle">
+    <button type="button" class="main-toggle-btn active" data-main-mode="cout" onclick="setMainMode('cout')">Coût carburant</button>
+    <button type="button" class="main-toggle-btn" data-main-mode="station" onclick="setMainMode('station')">Station la moins chère</button>
+  </div>
+
+  <div id="modeCout">
   <!-- Paramètres -->
   <div class="card">
     <div class="card-title">Paramètres du trajet</div>
@@ -981,6 +1021,51 @@
     </a>
 </div>
     <div class="cheapest-note" id="cheapestNote" style="display:none;"></div>
+  </div>
+  </div>
+
+  <!-- Station la moins chère près de chez moi, indépendamment de tout trajet -->
+  <div id="modeStation" style="display:none;">
+    <div class="card">
+      <div class="card-title">Station la moins chère près de chez moi</div>
+
+      <div class="section">
+        <div class="param-row">
+          <div class="param-icon">📍</div>
+          <div class="param-label">Ma position</div>
+          <div class="param-input">
+            <div class="autocomplete-wrap">
+              <input type="text" id="stationAdresse" class="point-input" autocomplete="off" placeholder="Ton adresse" oninput="onStationAdresseInput(this)">
+              <div class="autocomplete-list"></div>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="link-btn" onclick="utiliserPositionActuelle()">📍 Utiliser ma position actuelle</button>
+        <div class="prix-actuel" id="stationPosStatus"></div>
+      </div>
+
+      <div class="section section-carburant">
+        <div class="param-row carburant-row">
+          <div class="param-icon">⛽</div>
+          <div class="param-label">Carburant</div>
+          <div class="param-input">
+            <select id="carburantStation">
+              <option value="sp95">Sans plomb 95</option>
+              <option value="sp98">Sans plomb 98</option>
+              <option value="gazole">Gazole (Diesel)</option>
+              <option value="e85">Superéthanol E85</option>
+              <option value="gplc">GPLc</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn" id="stationSearchBtn" onclick="rechercherStationStandalone()">Chercher la station la moins chère</button>
+      <div class="loader" id="stationLoader">⏳ Recherche en cours…</div>
+      <div class="error" id="stationError"></div>
+
+      <div class="cheapest-note" id="cheapestNoteStation" style="display:none; margin-top:14px;"></div>
+    </div>
   </div>
 
 </div>
@@ -1195,6 +1280,18 @@ function showError(msg) { const e=document.getElementById('error'); e.textConten
 function hideError() { document.getElementById('error').style.display='none'; }
 function setLoading(on) { document.getElementById('loader').style.display=on?'block':'none'; document.getElementById('calcBtn').disabled=on; }
 function resetResultat() { document.getElementById('sectionResultats').style.display='none'; hideError(); }
+
+// Bascule principale : Coût carburant (trajet complet) / Station la moins
+// chère (recherche indépendante autour d'une position donnée).
+function setMainMode(mode) {
+  document.querySelectorAll('.main-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mainMode === mode));
+  document.getElementById('modeCout').style.display = mode === 'cout' ? '' : 'none';
+  document.getElementById('modeStation').style.display = mode === 'station' ? '' : 'none';
+}
+
+function showStationError(msg) { const e=document.getElementById('stationError'); e.textContent=msg; e.style.display='block'; }
+function hideStationError() { document.getElementById('stationError').style.display='none'; }
+function setStationLoading(on) { document.getElementById('stationLoader').style.display=on?'block':'none'; document.getElementById('stationSearchBtn').disabled=on; }
 
 // Petit retour haptique (Android via l'API Vibration ; Safari iOS ne l'expose
 // pas, aucune astuce fiable n'existe côté web pour la remplacer).
@@ -1536,6 +1633,139 @@ async function rechercherStationMoinsChere() {
   slider.addEventListener('change', () => {
     lastStationSearch.rayon = parseInt(slider.value, 10);
     rechercherStationMoinsChere();
+  });
+  radiusWrap.appendChild(label);
+  radiusWrap.appendChild(slider);
+  cheapestNote.appendChild(radiusWrap);
+}
+
+// --- Station la moins chère près de chez moi, recherche indépendante d'un
+// trajet (onglet dédié) : même logique de recherche/curseur que ci-dessus,
+// mais son propre état et ses propres éléments (IDs distincts). ---
+let stationGeoCoords = null; // [lon, lat] fixé par géolocalisation, invalidé dès que l'adresse est modifiée à la main
+let lastStationSearchStandalone = null; // { lat, lon, type, rayon }
+
+function onStationAdresseInput(el) {
+  stationGeoCoords = null;
+  document.getElementById('cheapestNoteStation').style.display = 'none';
+  hideStationError();
+  if (el.value.trim().length === 0) showFavoritesIfEmpty(el);
+  else onAutoComplete(el);
+}
+
+function utiliserPositionActuelle() {
+  const status = document.getElementById('stationPosStatus');
+  if (!navigator.geolocation) {
+    status.textContent = 'Géolocalisation non disponible sur cet appareil.';
+    return;
+  }
+  status.textContent = 'Localisation en cours…';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      stationGeoCoords = [pos.coords.longitude, pos.coords.latitude];
+      document.getElementById('stationAdresse').value = 'Ma position actuelle';
+      status.textContent = '✓ Position récupérée';
+    },
+    () => {
+      status.textContent = 'Impossible de récupérer ta position (autorisation refusée ou indisponible).';
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+async function rechercherStationStandalone() {
+  hideStationError();
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const adresse = document.getElementById('stationAdresse').value.trim();
+  const type = document.getElementById('carburantStation').value;
+
+  if (!stationGeoCoords && !adresse) return showStationError('⚠️ Indique ton adresse ou utilise ta position actuelle.');
+
+  setStationLoading(true);
+  document.getElementById('cheapestNoteStation').style.display = 'none';
+  try {
+    const coords = stationGeoCoords || await geocode(adresse, apiKey);
+    lastStationSearchStandalone = { lat: coords[1], lon: coords[0], type, rayon: STATION_RAYON_KM };
+    await afficherStationStandalone();
+  } catch(e) {
+    showStationError('⚠️ ' + (e.message || 'Erreur inconnue.'));
+  } finally {
+    setStationLoading(false);
+  }
+}
+
+async function afficherStationStandalone() {
+  const cheapestNote = document.getElementById('cheapestNoteStation');
+  if (!lastStationSearchStandalone) { cheapestNote.style.display = 'none'; return; }
+  const { lat, lon, type, rayon } = lastStationSearchStandalone;
+  cheapestNote.classList.add('loading');
+  const station = await fetchStationMoinsChere(lat, lon, type, rayon);
+  cheapestNote.classList.remove('loading');
+  cheapestNote.textContent = '';
+  cheapestNote.style.display = 'block';
+
+  const header = document.createElement('div');
+  header.className = 'cheapest-header';
+  const icon = document.createElement('span');
+  icon.className = 'cheapest-icon';
+  icon.textContent = '🐀';
+  header.appendChild(icon);
+  const title = document.createElement('span');
+  title.className = 'cheapest-title';
+  title.style.fontSize = '0.9em';
+  title.textContent = 'Station la moins chère trouvée';
+  header.appendChild(title);
+  cheapestNote.appendChild(header);
+
+  if (station) {
+    const detail = document.createElement('div');
+    detail.className = 'cheapest-detail';
+    const strong = document.createElement('strong');
+    strong.textContent = station.prix.toFixed(3) + ' €/L';
+    detail.appendChild(strong);
+    const lieu = [station.nom, station.ville].filter(Boolean).join(', ');
+    if (lieu) detail.appendChild(document.createTextNode(' à ' + lieu));
+    if (station.lat !== null && station.lon !== null) {
+      const dKm = distKm(lat, lon, station.lat, station.lon);
+      if (isFinite(dKm)) detail.appendChild(document.createTextNode(' (' + dKm.toFixed(1) + ' km)'));
+    }
+    cheapestNote.appendChild(detail);
+
+    if (station.lat !== null && station.lon !== null) {
+      const link = document.createElement('a');
+      link.className = 'cheapest-link';
+      link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${lat},${lon}&destination=${station.lat},${station.lon}`;
+      link.target = '_blank';
+      link.textContent = 'Itinéraire vers cette station';
+      cheapestNote.appendChild(link);
+    }
+  } else {
+    const empty = document.createElement('div');
+    empty.className = 'cheapest-empty';
+    empty.textContent = 'Aucune station trouvée dans un rayon de ' + rayon + ' km.';
+    cheapestNote.appendChild(empty);
+  }
+
+  const radiusWrap = document.createElement('div');
+  radiusWrap.className = 'cheapest-radius';
+  const label = document.createElement('span');
+  label.className = 'cheapest-radius-label';
+  label.id = 'cheapestRadiusLabelStation';
+  label.textContent = 'Rayon : ' + rayon + ' km';
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.className = 'cheapest-slider';
+  slider.min = STATION_RAYON_MIN;
+  slider.max = STATION_RAYON_MAX;
+  slider.step = 1;
+  slider.value = rayon;
+  slider.setAttribute('aria-label', 'Rayon de recherche de la station la moins chère');
+  slider.addEventListener('input', () => {
+    document.getElementById('cheapestRadiusLabelStation').textContent = 'Rayon : ' + slider.value + ' km';
+  });
+  slider.addEventListener('change', () => {
+    lastStationSearchStandalone.rayon = parseInt(slider.value, 10);
+    afficherStationStandalone();
   });
   radiusWrap.appendChild(label);
   radiusWrap.appendChild(slider);
