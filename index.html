@@ -832,14 +832,35 @@
     }
     .cheapest-detail { font-size: 13px; color: #455060; line-height: 1.4; }
     .cheapest-detail strong { color: #2e7d32; font-size: 15px; }
-    .cheapest-map {
-      display: block;
+    /* Le bandeau de liens intégré à l'iframe OSM (Signaler un problème /
+       Faire un don / Conditions d'utilisation) ne peut pas être retiré : il
+       fait partie du contenu de l'iframe (autre origine). On le masque en
+       rognant le bas via un conteneur de hauteur fixe (overflow hidden) +
+       une iframe plus grande décalée dedans, et on affiche notre propre
+       mention d'attribution en dessous, sobre et conforme à leurs CGU. */
+    .cheapest-map-wrap {
+      position: relative;
       width: 100%;
       height: 160px;
-      border: none;
+      overflow: hidden;
       border-radius: 12px;
       margin-top: 10px;
     }
+    .cheapest-map-wrap .cheapest-map {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 225px;
+      border: none;
+    }
+    .cheapest-map-attrib {
+      font-size: 10px;
+      color: #90a4ae;
+      text-align: right;
+      margin-top: 3px;
+    }
+    .cheapest-map-attrib a { color: #90a4ae; }
     .cheapest-link {
       display: inline-flex;
       align-items: center;
@@ -1545,12 +1566,24 @@ function distKm(lat1, lon1, lat2, lon2) {
 // Mini-carte intégrée (Google Maps, sans clé API) montrant l'emplacement
 // exact de la station trouvée.
 function buildStationMap(lat, lon) {
+  const delta = 0.01;
+  const bbox = [lon - delta, lat - delta, lon + delta, lat + delta].join(',');
+  const wrap = document.createElement('div');
+  wrap.className = 'cheapest-map-wrap';
   const iframe = document.createElement('iframe');
   iframe.className = 'cheapest-map';
   iframe.loading = 'lazy';
-  iframe.referrerPolicy = 'no-referrer-when-downgrade';
-  iframe.src = `https://www.google.com/maps?q=${lat},${lon}&z=16&output=embed`;
-  return iframe;
+  iframe.src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lon}`;
+  wrap.appendChild(iframe);
+
+  const attrib = document.createElement('div');
+  attrib.className = 'cheapest-map-attrib';
+  attrib.innerHTML = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a>';
+
+  const frag = document.createDocumentFragment();
+  frag.appendChild(wrap);
+  frag.appendChild(attrib);
+  return frag;
 }
 
 // Station la moins chère à proximité du départ, pour le carburant choisi.
