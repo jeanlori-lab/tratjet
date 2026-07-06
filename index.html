@@ -1392,23 +1392,67 @@ function consoInit() {
   track.innerHTML = html;
 
   let dragging = false, startX = 0, startVal = 7.5;
+  // Vitesse lissée du glissement (en unités de consommation par ms), pour
+  // prolonger le mouvement en douceur (inertie) au relâchement au lieu de
+  // s'arrêter net.
+  let lastX = 0, lastT = 0, velocity = 0, momentumFrame = null;
+  function stopMomentum() {
+    if (momentumFrame) { cancelAnimationFrame(momentumFrame); momentumFrame = null; }
+  }
   box.addEventListener('pointerdown', e => {
+    stopMomentum();
     dragging = true; startX = e.clientX; startVal = consoValeur();
+    lastX = e.clientX; lastT = performance.now(); velocity = 0;
     track.style.transition = 'none';
     box.setPointerCapture(e.pointerId);
     e.preventDefault();
   });
   box.addEventListener('pointermove', e => {
     if (!dragging) return;
+    const now = performance.now();
+    const dt = now - lastT;
+    // Ignore les intervalles quasi nuls (deux évènements trop rapprochés) :
+    // la division par un dt minuscule produirait une vitesse instantanée
+    // aberrante qui fausserait toute l'inertie. On borne aussi la vitesse à
+    // une valeur réaliste, pour la même raison.
+    if (dt >= 8) {
+      const instVel = -(e.clientX - lastX) / CONSO_PPU / dt;
+      const MAX_VEL = 0.03; // ~30 unités/seconde, flick très rapide
+      velocity = velocity * 0.7 + Math.max(-MAX_VEL, Math.min(MAX_VEL, instVel)) * 0.3; // lissage anti-à-coups
+      lastX = e.clientX; lastT = now;
+    }
+
     const prev = consoValeur();
     consoSet(startVal - (e.clientX - startX) / CONSO_PPU, true);
     if (consoValeur() !== prev) hapticTick(); // petite vibration à chaque cran
   });
+  // Inertie : après relâchement, le défilement continue en ralentissant
+  // progressivement selon la vitesse du geste, au lieu de s'arrêter net.
+  function startMomentum() {
+    if (Math.abs(velocity) < 0.008) { track.style.transition = 'transform 0.15s ease-out'; return; }
+    let v = velocity;
+    let lastTime = performance.now();
+    const step = (now) => {
+      const dt = now - lastTime;
+      lastTime = now;
+      v *= Math.pow(0.08, dt / 1000); // décroissance : ~8% de la vitesse restante après 1s
+      const prevVal = consoValeur();
+      consoSet(consoValeur() + v * dt, true);
+      if (consoValeur() !== prevVal) hapticTick();
+      const atBound = consoValeur() <= CONSO_MIN || consoValeur() >= CONSO_MAX;
+      if (Math.abs(v) > 0.0008 && !atBound) {
+        momentumFrame = requestAnimationFrame(step);
+      } else {
+        momentumFrame = null;
+        track.style.transition = 'transform 0.15s ease-out';
+      }
+    };
+    momentumFrame = requestAnimationFrame(step);
+  }
   const end = () => {
     if (!dragging) return;
     dragging = false;
-    track.style.transition = 'transform 0.15s ease-out';
-    consoSet(consoValeur(), true);
+    startMomentum();
   };
   box.addEventListener('pointerup', end);
   box.addEventListener('pointercancel', end);
