@@ -1108,33 +1108,8 @@
 // Autocomplétion
 const autoTimers = new WeakMap();
 
-// Place les résultats français en tête (tri stable : l'ordre de pertinence
-// est conservé à l'intérieur de chaque groupe).
-function frenchFirst(features) {
-  return features.slice().sort((a, b) => {
-    const fa = (a.properties && a.properties.country_a === 'FRA') ? 0 : 1;
-    const fb = (b.properties && b.properties.country_a === 'FRA') ? 0 : 1;
-    return fa - fb;
-  });
-}
-
-// Trajets limités au continent européen : on écarte les résultats de géocodage
-// hors Europe (Asie, États-Unis, îles lointaines…) pour simplifier les choix.
-const EUROPE_COUNTRIES = new Set([
-  'ALA','ALB','AND','AUT','BEL','BGR','BIH','BLR','CHE','CYP','CZE','DEU','DNK',
-  'ESP','EST','FIN','FRA','FRO','GBR','GGY','GIB','GRC','HRV','HUN','IMN','IRL',
-  'ISL','ITA','JEY','LIE','LTU','LUX','LVA','MCO','MDA','MKD','MLT','MNE','NLD',
-  'NOR','POL','PRT','ROU','SMR','SRB','SVK','SVN','SWE','UKR','VAT','XKX',
-]);
-function isEurope(feature) {
-  const cc = feature.properties && feature.properties.country_a;
-  return EUROPE_COUNTRIES.has(cc);
-}
-
-// --- Autocomplétion (Photon/komoot) : mêmes idées que frenchFirst/isEurope
-// ci-dessus mais Photon utilise des codes pays ISO 3166-1 alpha-2 ("FR")
-// au lieu des codes alpha-3 ("FRA") renvoyés par ORS/Pelias pour le
-// géocodage final. On duplique donc la logique avec le bon format de code.
+// Codes pays ISO 3166-1 alpha-2 pour filtrer les résultats Photon (le reste
+// de l'Europe, la France étant déjà couverte par la BAN dans searchPlaces).
 const EUROPE_COUNTRIES_2 = new Set([
   'AX','AL','AD','AT','BE','BG','BA','BY','CH','CY','CZ','DE','DK',
   'ES','EE','FI','FR','FO','GB','GG','GI','GR','HR','HU','IM','IE',
@@ -1145,16 +1120,8 @@ function isEuropePhoton(feature) {
   const cc = feature.properties && feature.properties.countrycode;
   return EUROPE_COUNTRIES_2.has(cc);
 }
-function frenchFirstPhoton(features) {
-  return features.slice().sort((a, b) => {
-    const fa = (a.properties && a.properties.countrycode === 'FR') ? 0 : 1;
-    const fb = (b.properties && b.properties.countrycode === 'FR') ? 0 : 1;
-    return fa - fb;
-  });
-}
 // Construit un libellé lisible à partir des propriétés Photon (ville, code
-// postal, rue… selon ce qui est disponible), sur le même principe que le
-// libellé enrichi qu'ORS fournissait déjà tout formé dans "label".
+// postal, rue… selon ce qui est disponible).
 function photonLabel(p) {
   const parts = [];
   if (p.housenumber && p.street) parts.push(p.housenumber + ' ' + p.street);
@@ -1166,6 +1133,35 @@ function photonLabel(p) {
   if (zone && zone !== ville && !parts.includes(zone)) parts.push(zone);
   if (p.country && !parts.includes(p.country)) parts.push(p.country);
   return parts.filter(Boolean).join(', ');
+}
+
+// Recherche de lieux : API Adresse officielle (BAN, data.gouv.fr) en priorité
+// pour la France — exhaustive et bien priorisée sur les adresses françaises
+// (jusqu'au numéro de rue), gratuite et sans clé — complétée par Photon
+// (Komoot) pour le reste de l'Europe, que BAN ne couvre pas.
+async function searchPlaces(q, limit) {
+  const [banRes, photonRes] = await Promise.all([
+    fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=${limit}&autocomplete=1`)
+      .then(r => r.ok ? r.json() : { features: [] }).catch(() => ({ features: [] })),
+    fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=${limit}&lang=fr`)
+      .then(r => r.ok ? r.json() : { features: [] }).catch(() => ({ features: [] })),
+  ]);
+  const ban = (banRes.features || []).map(f => ({
+    label: f.properties.label,
+    lat: f.geometry.coordinates[1],
+    lng: f.geometry.coordinates[0],
+    city: f.properties.city || f.properties.name,
+  }));
+  const photon = (photonRes.features || [])
+    .filter(f => isEuropePhoton(f) && f.properties.countrycode !== 'FR')
+    .map(f => ({
+      label: photonLabel(f.properties),
+      lat: f.geometry.coordinates[1],
+      lng: f.geometry.coordinates[0],
+      city: f.properties.city || f.properties.name,
+    }))
+    .filter(f => f.label);
+  return [...ban, ...photon];
 }
 
 // --- Lieux favoris (départ/destination/étapes) : mémorisés dans le navigateur,
@@ -1262,30 +1258,23 @@ async function onAutoComplete(input) {
     // proposé en Allemagne, par exemple).
     const texteGeo = val;
     try {
-      const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(texteGeo)}&limit=10&lang=fr&lat=48.8566&lon=2.3522`;
-      const r = await fetch(url);
-      if (!r.ok) { list.style.display = 'none'; return; }
-      const d = await r.json();
-      if (!d.features || d.features.length === 0) { list.style.display = 'none'; return; }
+      const results = await searchPlaces(texteGeo, 10);
+      if (!results.length) { list.style.display = 'none'; return; }
       list.innerHTML = '';
       const vus = new Set();
-      frenchFirstPhoton(d.features.filter(isEuropePhoton)).forEach(f => {
+      results.forEach(f => {
         if (list.children.length >= 6) return; // limite l'affichage
-        // Libellé enrichi avec le département/la région : indispensable pour
-        // distinguer les homonymes (ex. Vanne en Haute-Saône vs Vannes dans le
-        // Morbihan), et le texte choisi désambiguïse aussi le géocodage final.
-        const label = photonLabel(f.properties);
-        if (!label) return;
+        if (!f.label) return;
         // Le géocodeur renvoie parfois plusieurs résultats au même libellé : on dédoublonne.
-        const cle = label.trim().toLowerCase();
+        const cle = f.label.trim().toLowerCase();
         if (vus.has(cle)) return;
         vus.add(cle);
         const div = document.createElement('div');
         div.className = 'autocomplete-item';
-        div.textContent = label;
+        div.textContent = f.label;
         div.addEventListener('mousedown', e => {
           e.preventDefault();
-          input.value = label;
+          input.value = f.label;
           list.style.display = 'none';
           resetResultat();
           syncStarForInput(input);
@@ -1758,7 +1747,7 @@ async function rechercherStationStandalone() {
   setStationLoading(true);
   document.getElementById('cheapestNoteStation').style.display = 'none';
   try {
-    const coords = stationGeoCoords || await geocode(adresse, apiKey);
+    const coords = stationGeoCoords || await geocode(adresse);
     lastStationSearchStandalone = { lat: coords[1], lon: coords[0], type, rayon: STATION_RAYON_KM };
     await afficherStationStandalone();
   } catch(e) {
@@ -2075,24 +2064,13 @@ function parseGPS(texte) {
   return null;
 }
 
-async function geocode(lieu, apiKey) {
+async function geocode(lieu) {
   const gps = parseGPS(lieu);
   if (gps) return gps;
-  // Pas de « , France » forcé : focus.point (Paris) privilégie déjà la France
-  // pour les homonymes, sans casser les villes étrangères (Athènes, Berlin…).
-  const texteGeo = lieu;
-  // focus.point (Paris = départ) : privilégie le résultat le plus proche pour
-  // lever les ambiguïtés de noms (ex. Houdan Yvelines vs Houdan Guadeloupe),
-  // sans empêcher les destinations lointaines légitimes.
-  const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(texteGeo)}&size=5&layers=locality,address,street&focus.point.lon=2.3522&focus.point.lat=48.8566`;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error('Géocodage impossible pour "' + lieu + '"');
-  const d = await r.json();
-  if (!d.features || d.features.length === 0) throw new Error('Adresse introuvable : "' + lieu + '"');
-  const europeens = d.features.filter(isEurope);
-  if (!europeens.length) throw new Error('Adresse introuvable en Europe : "' + lieu + '"');
-  // France d'abord (sans exclure le reste de l'Europe si aucun résultat français).
-  return frenchFirst(europeens)[0].geometry.coordinates;
+  const results = await searchPlaces(lieu, 5);
+  if (!results.length) throw new Error('Adresse introuvable en Europe : "' + lieu + '"');
+  const f = results[0];
+  return [f.lng, f.lat];
 }
 
 async function getRoute(coords, apiKey) {
@@ -2283,7 +2261,7 @@ async function calculer() {
 
   try {
     // Géocode tous les points dans l'ordre : départ, étapes…, destination.
-    const coords = await Promise.all(lieux.map(l => geocode(l, apiKey)));
+    const coords = await Promise.all(lieux.map(l => geocode(l)));
     const c1 = coords[0], c2 = coords[coords.length - 1];
     const route = await getRoute(coords, apiKey);
     // ORS renvoie déjà la distance/durée totale cumulée sur tous les tronçons.
