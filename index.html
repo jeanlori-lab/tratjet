@@ -1542,14 +1542,18 @@ function distKm(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.asin(Math.sqrt(a));
 }
 
-// Mini-carte intégrée (Google Maps, sans clé API) montrant l'emplacement
-// exact de la station trouvée.
+// Mini-carte intégrée (OpenStreetMap, sans clé API) montrant l'emplacement
+// exact de la station trouvée. Contrairement à l'iframe Google Maps
+// "output=embed" (qui exige deux doigts pour se déplacer, afin de ne pas
+// intercepter le défilement de la page), l'iframe OSM se déplace librement
+// avec un seul doigt/la souris.
 function buildStationMap(lat, lon) {
+  const delta = 0.01;
+  const bbox = [lon - delta, lat - delta, lon + delta, lat + delta].join(',');
   const iframe = document.createElement('iframe');
   iframe.className = 'cheapest-map';
   iframe.loading = 'lazy';
-  iframe.referrerPolicy = 'no-referrer-when-downgrade';
-  iframe.src = `https://www.google.com/maps?q=${lat},${lon}&z=16&output=embed`;
+  iframe.src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lon}`;
   return iframe;
 }
 
