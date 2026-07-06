@@ -832,6 +832,14 @@ u<!DOCTYPE html>
     }
     .cheapest-detail { font-size: 13px; color: #455060; line-height: 1.4; }
     .cheapest-detail strong { color: #2e7d32; font-size: 15px; }
+    .cheapest-map {
+      display: block;
+      width: 100%;
+      height: 160px;
+      border: none;
+      border-radius: 12px;
+      margin-top: 10px;
+    }
     .cheapest-link {
       display: inline-flex;
       align-items: center;
@@ -1035,14 +1043,15 @@ u<!DOCTYPE html>
       <div class="card-title">Station la moins chère près de chez moi</div>
 
       <div class="section">
-        <div class="param-row">
+        <div class="param-row point-row">
           <div class="param-icon">📍</div>
           <div class="param-label">Ma position</div>
           <div class="param-input">
             <div class="autocomplete-wrap">
-              <input type="text" id="stationAdresse" class="point-input" autocomplete="off" placeholder="Ton adresse" oninput="onStationAdresseInput(this)">
+              <input type="text" id="stationAdresse" class="point-input" autocomplete="off" placeholder="Ton adresse" oninput="onStationAdresseInput(this)" onfocus="showFavoritesIfEmpty(this)">
               <div class="autocomplete-list"></div>
             </div>
+            <button type="button" class="fav-star" id="stationFavStar" title="Enregistrer en favori" onclick="toggleFavPlace(document.getElementById('stationAdresse').value, this)">☆</button>
           </div>
         </div>
         <button type="button" class="link-btn" onclick="utiliserPositionActuelle()">Utiliser ma position actuelle</button>
@@ -1305,6 +1314,7 @@ function applyMainModeFromHash() {
 }
 applyMainModeFromHash();
 window.addEventListener('hashchange', applyMainModeFromHash);
+syncStarForInput(document.getElementById('stationAdresse'));
 
 function showStationError(msg) { const e=document.getElementById('stationError'); e.textContent=msg; e.style.display='block'; }
 function hideStationError() { document.getElementById('stationError').style.display='none'; }
@@ -1532,6 +1542,17 @@ function distKm(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.asin(Math.sqrt(a));
 }
 
+// Mini-carte intégrée (Google Maps, sans clé API) montrant l'emplacement
+// exact de la station trouvée.
+function buildStationMap(lat, lon) {
+  const iframe = document.createElement('iframe');
+  iframe.className = 'cheapest-map';
+  iframe.loading = 'lazy';
+  iframe.referrerPolicy = 'no-referrer-when-downgrade';
+  iframe.src = `https://www.google.com/maps?q=${lat},${lon}&z=16&output=embed`;
+  return iframe;
+}
+
 // Station la moins chère à proximité du départ, pour le carburant choisi.
 // Best-effort : en cas d'échec (API indisponible, aucune station dans le
 // rayon…), on masque simplement la note, sans bloquer le reste du calcul.
@@ -1612,6 +1633,8 @@ async function rechercherStationMoinsChere() {
     cheapestNote.appendChild(detail);
 
     if (station.lat !== null && station.lon !== null) {
+      cheapestNote.appendChild(buildStationMap(station.lat, station.lon));
+
       const link = document.createElement('a');
       link.className = 'cheapest-link';
       const origin = encodeURIComponent(depart || `${lat},${lon}`);
@@ -1668,6 +1691,7 @@ function onStationAdresseInput(el) {
   hideStationError();
   if (el.value.trim().length === 0) showFavoritesIfEmpty(el);
   else onAutoComplete(el);
+  syncStarForInput(el);
 }
 
 function utiliserPositionActuelle() {
@@ -1749,6 +1773,8 @@ async function afficherStationStandalone() {
     cheapestNote.appendChild(detail);
 
     if (station.lat !== null && station.lon !== null) {
+      cheapestNote.appendChild(buildStationMap(station.lat, station.lon));
+
       const link = document.createElement('a');
       link.className = 'cheapest-link';
       link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${lat},${lon}&destination=${station.lat},${station.lon}`;
