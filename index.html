@@ -941,7 +941,7 @@
 
   <div class="header">
     <h1>T<span class="rat-emphasis">rat</span>jet</h1>
-    <p>Entre les paramètres de ton trajet, on s'occupe des calculs : coût du carburant et litres consommés. <br><span class="intro-bonus"><span class="intro-bonus-label">En bonus</span> : on te trouve la station la moins chère et la plus proche de ton départ !</span></p>
+    <p>Entrez les paramètres de votre trajet, on s'occupe des calculs : coût du carburant et litres consommés. <br><span class="intro-bonus"><span class="intro-bonus-label">En bonus</span> : on vous trouve la station la moins chère et la plus proche de votre départ !</span></p>
   </div>
 
   <input type="hidden" id="apiKey" value="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY1NjRiM2M4Yjc0OTQ0ZDlhNmNjM2FiOWQzNjFhNTE2IiwiaCI6Im11cm11cjY0In0=">
@@ -1196,7 +1196,7 @@ function showFavHint(star) {
   if (!row) return;
   const hint = document.createElement('div');
   hint.className = 'fav-hint';
-  hint.textContent = 'Enregistré ! Retrouve tes favoris en cliquant dans un champ vide.';
+  hint.textContent = 'Enregistré ! Retrouvez vos favoris en cliquant dans un champ vide.';
   row.appendChild(hint);
   requestAnimationFrame(() => hint.classList.add('show'));
   setTimeout(() => {
@@ -1782,7 +1782,7 @@ function utiliserPositionActuelle() {
       status.textContent = '✓ Position récupérée';
     },
     () => {
-      status.textContent = 'Impossible de récupérer ta position (autorisation refusée ou indisponible).';
+      status.textContent = 'Impossible de récupérer votre position (autorisation refusée ou indisponible).';
     },
     { enableHighAccuracy: true, timeout: 10000 }
   );
@@ -1794,7 +1794,7 @@ async function rechercherStationStandalone() {
   const adresse = document.getElementById('stationAdresse').value.trim();
   const type = document.getElementById('carburantStation').value;
 
-  if (!stationGeoCoords && !adresse) return showStationError('⚠️ Indique ton adresse ou utilise ta position actuelle.');
+  if (!stationGeoCoords && !adresse) return showStationError('⚠️ Indiquez votre adresse ou utilisez votre position actuelle.');
 
   setStationLoading(true);
   document.getElementById('cheapestNoteStation').style.display = 'none';
@@ -2063,7 +2063,7 @@ function ensureDragOutsideMsg() {
     el = document.createElement('div');
     el.id = 'dragOutsideMsg';
     el.className = 'drag-outside-msg';
-    el.textContent = 'Non mais tu vas où comme ça ?';
+    el.textContent = 'Non mais vous allez où comme ça ?';
     document.body.appendChild(el);
   }
   return el;
@@ -2138,8 +2138,8 @@ async function getRoute(coords, apiKey) {
   if (!r.ok) {
     let msg = 'Erreur itinéraire (code ' + r.status + ')';
     if (r.status === 403) msg = 'Clé API invalide ou quota dépassé';
-    if (r.status === 404) msg = 'Itinéraire introuvable, essaie de préciser l\'adresse';
-    if (r.status === 400) msg = 'Itinéraire introuvable, essaie de préciser l\'adresse';
+    if (r.status === 404) msg = 'Itinéraire introuvable, essayez de préciser l\'adresse';
+    if (r.status === 400) msg = 'Itinéraire introuvable, essayez de préciser l\'adresse';
     throw new Error(msg);
   }
   const d = await r.json();
@@ -2304,9 +2304,9 @@ async function calculer() {
   const lieux   = allPts.filter(p => p.length > 0);
   const conso   = parseFloat(document.getElementById('conso').value);
 
-  if (!depart || !arrivee) return showError('⚠️ Remplis le départ et la destination.');
+  if (!depart || !arrivee) return showError('⚠️ Remplissez le départ et la destination.');
   if (isNaN(conso) || conso <= 0) return showError('⚠️ Consommation invalide.');
-  if (!prixActuel) return showError('⚠️ Le prix du carburant n\'a pas pu être chargé. Vérifie ta connexion.');
+  if (!prixActuel) return showError('⚠️ Le prix du carburant n\'a pas pu être chargé. Vérifiez votre connexion.');
 
   setLoading(true);
   document.getElementById('sectionResultats').style.display = 'none';
