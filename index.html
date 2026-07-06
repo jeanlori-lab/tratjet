@@ -1544,6 +1544,11 @@ function showPassMinMessage() {
   clearTimeout(passMinMsgTimer);
   passMinMsgTimer = setTimeout(() => bubble.classList.remove('show'), 2600);
 }
+function hidePassMinMessage() {
+  clearTimeout(passMinMsgTimer);
+  const bubble = document.getElementById('passMinMsg');
+  if (bubble) bubble.classList.remove('show');
+}
 function passagersInit() {
   const minusBtn = document.getElementById('passMinus');
   const plusBtn = document.getElementById('passPlus');
@@ -1553,6 +1558,7 @@ function passagersInit() {
   });
   holdRepeat(plusBtn, () => {
     if (passagersValeur() >= PASS_MAX) { showPassMaxMessage(); return; }
+    hidePassMinMessage();
     passagersSet(passagersValeur() + 1);
   });
 }
