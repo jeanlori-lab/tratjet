@@ -1093,6 +1093,7 @@
               <option value="gazole">Gazole (Diesel)</option>
               <option value="e85">Superéthanol E85</option>
               <option value="gplc">GPLc</option>
+              <option value="electrique">Électrique</option>
             </select>
           </div>
         </div>
@@ -1700,6 +1701,78 @@ async function fetchStationMoinsChere(lat, lon, type, rayonKm) {
   } catch (e) { return null; }
 }
 
+// Borne de recharge la plus proche (véhicule électrique) : pas de prix
+// comparable d'une borne à l'autre (tarification très variable, souvent
+// absente des données), donc on cherche la plus proche plutôt que la
+// moins chère. Source : base nationale IRVE (Infrastructures de Recharge
+// pour Véhicules Électriques, ODRE/data.gouv.fr), gratuite, sans clé.
+async function fetchBorneRecharge(lat, lon, rayonKm) {
+  rayonKm = rayonKm || STATION_RAYON_KM;
+  try {
+    const url = `https://odre.opendatasoft.com/api/records/1.0/search/?dataset=bornes-irve&geofilter.distance=${lat},${lon},${rayonKm * 1000}&rows=100`;
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const d = await r.json();
+    if (!d.records || !d.records.length) return null;
+    let best = null, bestDist = Infinity;
+    for (const rec of d.records) {
+      const f = rec.fields || {};
+      const geo = rec.geometry && rec.geometry.coordinates; // [lon, lat]
+      const sLat = geo ? geo[1] : (f.consolidated_latitude !== undefined ? parseFloat(f.consolidated_latitude) : (f.ylatitude !== undefined ? parseFloat(f.ylatitude) : null));
+      const sLon = geo ? geo[0] : (f.consolidated_longitude !== undefined ? parseFloat(f.consolidated_longitude) : (f.xlongitude !== undefined ? parseFloat(f.xlongitude) : null));
+      if (sLat === null || sLon === null || isNaN(sLat) || isNaN(sLon)) continue;
+      const dist = distKm(lat, lon, sLat, sLon);
+      if (!isFinite(dist) || dist > rayonKm) continue;
+      if (dist < bestDist) {
+        bestDist = dist;
+        const puissance = parseFloat(f.puissance_nominale);
+        best = {
+          nom: f.nom_station || f.nom_enseigne || '',
+          operateur: f.nom_operateur || f.nom_amenageur || '',
+          ville: f.consolidated_commune || '',
+          puissance: isNaN(puissance) ? null : puissance,
+          gratuit: f.gratuit === true || f.gratuit === 'true' || f.gratuit === 'oui',
+          lat: sLat, lon: sLon,
+        };
+      }
+    }
+    return best;
+  } catch (e) { return null; }
+}
+
+// Choisit la bonne recherche (station essence/gasoil ou borne électrique)
+// selon le carburant sélectionné.
+function fetchStationOuBorne(lat, lon, type, rayonKm) {
+  return type === 'electrique' ? fetchBorneRecharge(lat, lon, rayonKm) : fetchStationMoinsChere(lat, lon, type, rayonKm);
+}
+
+// Construit la ligne de détail (prix carburant, ou puissance/opérateur pour
+// une borne électrique), commune aux deux encadrés "station la moins chère".
+function buildStationDetail(station, type, lat, lon) {
+  const detail = document.createElement('div');
+  detail.className = 'cheapest-detail';
+  if (type === 'electrique') {
+    const strong = document.createElement('strong');
+    strong.textContent = station.puissance ? station.puissance + ' kW' : 'Borne de recharge';
+    detail.appendChild(strong);
+    const nomOp = [station.operateur, station.nom].filter(Boolean).join(' – ');
+    if (nomOp) detail.appendChild(document.createTextNode(' ' + nomOp));
+    if (station.ville) detail.appendChild(document.createTextNode((nomOp ? ', ' : ' ') + station.ville));
+    if (station.gratuit) detail.appendChild(document.createTextNode(' · gratuite'));
+  } else {
+    const strong = document.createElement('strong');
+    strong.textContent = station.prix.toFixed(3) + ' €/L';
+    detail.appendChild(strong);
+    const lieu = [station.nom, station.ville].filter(Boolean).join(', ');
+    if (lieu) detail.appendChild(document.createTextNode(' à ' + lieu));
+  }
+  if (station.lat !== null && station.lon !== null) {
+    const dKm = distKm(lat, lon, station.lat, station.lon);
+    if (isFinite(dKm)) detail.appendChild(document.createTextNode(' (' + dKm.toFixed(1) + ' km)'));
+  }
+  return detail;
+}
+
 // Recherche + affichage de la station la moins chère, indépendants du reste
 // du calcul du trajet : le curseur de rayon ne relance que cet encadré, et
 // seulement au relâchement (évite un fetch à chaque pixel glissé).
@@ -1709,8 +1782,9 @@ async function rechercherStationMoinsChere() {
   const cheapestNote = document.getElementById('cheapestNote');
   if (!lastStationSearch) { cheapestNote.style.display = 'none'; return; }
   const { lat, lon, type, rayon, depart, arrivee } = lastStationSearch;
+  const electrique = type === 'electrique';
   cheapestNote.classList.add('loading');
-  const station = await fetchStationMoinsChere(lat, lon, type, rayon);
+  const station = await fetchStationOuBorne(lat, lon, type, rayon);
   cheapestNote.classList.remove('loading');
   cheapestNote.textContent = '';
   cheapestNote.style.display = 'block';
@@ -1724,23 +1798,12 @@ async function rechercherStationMoinsChere() {
   const title = document.createElement('span');
   title.className = 'cheapest-title';
   title.style.fontSize = '0.9em';
-  title.textContent = 'Station la moins chère près du départ';
+  title.textContent = electrique ? 'Borne de recharge la plus proche du départ' : 'Station la moins chère près du départ';
   header.appendChild(title);
   cheapestNote.appendChild(header);
 
   if (station) {
-    const detail = document.createElement('div');
-    detail.className = 'cheapest-detail';
-    const strong = document.createElement('strong');
-    strong.textContent = station.prix.toFixed(3) + ' €/L';
-    detail.appendChild(strong);
-    const lieu = [station.nom, station.ville].filter(Boolean).join(', ');
-    if (lieu) detail.appendChild(document.createTextNode(' à ' + lieu));
-    if (station.lat !== null && station.lon !== null) {
-      const dKm = distKm(lat, lon, station.lat, station.lon);
-      if (isFinite(dKm)) detail.appendChild(document.createTextNode(' (' + dKm.toFixed(1) + ' km)'));
-    }
-    cheapestNote.appendChild(detail);
+    cheapestNote.appendChild(buildStationDetail(station, type, lat, lon));
 
     if (station.lat !== null && station.lon !== null) {
       cheapestNote.appendChild(buildStationMap(station.lat, station.lon));
@@ -1751,13 +1814,13 @@ async function rechercherStationMoinsChere() {
       const destination = encodeURIComponent(arrivee || `${station.lat},${station.lon}`);
       link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}&waypoints=${station.lat},${station.lon}`;
       link.target = '_blank';
-      link.textContent = 'Ajouter cette station à mon trajet';
+      link.textContent = electrique ? 'Ajouter cette borne à mon trajet' : 'Ajouter cette station à mon trajet';
       cheapestNote.appendChild(link);
     }
   } else {
     const empty = document.createElement('div');
     empty.className = 'cheapest-empty';
-    empty.textContent = 'Aucune station trouvée dans un rayon de ' + rayon + ' km.';
+    empty.textContent = (electrique ? 'Aucune borne trouvée' : 'Aucune station trouvée') + ' dans un rayon de ' + rayon + ' km.';
     cheapestNote.appendChild(empty);
   }
 
@@ -1776,7 +1839,7 @@ async function rechercherStationMoinsChere() {
   slider.max = STATION_RAYON_MAX;
   slider.step = 1;
   slider.value = rayon;
-  slider.setAttribute('aria-label', 'Rayon de recherche de la station la moins chère');
+  slider.setAttribute('aria-label', 'Rayon de recherche');
   slider.addEventListener('input', () => {
     document.getElementById('cheapestRadiusLabel').textContent = 'Rayon : ' + slider.value + ' km';
   });
@@ -1849,8 +1912,9 @@ async function afficherStationStandalone() {
   const cheapestNote = document.getElementById('cheapestNoteStation');
   if (!lastStationSearchStandalone) { cheapestNote.style.display = 'none'; return; }
   const { lat, lon, type, rayon } = lastStationSearchStandalone;
+  const electrique = type === 'electrique';
   cheapestNote.classList.add('loading');
-  const station = await fetchStationMoinsChere(lat, lon, type, rayon);
+  const station = await fetchStationOuBorne(lat, lon, type, rayon);
   cheapestNote.classList.remove('loading');
   cheapestNote.textContent = '';
   cheapestNote.style.display = 'block';
@@ -1864,23 +1928,12 @@ async function afficherStationStandalone() {
   const title = document.createElement('span');
   title.className = 'cheapest-title';
   title.style.fontSize = '0.9em';
-  title.textContent = 'Station la moins chère trouvée';
+  title.textContent = electrique ? 'Borne de recharge trouvée' : 'Station la moins chère trouvée';
   header.appendChild(title);
   cheapestNote.appendChild(header);
 
   if (station) {
-    const detail = document.createElement('div');
-    detail.className = 'cheapest-detail';
-    const strong = document.createElement('strong');
-    strong.textContent = station.prix.toFixed(3) + ' €/L';
-    detail.appendChild(strong);
-    const lieu = [station.nom, station.ville].filter(Boolean).join(', ');
-    if (lieu) detail.appendChild(document.createTextNode(' à ' + lieu));
-    if (station.lat !== null && station.lon !== null) {
-      const dKm = distKm(lat, lon, station.lat, station.lon);
-      if (isFinite(dKm)) detail.appendChild(document.createTextNode(' (' + dKm.toFixed(1) + ' km)'));
-    }
-    cheapestNote.appendChild(detail);
+    cheapestNote.appendChild(buildStationDetail(station, type, lat, lon));
 
     if (station.lat !== null && station.lon !== null) {
       cheapestNote.appendChild(buildStationMap(station.lat, station.lon));
@@ -1889,13 +1942,13 @@ async function afficherStationStandalone() {
       link.className = 'cheapest-link';
       link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${lat},${lon}&destination=${station.lat},${station.lon}`;
       link.target = '_blank';
-      link.textContent = 'Itinéraire vers cette station';
+      link.textContent = electrique ? 'Itinéraire vers cette borne' : 'Itinéraire vers cette station';
       cheapestNote.appendChild(link);
     }
   } else {
     const empty = document.createElement('div');
     empty.className = 'cheapest-empty';
-    empty.textContent = 'Aucune station trouvée dans un rayon de ' + rayon + ' km.';
+    empty.textContent = (electrique ? 'Aucune borne trouvée' : 'Aucune station trouvée') + ' dans un rayon de ' + rayon + ' km.';
     cheapestNote.appendChild(empty);
   }
 
@@ -1912,7 +1965,7 @@ async function afficherStationStandalone() {
   slider.max = STATION_RAYON_MAX;
   slider.step = 1;
   slider.value = rayon;
-  slider.setAttribute('aria-label', 'Rayon de recherche de la station la moins chère');
+  slider.setAttribute('aria-label', 'Rayon de recherche');
   slider.addEventListener('input', () => {
     document.getElementById('cheapestRadiusLabelStation').textContent = 'Rayon : ' + slider.value + ' km';
   });
