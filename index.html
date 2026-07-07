@@ -1307,13 +1307,28 @@ const CARB_FIELD = {
 const PRIX_ELECTRIQUE_ESTIME = 0.2516;
 let prixActuel = null;
 
-// Met à jour l'unité affichée (L ou kWh) selon le carburant choisi.
+// Met à jour l'unité affichée (L ou kWh) selon le carburant choisi, et
+// préremplit une consommation moyenne plausible au changement de "famille"
+// (électrique <-> thermique), sans écraser une valeur déjà ajustée si on
+// reste dans la même famille.
+const CONSO_ELECTRIQUE_DEFAUT = 17;
+const CONSO_THERMIQUE_DEFAUT = 7.5;
+let carburantTypePrecedent = null;
 function majUniteConso() {
-  const electrique = document.getElementById('carburant').value === 'electrique';
+  const type = document.getElementById('carburant').value;
+  const electrique = type === 'electrique';
   const unitLabel = document.getElementById('consoUnitLabel');
   if (unitLabel) unitLabel.textContent = electrique ? 'kWh / 100 km' : 'L / 100 km';
   const roulette = document.getElementById('consoRoulette');
   if (roulette) roulette.setAttribute('aria-label', electrique ? 'Consommation électrique au 100 km' : 'Consommation au 100 km');
+
+  const etaitElectrique = carburantTypePrecedent === 'electrique';
+  if (electrique && !etaitElectrique) {
+    consoSet(CONSO_ELECTRIQUE_DEFAUT, true);
+  } else if (!electrique && etaitElectrique) {
+    consoSet(CONSO_THERMIQUE_DEFAUT, true);
+  }
+  carburantTypePrecedent = type;
 }
 
 function showError(msg) { const e=document.getElementById('error'); e.textContent=msg; e.style.display='block'; }
