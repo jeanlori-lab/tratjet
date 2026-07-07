@@ -977,12 +977,13 @@
       <div class="param-icon">⛽</div>
       <div class="param-label">Carburant</div>
       <div class="param-input">
-        <select id="carburant" onchange="resetResultat(); chargerPrix();">
+        <select id="carburant" onchange="resetResultat(); chargerPrix(); majUniteConso();">
           <option value="sp95">Sans plomb 95</option>
           <option value="sp98">Sans plomb 98</option>
           <option value="gazole">Gazole (Diesel)</option>
           <option value="e85">Superéthanol E85</option>
           <option value="gplc">GPLc</option>
+          <option value="electrique">Électrique</option>
         </select>
         <div class="prix-actuel">Prix moyen actuel : <span id="prixAffiche">Chargement…</span></div>
       </div>
@@ -999,7 +1000,7 @@
             <div class="roulette-center"></div>
           </div>
           <button type="button" class="conso-arrow" id="consoMinus" aria-label="Diminuer la consommation">−</button>
-          <div class="conso-value"><input type="text" id="consoVal" class="conso-val-input" value="7,5" inputmode="decimal" readonly aria-label="Consommation au 100 km, modifiable"> <span class="roulette-unit">L / 100 km</span></div>
+          <div class="conso-value"><input type="text" id="consoVal" class="conso-val-input" value="7,5" inputmode="decimal" readonly aria-label="Consommation au 100 km, modifiable"> <span class="roulette-unit" id="consoUnitLabel">L / 100 km</span></div>
           <button type="button" class="conso-arrow" id="consoPlus" aria-label="Augmenter la consommation">+</button>
         </div>
       </div>
@@ -1040,7 +1041,7 @@
         <span class="res-value res-value-big" id="r-cout">—</span>
       </div>
       <div class="res-row">
-        <span class="res-label">Litres consommés</span>
+        <span class="res-label" id="r-litres-label">Litres consommés</span>
         <span class="res-value res-value-big" id="r-litres">—</span>
       </div>
     </div>
@@ -1300,7 +1301,20 @@ const CARB_FIELD = {
   gazole:'gazole_prix', sp95:'sp95_prix', sp98:'sp98_prix',
   e10:'e10_prix', e85:'e85_prix', gplc:'gplc_prix'
 };
+// Pas de suivi temps réel du prix de l'électricité (l'API data.gouv ne
+// couvre que les carburants vendus en station) : estimation fixe basée sur
+// le tarif réglementé (heures pleines), à défaut de mieux.
+const PRIX_ELECTRIQUE_ESTIME = 0.2516;
 let prixActuel = null;
+
+// Met à jour l'unité affichée (L ou kWh) selon le carburant choisi.
+function majUniteConso() {
+  const electrique = document.getElementById('carburant').value === 'electrique';
+  const unitLabel = document.getElementById('consoUnitLabel');
+  if (unitLabel) unitLabel.textContent = electrique ? 'kWh / 100 km' : 'L / 100 km';
+  const roulette = document.getElementById('consoRoulette');
+  if (roulette) roulette.setAttribute('aria-label', electrique ? 'Consommation électrique au 100 km' : 'Consommation au 100 km');
+}
 
 function showError(msg) { const e=document.getElementById('error'); e.textContent=msg; e.style.display='block'; }
 function hideError() { document.getElementById('error').style.display='none'; }
@@ -1576,6 +1590,12 @@ async function chargerPrix() {
   const type = document.getElementById('carburant').value;
   document.getElementById('prixAffiche').textContent = 'Chargement…';
   prixActuel = null;
+  if (type === 'electrique') {
+    // Pas de donnée temps réel disponible : estimation fixe (tarif réglementé).
+    prixActuel = PRIX_ELECTRIQUE_ESTIME;
+    document.getElementById('prixAffiche').textContent = prixActuel.toFixed(4) + ' €/kWh (estimation)';
+    return;
+  }
   try {
     let prix;
     if (type === 'sp95') {
@@ -1595,6 +1615,7 @@ async function chargerPrix() {
   }
 }
 chargerPrix();
+majUniteConso();
 
 // Distance à vol d'oiseau (km), pour situer la station la moins chère trouvée.
 function distKm(lat1, lon1, lat2, lon2) {
@@ -2256,7 +2277,7 @@ function formatDuree(sec) {
 
 function fmtKm(n)  { return Math.round(n).toLocaleString('fr-FR') + ' km'; }
 function fmtEur(n) { return n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €'; }
-function fmtL(n)   { return n.toLocaleString('fr-FR', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' L'; }
+function fmtL(n, unit)   { return n.toLocaleString('fr-FR', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' ' + (unit || 'L'); }
 
 // --- Bascule Aller simple / Aller-retour dans le tableau de résultats ---
 let resultMode = 'simple'; // 'simple' | 'ar'
@@ -2273,7 +2294,8 @@ function renderResultMode() {
   const isAR = resultMode === 'ar';
   document.getElementById('r-dist').textContent   = fmtKm(isAR ? d.distA * 2 : d.distA);
   document.getElementById('r-duree').textContent  = formatDuree(isAR ? d.dureeSec * 2 : d.dureeSec);
-  document.getElementById('r-litres').textContent = fmtL(isAR ? d.litresA * 2 : d.litresA);
+  document.getElementById('r-litres').textContent = fmtL(isAR ? d.litresA * 2 : d.litresA, d.unit);
+  document.getElementById('r-litres-label').textContent = d.unit === 'kWh' ? 'Électricité consommée' : 'Litres consommés';
 
   // Coût carburant : seule valeur qui garde un rappel de l'autre mode
   // (c'est la donnée jugée pertinente à comparer aller vs aller-retour).
@@ -2321,8 +2343,9 @@ async function calculer() {
     const litresA = (distA * conso) / 100;
     const coutA   = litresA * prixActuel;
     const passagers = passagersValeur();
+    const unit = document.getElementById('carburant').value === 'electrique' ? 'kWh' : 'L';
 
-    lastResultData = { distA, dureeSec: route.dureeSec, litresA, coutA, passagers };
+    lastResultData = { distA, dureeSec: route.dureeSec, litresA, coutA, passagers, unit };
     renderResultMode();
 
     // Itinéraire Maps : force le mode voiture (travelmode=driving) + étapes.
