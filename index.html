@@ -1143,6 +1143,17 @@ function photonLabel(p) {
   return parts.filter(Boolean).join(', ');
 }
 
+// Extrait le nom du département depuis le "context" BAN, ex. "21, Côte-d'Or,
+// Bourgogne-Franche-Comté" -> "Côte-d'Or". Sert à désambiguïser les
+// homonymes (plusieurs communes portent le même nom dans des départements
+// différents), affiché seulement dans la liste — jamais injecté dans la
+// valeur du champ (qui doit rester une adresse géocodable telle quelle).
+function banDept(properties) {
+  if (!properties || !properties.context) return null;
+  const parts = properties.context.split(',').map(s => s.trim());
+  return parts[1] || null;
+}
+
 // Recherche de lieux : API Adresse officielle (BAN, data.gouv.fr) en priorité
 // pour la France — exhaustive et bien priorisée sur les adresses françaises
 // (jusqu'au numéro de rue), gratuite et sans clé — complétée par Photon
@@ -1154,16 +1165,30 @@ async function searchPlaces(q, limit) {
     fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=${limit}&lang=fr`)
       .then(r => r.ok ? r.json() : { features: [] }).catch(() => ({ features: [] })),
   ]);
-  const ban = (banRes.features || []).map(f => ({
-    label: f.properties.label,
-    lat: f.geometry.coordinates[1],
-    lng: f.geometry.coordinates[0],
-    city: f.properties.city || f.properties.name,
-  }));
+  let banFeatures = banRes.features || [];
+  // Saisie sans numéro = on cherche vraisemblablement une ville/un lieu, pas
+  // une rue précise : on écarte les rues/numéros homonymes d'ailleurs en
+  // France (ex. taper "dijon" ne doit pas remonter "Rue de Dijon" à Nice),
+  // sauf si ça ne laisse plus aucun résultat (repli sur la liste complète).
+  if (!/\d/.test(q)) {
+    const lieux = banFeatures.filter(f => f.properties.type === 'municipality' || f.properties.type === 'locality');
+    if (lieux.length) banFeatures = lieux;
+  }
+  const ban = banFeatures.map(f => {
+    const dept = banDept(f.properties);
+    return {
+      label: f.properties.label,
+      displayLabel: dept ? `${f.properties.label} (${dept})` : f.properties.label,
+      lat: f.geometry.coordinates[1],
+      lng: f.geometry.coordinates[0],
+      city: f.properties.city || f.properties.name,
+    };
+  });
   const photon = (photonRes.features || [])
     .filter(f => isEuropePhoton(f) && f.properties.countrycode !== 'FR')
     .map(f => ({
       label: photonLabel(f.properties),
+      displayLabel: photonLabel(f.properties),
       lat: f.geometry.coordinates[1],
       lng: f.geometry.coordinates[0],
       city: f.properties.city || f.properties.name,
@@ -1279,7 +1304,7 @@ async function onAutoComplete(input) {
         vus.add(cle);
         const div = document.createElement('div');
         div.className = 'autocomplete-item';
-        div.textContent = f.label;
+        div.textContent = f.displayLabel || f.label;
         div.addEventListener('mousedown', e => {
           e.preventDefault();
           input.value = f.label;
