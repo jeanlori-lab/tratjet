@@ -1662,7 +1662,7 @@ function buildStationMap(lat, lon) {
 // relancer tout le calcul du trajet.
 const STATION_RAYON_KM = 8;
 const STATION_RAYON_MIN = 1;
-const STATION_RAYON_MAX = 50;
+const STATION_RAYON_MAX = 1000;
 // mode: 'min' (station la moins chère, par défaut) ou 'max' (la plus chère).
 async function fetchStationMoinsChere(lat, lon, type, rayonKm, mode) {
   rayonKm = rayonKm || STATION_RAYON_KM;
