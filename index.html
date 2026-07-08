@@ -866,14 +866,27 @@
       accent-color: #1976d2;
       cursor: pointer;
     }
-    .cheapest-mode-btn {
-      display: block;
+    .cheapest-btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
       margin-top: 8px;
     }
-    .cheapest-nolimit-btn {
-      display: block;
-      margin-top: 8px;
+    .cheapest-mode-btn, .cheapest-nolimit-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: inherit;
+      color: #ffffff;
+      cursor: pointer;
+      transition: filter 0.15s;
     }
+    .cheapest-mode-btn:hover, .cheapest-nolimit-btn:hover { filter: brightness(1.08); }
+    .cheapest-mode-btn.mode-plus-chere { background: #d32f2f; }
+    .cheapest-mode-btn.mode-moins-chere { background: #2e7d32; }
+    .cheapest-nolimit-btn { background: #1976d2; }
     /* Résultat "pas de limites" (France entière) : même mise en avant que le
        coût total du trajet, pour qu'un prix isolé se voie au premier regard. */
     .cheapest-detail-big {
@@ -1887,15 +1900,18 @@ async function rechercherStationMoinsChere() {
   if (illimite) {
     // Retour à un rayon limité : on réutilise le dernier rayon connu avant la
     // bascule "pas de limites" (ou le rayon par défaut si on ne l'a pas).
+    const backRow = document.createElement('div');
+    backRow.className = 'cheapest-btn-row';
     const backBtn = document.createElement('button');
     backBtn.type = 'button';
-    backBtn.className = 'link-btn cheapest-nolimit-btn';
-    backBtn.textContent = '↺ Revenir à un rayon limité';
+    backBtn.className = 'cheapest-nolimit-btn';
+    backBtn.textContent = 'Revenir à un rayon limité';
     backBtn.onclick = () => {
       lastStationSearch.rayon = lastStationSearch.rayonAvantIllimite || STATION_RAYON_KM;
       rechercherStationMoinsChere();
     };
-    cheapestNote.appendChild(backBtn);
+    backRow.appendChild(backBtn);
+    cheapestNote.appendChild(backRow);
     return;
   }
 
@@ -1929,16 +1945,19 @@ async function rechercherStationMoinsChere() {
   // "Pas de limites" : recherche la station la moins chère sur toute la
   // France (n'a de sens que pour un carburant, pas pour les bornes).
   if (!electrique) {
+    const btnRow = document.createElement('div');
+    btnRow.className = 'cheapest-btn-row';
     const noLimitBtn = document.createElement('button');
     noLimitBtn.type = 'button';
-    noLimitBtn.className = 'link-btn cheapest-nolimit-btn';
-    noLimitBtn.textContent = '🌍 Pas de limites (France entière)';
+    noLimitBtn.className = 'cheapest-nolimit-btn';
+    noLimitBtn.textContent = 'Pas de limites (France entière)';
     noLimitBtn.onclick = () => {
       lastStationSearch.rayonAvantIllimite = rayon;
       lastStationSearch.rayon = STATION_RAYON_ILLIMITE;
       rechercherStationMoinsChere();
     };
-    cheapestNote.appendChild(noLimitBtn);
+    btnRow.appendChild(noLimitBtn);
+    cheapestNote.appendChild(btnRow);
   }
 }
 
@@ -2051,15 +2070,18 @@ async function afficherStationStandalone() {
   }
 
   if (illimite) {
+    const backRow = document.createElement('div');
+    backRow.className = 'cheapest-btn-row';
     const backBtn = document.createElement('button');
     backBtn.type = 'button';
-    backBtn.className = 'link-btn cheapest-nolimit-btn';
-    backBtn.textContent = '↺ Revenir à un rayon limité';
+    backBtn.className = 'cheapest-nolimit-btn';
+    backBtn.textContent = 'Revenir à un rayon limité';
     backBtn.onclick = () => {
       lastStationSearchStandalone.rayon = lastStationSearchStandalone.rayonAvantIllimite || STATION_RAYON_KM;
       afficherStationStandalone();
     };
-    cheapestNote.appendChild(backBtn);
+    backRow.appendChild(backBtn);
+    cheapestNote.appendChild(backRow);
     return;
   }
 
@@ -2088,29 +2110,34 @@ async function afficherStationStandalone() {
   radiusWrap.appendChild(slider);
   cheapestNote.appendChild(radiusWrap);
 
-  // Bascule moins chère / plus chère : n'a de sens que pour un carburant
-  // (prix comparables), pas pour les bornes électriques.
+  // Bascule moins chère / plus chère (n'a de sens que pour un carburant, pas
+  // pour les bornes électriques) et "pas de limites" : côte à côte.
   if (!electrique) {
+    const btnRow = document.createElement('div');
+    btnRow.className = 'cheapest-btn-row';
+
     const modeBtn = document.createElement('button');
     modeBtn.type = 'button';
-    modeBtn.className = 'link-btn cheapest-mode-btn';
-    modeBtn.textContent = veutMax ? '↺ Voir la station la moins chère' : '↻ Voir la station la plus chère';
+    modeBtn.className = 'cheapest-mode-btn ' + (veutMax ? 'mode-moins-chere' : 'mode-plus-chere');
+    modeBtn.textContent = veutMax ? 'Voir la station la moins chère' : 'Voir la station la plus chère';
     modeBtn.onclick = () => {
       lastStationSearchStandalone.mode = veutMax ? 'min' : 'max';
       afficherStationStandalone();
     };
-    cheapestNote.appendChild(modeBtn);
+    btnRow.appendChild(modeBtn);
 
     const noLimitBtn = document.createElement('button');
     noLimitBtn.type = 'button';
-    noLimitBtn.className = 'link-btn cheapest-nolimit-btn';
-    noLimitBtn.textContent = '🌍 Pas de limites (France entière)';
+    noLimitBtn.className = 'cheapest-nolimit-btn';
+    noLimitBtn.textContent = 'Pas de limites (France entière)';
     noLimitBtn.onclick = () => {
       lastStationSearchStandalone.rayonAvantIllimite = rayon;
       lastStationSearchStandalone.rayon = STATION_RAYON_ILLIMITE;
       afficherStationStandalone();
     };
-    cheapestNote.appendChild(noLimitBtn);
+    btnRow.appendChild(noLimitBtn);
+
+    cheapestNote.appendChild(btnRow);
   }
 }
 
