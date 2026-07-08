@@ -1129,10 +1129,8 @@ function isEuropePhoton(feature) {
   return EUROPE_COUNTRIES_2.has(cc);
 }
 // Construit un libellé lisible à partir des propriétés Photon (ville, code
-// postal, rue… selon ce qui est disponible). omitCountry : n'affiche pas le
-// pays (pour la France, redondant avec les autres résultats qui sont déjà
-// tous français).
-function photonLabel(p, omitCountry) {
+// postal, rue… selon ce qui est disponible).
+function photonLabel(p) {
   const parts = [];
   if (p.housenumber && p.street) parts.push(p.housenumber + ' ' + p.street);
   else if (p.street) parts.push(p.street);
@@ -1141,18 +1139,8 @@ function photonLabel(p, omitCountry) {
   if (ville && !parts.includes(ville)) parts.push(ville);
   const zone = p.state || p.county;
   if (zone && zone !== ville && !parts.includes(zone)) parts.push(zone);
-  if (p.country && !omitCountry && !parts.includes(p.country)) parts.push(p.country);
+  if (p.country && !parts.includes(p.country)) parts.push(p.country);
   return parts.filter(Boolean).join(', ');
-}
-
-// Catégories OSM (champ "osm_key" renvoyé par Photon) considérées comme des
-// lieux/établissements (restaurants, hôtels, salles de sport, commerces,
-// entreprises…) plutôt que de simples adresses. La BAN ne référence que des
-// adresses/communes, pas ces lieux : on va les chercher chez Photon, y
-// compris pour la France (où Photon est sinon écarté au profit de la BAN).
-const OSM_POI_KEYS = new Set(['amenity', 'shop', 'tourism', 'leisure', 'office', 'craft', 'healthcare', 'sport']);
-function isPhotonPOI(properties) {
-  return !!(properties && properties.name && OSM_POI_KEYS.has(properties.osm_key));
 }
 
 // Extrait le nom du département depuis le "context" BAN, ex. "21, Côte-d'Or,
@@ -1169,17 +1157,12 @@ function banDept(properties) {
 // Recherche de lieux : API Adresse officielle (BAN, data.gouv.fr) en priorité
 // pour la France — exhaustive et bien priorisée sur les adresses françaises
 // (jusqu'au numéro de rue), gratuite et sans clé — complétée par Photon
-// (Komoot) pour le reste de l'Europe, que BAN ne couvre pas, ainsi que pour
-// les lieux/établissements en France (restaurants, hôtels, salles de sport,
-// commerces, entreprises…) que la BAN ne référence pas du tout (adresses
-// uniquement). On sur-demande Photon (PHOTON_LIMIT plutôt que "limit") car
-// le filtre POI en France écarte la plupart des résultats bruts (adresses).
-const PHOTON_LIMIT = 30;
+// (Komoot) pour le reste de l'Europe, que BAN ne couvre pas.
 async function searchPlaces(q, limit) {
   const [banRes, photonRes] = await Promise.all([
     fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=${limit}&autocomplete=1`)
       .then(r => r.ok ? r.json() : { features: [] }).catch(() => ({ features: [] })),
-    fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=${PHOTON_LIMIT}&lang=fr`)
+    fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=${limit}&lang=fr`)
       .then(r => r.ok ? r.json() : { features: [] }).catch(() => ({ features: [] })),
   ]);
   let banFeatures = banRes.features || [];
@@ -1202,23 +1185,14 @@ async function searchPlaces(q, limit) {
     };
   });
   const photon = (photonRes.features || [])
-    .filter(f => {
-      const cc = f.properties && f.properties.countrycode;
-      // France : uniquement les lieux/établissements (adresses déjà couvertes par la BAN).
-      if (cc === 'FR') return isPhotonPOI(f.properties);
-      return isEuropePhoton(f);
-    })
-    .map(f => {
-      const cc = f.properties.countrycode;
-      const lbl = photonLabel(f.properties, cc === 'FR');
-      return {
-        label: lbl,
-        displayLabel: lbl,
-        lat: f.geometry.coordinates[1],
-        lng: f.geometry.coordinates[0],
-        city: f.properties.city || f.properties.name,
-      };
-    })
+    .filter(f => isEuropePhoton(f) && f.properties.countrycode !== 'FR')
+    .map(f => ({
+      label: photonLabel(f.properties),
+      displayLabel: photonLabel(f.properties),
+      lat: f.geometry.coordinates[1],
+      lng: f.geometry.coordinates[0],
+      city: f.properties.city || f.properties.name,
+    }))
     .filter(f => f.label);
   return [...ban, ...photon];
 }
