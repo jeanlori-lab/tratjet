@@ -870,6 +870,19 @@
       display: block;
       margin-top: 8px;
     }
+    .cheapest-nolimit-btn {
+      display: block;
+      margin-top: 8px;
+    }
+    /* Résultat "pas de limites" (France entière) : même mise en avant que le
+       coût total du trajet, pour qu'un prix isolé se voie au premier regard. */
+    .cheapest-detail-big {
+      font-size: 22px;
+      font-weight: 900;
+      color: #1565c0;
+      margin: 4px 0 8px;
+    }
+    .cheapest-detail-big strong { color: inherit; font-size: inherit; }
 
     .maps-wrap {
       text-align: center;
@@ -1662,7 +1675,10 @@ function buildStationMap(lat, lon) {
 // relancer tout le calcul du trajet.
 const STATION_RAYON_KM = 8;
 const STATION_RAYON_MIN = 1;
-const STATION_RAYON_MAX = 500;
+const STATION_RAYON_MAX = 100;
+// Rayon spécial "pas de limites" (recherche sur toute la France), même
+// convention que les radiuses -1 d'OpenRouteService plus bas dans ce fichier.
+const STATION_RAYON_ILLIMITE = -1;
 
 // Récupère TOUS les enregistrements d'une recherche opendatasoft v1 (l'API
 // plafonne chaque appel à ODS_PAGE_SIZE résultats) en paginant avec "start"
@@ -1685,13 +1701,16 @@ async function fetchAllODSRecords(baseUrl) {
 // mode: 'min' (station la moins chère, par défaut) ou 'max' (la plus chère).
 async function fetchStationMoinsChere(lat, lon, type, rayonKm, mode) {
   rayonKm = rayonKm || STATION_RAYON_KM;
+  const illimite = rayonKm === STATION_RAYON_ILLIMITE;
   const field = (type === 'sp95') ? 'e10_prix' : CARB_FIELD[type];
   if (!field) return null;
   try {
     // Le tri "sort" de l'API porte sur un champ texte : il n'est pas fiable pour
     // classer les prix numériquement (ex. "1.9" avant "1.85"). On récupère donc
     // toutes les stations du rayon (paginé) et on calcule nous-mêmes le minimum/maximum.
-    const url = `https://data.economie.gouv.fr/api/records/1.0/search/?dataset=prix-des-carburants-en-france-flux-instantane-v2&geofilter.distance=${lat},${lon},${rayonKm * 1000}`;
+    // "Pas de limites" : pas de filtre géographique, on cherche sur toute la France.
+    const url = `https://data.economie.gouv.fr/api/records/1.0/search/?dataset=prix-des-carburants-en-france-flux-instantane-v2`
+      + (illimite ? '' : `&geofilter.distance=${lat},${lon},${rayonKm * 1000}`);
     const records = await fetchAllODSRecords(url);
     if (!records.length) return null;
     const veutMax = mode === 'max';
@@ -1704,7 +1723,7 @@ async function fetchStationMoinsChere(lat, lon, type, rayonKm, mode) {
       const sLat = geo ? geo[1] : (f.latitude !== undefined ? parseFloat(f.latitude) : null);
       const sLon = geo ? geo[0] : (f.longitude !== undefined ? parseFloat(f.longitude) : null);
       // Filtre client en plus du rayon serveur (sécurité si l'API renvoie plus large).
-      if (sLat !== null && sLon !== null && distKm(lat, lon, sLat, sLon) > rayonKm) continue;
+      if (!illimite && sLat !== null && sLon !== null && distKm(lat, lon, sLat, sLon) > rayonKm) continue;
       if (!best || (veutMax ? prix > best.prix : prix < best.prix)) best = { prix, nom: f.nom || '', ville: f.ville || '', lat: sLat, lon: sLon };
     }
     return best;
@@ -1757,9 +1776,11 @@ function fetchStationOuBorne(lat, lon, type, rayonKm, mode) {
 
 // Construit la ligne de détail (prix carburant, ou puissance/opérateur pour
 // une borne électrique), commune aux deux encadrés "station la moins chère".
-function buildStationDetail(station, type, lat, lon) {
+// big : mise en avant (recherche "pas de limites"), même traitement visuel
+// que le coût total du trajet.
+function buildStationDetail(station, type, lat, lon, big) {
   const detail = document.createElement('div');
-  detail.className = 'cheapest-detail';
+  detail.className = big ? 'cheapest-detail cheapest-detail-big' : 'cheapest-detail';
   if (type === 'electrique') {
     const strong = document.createElement('strong');
     strong.textContent = station.puissance ? station.puissance + ' kW' : 'Borne de recharge';
@@ -1785,13 +1806,14 @@ function buildStationDetail(station, type, lat, lon) {
 // Recherche + affichage de la station la moins chère, indépendants du reste
 // du calcul du trajet : le curseur de rayon ne relance que cet encadré, et
 // seulement au relâchement (évite un fetch à chaque pixel glissé).
-let lastStationSearch = null; // { lat, lon, type, rayon, depart, arrivee }
+let lastStationSearch = null; // { lat, lon, type, rayon, depart, arrivee, rayonAvantIllimite }
 
 async function rechercherStationMoinsChere() {
   const cheapestNote = document.getElementById('cheapestNote');
   if (!lastStationSearch) { cheapestNote.style.display = 'none'; return; }
   const { lat, lon, type, rayon, depart, arrivee } = lastStationSearch;
   const electrique = type === 'electrique';
+  const illimite = rayon === STATION_RAYON_ILLIMITE;
   cheapestNote.classList.add('loading');
   const station = await fetchStationOuBorne(lat, lon, type, rayon);
   cheapestNote.classList.remove('loading');
@@ -1807,12 +1829,14 @@ async function rechercherStationMoinsChere() {
   const title = document.createElement('span');
   title.className = 'cheapest-title';
   title.style.fontSize = '0.9em';
-  title.textContent = electrique ? 'Borne de recharge la plus proche du départ' : 'Station la moins chère près du départ';
+  title.textContent = electrique
+    ? 'Borne de recharge la plus proche du départ'
+    : (illimite ? 'Station la moins chère de France' : 'Station la moins chère près du départ');
   header.appendChild(title);
   cheapestNote.appendChild(header);
 
   if (station) {
-    cheapestNote.appendChild(buildStationDetail(station, type, lat, lon));
+    cheapestNote.appendChild(buildStationDetail(station, type, lat, lon, illimite));
 
     if (station.lat !== null && station.lon !== null) {
       cheapestNote.appendChild(buildStationMap(station.lat, station.lon));
@@ -1829,8 +1853,25 @@ async function rechercherStationMoinsChere() {
   } else {
     const empty = document.createElement('div');
     empty.className = 'cheapest-empty';
-    empty.textContent = (electrique ? 'Aucune borne trouvée' : 'Aucune station trouvée') + ' dans un rayon de ' + rayon + ' km.';
+    empty.textContent = illimite
+      ? (electrique ? 'Aucune borne trouvée.' : 'Aucune station trouvée.')
+      : (electrique ? 'Aucune borne trouvée' : 'Aucune station trouvée') + ' dans un rayon de ' + rayon + ' km.';
     cheapestNote.appendChild(empty);
+  }
+
+  if (illimite) {
+    // Retour à un rayon limité : on réutilise le dernier rayon connu avant la
+    // bascule "pas de limites" (ou le rayon par défaut si on ne l'a pas).
+    const backBtn = document.createElement('button');
+    backBtn.type = 'button';
+    backBtn.className = 'link-btn cheapest-nolimit-btn';
+    backBtn.textContent = '↺ Revenir à un rayon limité';
+    backBtn.onclick = () => {
+      lastStationSearch.rayon = lastStationSearch.rayonAvantIllimite || STATION_RAYON_KM;
+      rechercherStationMoinsChere();
+    };
+    cheapestNote.appendChild(backBtn);
+    return;
   }
 
   // Curseur pour élargir/réduire le rayon de recherche : recalcule uniquement
@@ -1859,6 +1900,21 @@ async function rechercherStationMoinsChere() {
   radiusWrap.appendChild(label);
   radiusWrap.appendChild(slider);
   cheapestNote.appendChild(radiusWrap);
+
+  // "Pas de limites" : recherche la station la moins chère sur toute la
+  // France (n'a de sens que pour un carburant, pas pour les bornes).
+  if (!electrique) {
+    const noLimitBtn = document.createElement('button');
+    noLimitBtn.type = 'button';
+    noLimitBtn.className = 'link-btn cheapest-nolimit-btn';
+    noLimitBtn.textContent = '🌍 Pas de limites (France entière)';
+    noLimitBtn.onclick = () => {
+      lastStationSearch.rayonAvantIllimite = rayon;
+      lastStationSearch.rayon = STATION_RAYON_ILLIMITE;
+      rechercherStationMoinsChere();
+    };
+    cheapestNote.appendChild(noLimitBtn);
+  }
 }
 
 // --- Station la moins chère près de chez moi, recherche indépendante d'un
@@ -1923,6 +1979,7 @@ async function afficherStationStandalone() {
   const { lat, lon, type, rayon, mode } = lastStationSearchStandalone;
   const electrique = type === 'electrique';
   const veutMax = mode === 'max';
+  const illimite = rayon === STATION_RAYON_ILLIMITE;
   cheapestNote.classList.add('loading');
   const station = await fetchStationOuBorne(lat, lon, type, rayon, mode);
   cheapestNote.classList.remove('loading');
@@ -1938,12 +1995,16 @@ async function afficherStationStandalone() {
   const title = document.createElement('span');
   title.className = 'cheapest-title';
   title.style.fontSize = '0.9em';
-  title.textContent = electrique ? 'Borne de recharge trouvée' : (veutMax ? 'Station la plus chère trouvée' : 'Station la moins chère trouvée');
+  title.textContent = electrique
+    ? 'Borne de recharge trouvée'
+    : (illimite
+        ? (veutMax ? 'Station la plus chère de France' : 'Station la moins chère de France')
+        : (veutMax ? 'Station la plus chère trouvée' : 'Station la moins chère trouvée'));
   header.appendChild(title);
   cheapestNote.appendChild(header);
 
   if (station) {
-    cheapestNote.appendChild(buildStationDetail(station, type, lat, lon));
+    cheapestNote.appendChild(buildStationDetail(station, type, lat, lon, illimite));
 
     if (station.lat !== null && station.lon !== null) {
       cheapestNote.appendChild(buildStationMap(station.lat, station.lon));
@@ -1958,8 +2019,23 @@ async function afficherStationStandalone() {
   } else {
     const empty = document.createElement('div');
     empty.className = 'cheapest-empty';
-    empty.textContent = (electrique ? 'Aucune borne trouvée' : 'Aucune station trouvée') + ' dans un rayon de ' + rayon + ' km.';
+    empty.textContent = illimite
+      ? (electrique ? 'Aucune borne trouvée.' : 'Aucune station trouvée.')
+      : (electrique ? 'Aucune borne trouvée' : 'Aucune station trouvée') + ' dans un rayon de ' + rayon + ' km.';
     cheapestNote.appendChild(empty);
+  }
+
+  if (illimite) {
+    const backBtn = document.createElement('button');
+    backBtn.type = 'button';
+    backBtn.className = 'link-btn cheapest-nolimit-btn';
+    backBtn.textContent = '↺ Revenir à un rayon limité';
+    backBtn.onclick = () => {
+      lastStationSearchStandalone.rayon = lastStationSearchStandalone.rayonAvantIllimite || STATION_RAYON_KM;
+      afficherStationStandalone();
+    };
+    cheapestNote.appendChild(backBtn);
+    return;
   }
 
   const radiusWrap = document.createElement('div');
@@ -1999,6 +2075,17 @@ async function afficherStationStandalone() {
       afficherStationStandalone();
     };
     cheapestNote.appendChild(modeBtn);
+
+    const noLimitBtn = document.createElement('button');
+    noLimitBtn.type = 'button';
+    noLimitBtn.className = 'link-btn cheapest-nolimit-btn';
+    noLimitBtn.textContent = '🌍 Pas de limites (France entière)';
+    noLimitBtn.onclick = () => {
+      lastStationSearchStandalone.rayonAvantIllimite = rayon;
+      lastStationSearchStandalone.rayon = STATION_RAYON_ILLIMITE;
+      afficherStationStandalone();
+    };
+    cheapestNote.appendChild(noLimitBtn);
   }
 }
 
