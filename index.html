@@ -662,6 +662,18 @@
     .res-value-big { font-size: 29px; font-weight: 900; color: #1565c0; }
     #r-litres.res-value-big { font-size: 22px; color: #1a2433; }
 
+    /* Détail carburant/péages, en petit au-dessus du coût total. */
+    .cost-chips-row { display: flex; gap: 8px; padding: 10px 0 8px; }
+    .cost-chip {
+      display: flex; flex-direction: column; align-items: center; gap: 1px;
+      background: #f5f8fb; border: 1px solid #dbe7f5; border-radius: 12px;
+      padding: 6px 10px; flex: 1; text-align: center;
+    }
+    .cost-chip-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #90a4ae; }
+    .cost-chip-value { font-size: 14px; font-weight: 800; color: #1a2433; }
+    .cost-chip-peage .cost-chip-value { color: #2e7d32; }
+    .cost-chip-peage.unavailable .cost-chip-value { font-size: 10.5px; font-weight: 700; color: #90a4ae; line-height: 1.3; }
+
     /* Bascule Aller simple / Aller-retour : remplace les deux colonnes du
        tableau par une seule valeur, qu'on peut basculer d'un mode à
        l'autre (seul le coût carburant garde un rappel de l'autre mode). */
@@ -1036,8 +1048,18 @@
 
     <div class="res-section-title">Coût & conso</div>
     <div class="section res-section">
+      <div class="cost-chips-row">
+        <div class="cost-chip">
+          <span class="cost-chip-label">Carburant</span>
+          <span class="cost-chip-value" id="r-cout-carburant">—</span>
+        </div>
+        <div class="cost-chip cost-chip-peage" id="costChipPeage">
+          <span class="cost-chip-label">Péages</span>
+          <span class="cost-chip-value" id="r-cout-peage">—</span>
+        </div>
+      </div>
       <div class="res-row">
-        <span class="res-label">Coût carburant</span>
+        <span class="res-label">Coût total</span>
         <span class="res-value res-value-big" id="r-cout">—</span>
       </div>
       <div class="res-row">
@@ -2365,11 +2387,22 @@ function renderResultMode() {
   document.getElementById('r-litres').textContent = fmtL(isAR ? d.litresA * 2 : d.litresA, d.unit);
   document.getElementById('r-litres-label').textContent = d.unit === 'kWh' ? 'Électricité consommée' : 'Litres consommés';
 
-  // Coût carburant : seule valeur qui garde un rappel de l'autre mode
-  // (c'est la donnée jugée pertinente à comparer aller vs aller-retour).
-  const coutAffiche = isAR ? d.coutA * 2 : d.coutA;
+  // Détail carburant/péages en petit, coût total (carburant + péages) en
+  // gros. Les péages sont estimés via TollGuru ; s'ils sont indisponibles,
+  // le total ne compte que le carburant et on renvoie vers le lien Vinci.
+  const coutCarburantAffiche = isAR ? d.coutA * 2 : d.coutA;
+  const peageConnu = typeof d.coutPeage === 'number';
+  const coutPeageAffiche = peageConnu ? (isAR ? d.coutPeage * 2 : d.coutPeage) : null;
+  const coutTotalAffiche = coutCarburantAffiche + (coutPeageAffiche || 0);
+
+  document.getElementById('r-cout-carburant').textContent = fmtEur(coutCarburantAffiche);
+  const peageChip = document.getElementById('costChipPeage');
+  const peageValEl = document.getElementById('r-cout-peage');
+  peageChip.classList.toggle('unavailable', !peageConnu);
+  peageValEl.textContent = peageConnu ? fmtEur(coutPeageAffiche) : 'Voir le prix des péages ci-dessous';
+
   const rCout = document.getElementById('r-cout');
-  rCout.textContent = fmtEur(coutAffiche);
+  rCout.textContent = fmtEur(coutTotalAffiche);
   rCout.classList.toggle('has-per-person', d.passagers === 0 || d.passagers > 1);
   if (d.passagers === 0) {
     const note = document.createElement('div');
@@ -2379,7 +2412,7 @@ function renderResultMode() {
   } else if (d.passagers > 1) {
     const note = document.createElement('div');
     note.className = 'per-person-note';
-    note.textContent = fmtEur(coutAffiche / d.passagers) + ' / pers.';
+    note.textContent = fmtEur(coutTotalAffiche / d.passagers) + ' / pers.';
     rCout.appendChild(note);
   }
 }
@@ -2412,8 +2445,11 @@ async function calculer() {
     const coutA   = litresA * prixActuel;
     const passagers = passagersValeur();
     const unit = document.getElementById('carburant').value === 'electrique' ? 'kWh' : 'L';
+    // Péages (best-effort, TollGuru) : n'importe quel échec (quota, trajet
+    // hors couverture...) laisse simplement le total au seul carburant.
+    const coutPeage = await getTolls(route.polyline, c1, c2);
 
-    lastResultData = { distA, dureeSec: route.dureeSec, litresA, coutA, passagers, unit };
+    lastResultData = { distA, dureeSec: route.dureeSec, litresA, coutA, coutPeage, passagers, unit };
     renderResultMode();
 
     // Itinéraire Maps : force le mode voiture (travelmode=driving) + étapes.
