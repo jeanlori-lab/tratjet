@@ -73,22 +73,6 @@
       margin-bottom: 14px;
     }
 
-    /* Légende */
-    .legende {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      color: #607080;
-    }
-    .legend-dot {
-      width: 12px; height: 12px;
-      border-radius: 3px;
-      background: #c6f5c6;
-      border: 1.5px solid #4caf50;
-      flex-shrink: 0;
-    }
-
     /* Lignes de paramètres */
     .param-row {
       display: flex;
@@ -165,16 +149,6 @@
     .section-carburant input[type="text"]:focus, .section-carburant input[type="number"]:focus, .section-carburant select:focus {
       border-color: #c9760a;
       box-shadow: 0 0 0 3px rgba(226,151,26,0.22);
-    }
-
-    .auto-field {
-      width: 100%;
-      padding: 8px 11px;
-      border: 1.5px solid #e0e0e0;
-      border-radius: 10px;
-      background: #f5f7fa;
-      font-size: 13px;
-      color: #607080;
     }
 
     /* Prix moyen actuel : une ligne, alignée avec le champ Carburant */
@@ -776,28 +750,6 @@
     }
     .pass-max-msg.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-    /* Message péage indisponible (occupe les 2 colonnes de la ligne Péages) */
-    .res-table td.peage-msg {
-      border-right: 1px solid #dbe3ec;
-      font-size: 12px;
-      font-weight: 600;
-      font-style: italic;
-      color: #1976d2;
-    }
-    /* Espace en bas de la cellule péage pour loger la note quota sans
-       décaler le prix (qui reste centré verticalement comme l'aller-retour). */
-    #r-peage-a, #r-peage-ar { position: relative; padding-bottom: 14px; }
-    /* Note discrète du quota TollGuru, juste sous le prix (centré) */
-    .quota-note {
-      position: absolute;
-      left: 0; right: 0;
-      top: calc(50% + 4px);
-      line-height: 1;
-      font-size: 9px;
-      font-weight: 400;
-      color: #aab4bf;
-    }
-
     /* Bordure animée "chasing shine" + halo pulsé, pour mettre en valeur
        la station la moins chère. Dégrade proprement (bordure verte fixe)
        sur les navigateurs sans support de @property/conic-gradient. */
@@ -914,6 +866,10 @@
       accent-color: #1976d2;
       cursor: pointer;
     }
+    .cheapest-mode-btn {
+      display: block;
+      margin-top: 8px;
+    }
 
     .maps-wrap {
       text-align: center;
@@ -961,7 +917,7 @@
   <input type="hidden" id="apiKey" value="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY1NjRiM2M4Yjc0OTQ0ZDlhNmNjM2FiOWQzNjFhNTE2IiwiaCI6Im11cm11cjY0In0=">
 
   <!-- Bascule Coût carburant (trajet) / Station la moins chère (près de moi) -->
-  <div class="main-toggle" id="mainToggle">
+  <div class="main-toggle">
     <button type="button" class="main-toggle-btn active" data-main-mode="cout" onclick="setMainMode('cout')">Coût carburant</button>
     <button type="button" class="main-toggle-btn" data-main-mode="station" onclick="setMainMode('station')">Station la moins chère</button>
   </div>
@@ -1042,7 +998,7 @@
   <!-- Résultats -->
   <div class="card resultats" id="sectionResultats" style="margin-top:14px;">
     <div class="card-title">Résultats</div>
-    <div class="ar-toggle" id="arToggle">
+    <div class="ar-toggle">
       <button type="button" class="ar-toggle-btn active" data-mode="simple" onclick="setResultMode('simple')">Aller simple</button>
       <button type="button" class="ar-toggle-btn" data-mode="ar" onclick="setResultMode('ar')">Aller-retour</button>
     </div>
@@ -1104,7 +1060,7 @@
               <input type="text" id="stationAdresse" class="point-input" autocomplete="off" placeholder="Ton adresse" oninput="onStationAdresseInput(this)" onfocus="showFavoritesIfEmpty(this)">
               <div class="autocomplete-list"></div>
             </div>
-            <button type="button" class="fav-star" id="stationFavStar" title="Enregistrer en favori" onclick="toggleFavPlace(document.getElementById('stationAdresse').value, this)">☆</button>
+            <button type="button" class="fav-star" title="Enregistrer en favori" onclick="toggleFavPlace(document.getElementById('stationAdresse').value, this)">☆</button>
           </div>
         </div>
         <button type="button" class="link-btn" onclick="utiliserPositionActuelle()"> Utiliser ma position actuelle</button>
@@ -1705,21 +1661,23 @@ function buildStationMap(lat, lon) {
 // Le rayon peut être élargi via un curseur depuis l'encadré résultat, sans
 // relancer tout le calcul du trajet.
 const STATION_RAYON_KM = 8;
-const STATION_RAYON_MIN = 5;
-const STATION_RAYON_MAX = 50;
-async function fetchStationMoinsChere(lat, lon, type, rayonKm) {
+const STATION_RAYON_MIN = 1;
+const STATION_RAYON_MAX = 1000;
+// mode: 'min' (station la moins chère, par défaut) ou 'max' (la plus chère).
+async function fetchStationMoinsChere(lat, lon, type, rayonKm, mode) {
   rayonKm = rayonKm || STATION_RAYON_KM;
   const field = (type === 'sp95') ? 'e10_prix' : CARB_FIELD[type];
   if (!field) return null;
   try {
     // Le tri "sort" de l'API porte sur un champ texte : il n'est pas fiable pour
     // classer les prix numériquement (ex. "1.9" avant "1.85"). On récupère donc
-    // toutes les stations du rayon et on calcule nous-mêmes le minimum.
+    // toutes les stations du rayon et on calcule nous-mêmes le minimum/maximum.
     const url = `https://data.economie.gouv.fr/api/records/1.0/search/?dataset=prix-des-carburants-en-france-flux-instantane-v2&geofilter.distance=${lat},${lon},${rayonKm * 1000}&rows=100`;
     const r = await fetch(url);
     if (!r.ok) return null;
     const d = await r.json();
     if (!d.records || !d.records.length) return null;
+    const veutMax = mode === 'max';
     let best = null;
     for (const rec of d.records) {
       const f = rec.fields || {};
@@ -1730,7 +1688,7 @@ async function fetchStationMoinsChere(lat, lon, type, rayonKm) {
       const sLon = geo ? geo[0] : (f.longitude !== undefined ? parseFloat(f.longitude) : null);
       // Filtre client en plus du rayon serveur (sécurité si l'API renvoie plus large).
       if (sLat !== null && sLon !== null && distKm(lat, lon, sLat, sLon) > rayonKm) continue;
-      if (!best || prix < best.prix) best = { prix, nom: f.nom || '', ville: f.ville || '', lat: sLat, lon: sLon };
+      if (!best || (veutMax ? prix > best.prix : prix < best.prix)) best = { prix, nom: f.nom || '', ville: f.ville || '', lat: sLat, lon: sLon };
     }
     return best;
   } catch (e) { return null; }
@@ -1776,9 +1734,10 @@ async function fetchBorneRecharge(lat, lon, rayonKm) {
 }
 
 // Choisit la bonne recherche (station essence/gasoil ou borne électrique)
-// selon le carburant sélectionné.
-function fetchStationOuBorne(lat, lon, type, rayonKm) {
-  return type === 'electrique' ? fetchBorneRecharge(lat, lon, rayonKm) : fetchStationMoinsChere(lat, lon, type, rayonKm);
+// selon le carburant sélectionné. Le mode min/max est ignoré pour les bornes
+// électriques (pas de prix comparable, cf. fetchBorneRecharge).
+function fetchStationOuBorne(lat, lon, type, rayonKm, mode) {
+  return type === 'electrique' ? fetchBorneRecharge(lat, lon, rayonKm) : fetchStationMoinsChere(lat, lon, type, rayonKm, mode);
 }
 
 // Construit la ligne de détail (prix carburant, ou puissance/opérateur pour
@@ -1891,7 +1850,7 @@ async function rechercherStationMoinsChere() {
 // trajet (onglet dédié) : même logique de recherche/curseur que ci-dessus,
 // mais son propre état et ses propres éléments (IDs distincts). ---
 let stationGeoCoords = null; // [lon, lat] fixé par géolocalisation, invalidé dès que l'adresse est modifiée à la main
-let lastStationSearchStandalone = null; // { lat, lon, type, rayon }
+let lastStationSearchStandalone = null; // { lat, lon, type, rayon, mode: 'min'|'max' }
 
 function onStationAdresseInput(el) {
   stationGeoCoords = null;
@@ -1934,7 +1893,7 @@ async function rechercherStationStandalone() {
   document.getElementById('cheapestNoteStation').style.display = 'none';
   try {
     const coords = stationGeoCoords || await geocode(adresse);
-    lastStationSearchStandalone = { lat: coords[1], lon: coords[0], type, rayon: STATION_RAYON_KM };
+    lastStationSearchStandalone = { lat: coords[1], lon: coords[0], type, rayon: STATION_RAYON_KM, mode: 'min' };
     await afficherStationStandalone();
   } catch(e) {
     showStationError('⚠️ ' + (e.message || 'Erreur inconnue.'));
@@ -1946,10 +1905,11 @@ async function rechercherStationStandalone() {
 async function afficherStationStandalone() {
   const cheapestNote = document.getElementById('cheapestNoteStation');
   if (!lastStationSearchStandalone) { cheapestNote.style.display = 'none'; return; }
-  const { lat, lon, type, rayon } = lastStationSearchStandalone;
+  const { lat, lon, type, rayon, mode } = lastStationSearchStandalone;
   const electrique = type === 'electrique';
+  const veutMax = mode === 'max';
   cheapestNote.classList.add('loading');
-  const station = await fetchStationOuBorne(lat, lon, type, rayon);
+  const station = await fetchStationOuBorne(lat, lon, type, rayon, mode);
   cheapestNote.classList.remove('loading');
   cheapestNote.textContent = '';
   cheapestNote.style.display = 'block';
@@ -1963,7 +1923,7 @@ async function afficherStationStandalone() {
   const title = document.createElement('span');
   title.className = 'cheapest-title';
   title.style.fontSize = '0.9em';
-  title.textContent = electrique ? 'Borne de recharge trouvée' : 'Station la moins chère trouvée';
+  title.textContent = electrique ? 'Borne de recharge trouvée' : (veutMax ? 'Station la plus chère trouvée' : 'Station la moins chère trouvée');
   header.appendChild(title);
   cheapestNote.appendChild(header);
 
@@ -2011,6 +1971,20 @@ async function afficherStationStandalone() {
   radiusWrap.appendChild(label);
   radiusWrap.appendChild(slider);
   cheapestNote.appendChild(radiusWrap);
+
+  // Bascule moins chère / plus chère : n'a de sens que pour un carburant
+  // (prix comparables), pas pour les bornes électriques.
+  if (!electrique) {
+    const modeBtn = document.createElement('button');
+    modeBtn.type = 'button';
+    modeBtn.className = 'link-btn cheapest-mode-btn';
+    modeBtn.textContent = veutMax ? '↺ Voir la station la moins chère' : '↻ Voir la station la plus chère';
+    modeBtn.onclick = () => {
+      lastStationSearchStandalone.mode = veutMax ? 'min' : 'max';
+      afficherStationStandalone();
+    };
+    cheapestNote.appendChild(modeBtn);
+  }
 }
 
 const DEPART_FIXE = '60 rue de Dantzig, Paris';
@@ -2528,7 +2502,6 @@ function renderResultMode() {
 
   const rCout = document.getElementById('r-cout');
   rCout.textContent = fmtEur(coutTotalAffiche);
-  rCout.classList.toggle('has-per-person', d.passagers === 0 || d.passagers > 1);
   if (d.passagers === 0) {
     const note = document.createElement('div');
     note.className = 'per-person-note';
