@@ -1080,6 +1080,11 @@
         <img src="logo prix peages.png" alt="" style="width:18px;height:18px;object-fit:contain;">
         Voir le prix des péages
     </a>
+    <a class="maps-link" id="wazeLink" href="#" target="_blank"
+       style="width:220px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;background:#eaf3ff;color:#1976d2;box-sizing:border-box;">
+        <span style="font-size:18px;line-height:1;">🧭</span>
+        Y aller avec Waze
+    </a>
 </div>
     <div class="cheapest-note" id="cheapestNote" style="display:none;"></div>
   </div>
@@ -2491,6 +2496,9 @@ async function calculer() {
     let mapsUrl = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}`;
     if (waypoints) mapsUrl += `&waypoints=${waypoints}`;
     document.getElementById('mapsLink').href = mapsUrl;
+    // Waze navigue toujours depuis la position GPS actuelle de l'appareil (il
+    // n'accepte pas de point de départ personnalisé) : seule la destination compte.
+    document.getElementById('wazeLink').href = `https://waze.com/ul?ll=${c2[1]},${c2[0]}&navigate=yes`;
     const vinciLink = document.getElementById('vinciLink');
     if (!vinciUrl) {
       vinciLink.style.display = 'none';
