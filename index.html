@@ -73,22 +73,6 @@
       margin-bottom: 14px;
     }
 
-    /* Légende */
-    .legende {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      color: #607080;
-    }
-    .legend-dot {
-      width: 12px; height: 12px;
-      border-radius: 3px;
-      background: #c6f5c6;
-      border: 1.5px solid #4caf50;
-      flex-shrink: 0;
-    }
-
     /* Lignes de paramètres */
     .param-row {
       display: flex;
@@ -165,16 +149,6 @@
     .section-carburant input[type="text"]:focus, .section-carburant input[type="number"]:focus, .section-carburant select:focus {
       border-color: #c9760a;
       box-shadow: 0 0 0 3px rgba(226,151,26,0.22);
-    }
-
-    .auto-field {
-      width: 100%;
-      padding: 8px 11px;
-      border: 1.5px solid #e0e0e0;
-      border-radius: 10px;
-      background: #f5f7fa;
-      font-size: 13px;
-      color: #607080;
     }
 
     /* Prix moyen actuel : une ligne, alignée avec le champ Carburant */
@@ -776,28 +750,6 @@
     }
     .pass-max-msg.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-    /* Message péage indisponible (occupe les 2 colonnes de la ligne Péages) */
-    .res-table td.peage-msg {
-      border-right: 1px solid #dbe3ec;
-      font-size: 12px;
-      font-weight: 600;
-      font-style: italic;
-      color: #1976d2;
-    }
-    /* Espace en bas de la cellule péage pour loger la note quota sans
-       décaler le prix (qui reste centré verticalement comme l'aller-retour). */
-    #r-peage-a, #r-peage-ar { position: relative; padding-bottom: 14px; }
-    /* Note discrète du quota TollGuru, juste sous le prix (centré) */
-    .quota-note {
-      position: absolute;
-      left: 0; right: 0;
-      top: calc(50% + 4px);
-      line-height: 1;
-      font-size: 9px;
-      font-weight: 400;
-      color: #aab4bf;
-    }
-
     /* Bordure animée "chasing shine" + halo pulsé, pour mettre en valeur
        la station la moins chère. Dégrade proprement (bordure verte fixe)
        sur les navigateurs sans support de @property/conic-gradient. */
@@ -965,7 +917,7 @@
   <input type="hidden" id="apiKey" value="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY1NjRiM2M4Yjc0OTQ0ZDlhNmNjM2FiOWQzNjFhNTE2IiwiaCI6Im11cm11cjY0In0=">
 
   <!-- Bascule Coût carburant (trajet) / Station la moins chère (près de moi) -->
-  <div class="main-toggle" id="mainToggle">
+  <div class="main-toggle">
     <button type="button" class="main-toggle-btn active" data-main-mode="cout" onclick="setMainMode('cout')">Coût carburant</button>
     <button type="button" class="main-toggle-btn" data-main-mode="station" onclick="setMainMode('station')">Station la moins chère</button>
   </div>
@@ -1046,7 +998,7 @@
   <!-- Résultats -->
   <div class="card resultats" id="sectionResultats" style="margin-top:14px;">
     <div class="card-title">Résultats</div>
-    <div class="ar-toggle" id="arToggle">
+    <div class="ar-toggle">
       <button type="button" class="ar-toggle-btn active" data-mode="simple" onclick="setResultMode('simple')">Aller simple</button>
       <button type="button" class="ar-toggle-btn" data-mode="ar" onclick="setResultMode('ar')">Aller-retour</button>
     </div>
@@ -1108,7 +1060,7 @@
               <input type="text" id="stationAdresse" class="point-input" autocomplete="off" placeholder="Ton adresse" oninput="onStationAdresseInput(this)" onfocus="showFavoritesIfEmpty(this)">
               <div class="autocomplete-list"></div>
             </div>
-            <button type="button" class="fav-star" id="stationFavStar" title="Enregistrer en favori" onclick="toggleFavPlace(document.getElementById('stationAdresse').value, this)">☆</button>
+            <button type="button" class="fav-star" title="Enregistrer en favori" onclick="toggleFavPlace(document.getElementById('stationAdresse').value, this)">☆</button>
           </div>
         </div>
         <button type="button" class="link-btn" onclick="utiliserPositionActuelle()"> Utiliser ma position actuelle</button>
@@ -2550,7 +2502,6 @@ function renderResultMode() {
 
   const rCout = document.getElementById('r-cout');
   rCout.textContent = fmtEur(coutTotalAffiche);
-  rCout.classList.toggle('has-per-person', d.passagers === 0 || d.passagers > 1);
   if (d.passagers === 0) {
     const note = document.createElement('div');
     note.className = 'per-person-note';
