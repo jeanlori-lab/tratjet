@@ -673,6 +673,8 @@
     .cost-chip-value { font-size: 14px; font-weight: 800; color: #1a2433; }
     .cost-chip-peage .cost-chip-value { color: #2e7d32; }
     .cost-chip-peage.unavailable .cost-chip-value { font-size: 10.5px; font-weight: 700; color: #90a4ae; line-height: 1.3; }
+    .cost-chip-peage .cost-chip-value a { color: inherit; text-decoration: underline; }
+    .cost-chip-quota { font-size: 8.5px; font-weight: 600; color: #b0bcc8; margin-top: 2px; }
 
     /* Bascule Aller simple / Aller-retour : remplace les deux colonnes du
        tableau par une seule valeur, qu'on peut basculer d'un mode à
@@ -2399,7 +2401,25 @@ function renderResultMode() {
   const peageChip = document.getElementById('costChipPeage');
   const peageValEl = document.getElementById('r-cout-peage');
   peageChip.classList.toggle('unavailable', !peageConnu);
-  peageValEl.textContent = peageConnu ? fmtEur(coutPeageAffiche) : 'Voir le prix des péages ci-dessous';
+  peageValEl.textContent = '';
+  if (peageConnu) {
+    peageValEl.appendChild(document.createTextNode(fmtEur(coutPeageAffiche)));
+  } else if (d.vinciUrl) {
+    const lien = document.createElement('a');
+    lien.href = d.vinciUrl;
+    lien.target = '_blank';
+    lien.textContent = 'Voir le prix des péages';
+    peageValEl.appendChild(lien);
+  } else {
+    peageValEl.appendChild(document.createTextNode('Voir le prix des péages ci-dessous'));
+  }
+  // Quota TollGuru restant (24h glissantes, plan gratuit) : discret, sous la valeur.
+  if (typeof d.tollQuotaRestant === 'number') {
+    const quota = document.createElement('div');
+    quota.className = 'cost-chip-quota';
+    quota.textContent = d.tollQuotaRestant + '/' + TOLL_QUOTA_MAX + ' calculs restants';
+    peageValEl.appendChild(quota);
+  }
 
   const rCout = document.getElementById('r-cout');
   rCout.textContent = fmtEur(coutTotalAffiche);
@@ -2448,8 +2468,20 @@ async function calculer() {
     // Péages (best-effort, TollGuru) : n'importe quel échec (quota, trajet
     // hors couverture...) laisse simplement le total au seul carburant.
     const coutPeage = await getTolls(route.polyline, c1, c2);
+    const tollQuotaRestant = tollQuotaRemaining();
 
-    lastResultData = { distA, dureeSec: route.dureeSec, litresA, coutA, coutPeage, passagers, unit };
+    // Lien Vinci calculé avant l'affichage des résultats : la pastille
+    // péages s'en sert comme lien de secours quand TollGuru est indisponible.
+    // Le calculateur de péages Vinci ne gère qu'un trajet direct départ→arrivée :
+    // pas de lien dès qu'il y a au moins une étape intermédiaire.
+    let vinciUrl = null;
+    if (lieux.length <= 2) {
+      const startObj = JSON.stringify({place: depart, lat: c1[1], lng: c1[0]});
+      const endObj = JSON.stringify({place: arrivee, lat: c2[1], lng: c2[0]});
+      vinciUrl = `https://www.vinci-autoroutes.com/fr/mon-trajet/?area=service&filter-status=0&start=${encodeURIComponent(startObj)}&end=${encodeURIComponent(endObj)}`;
+    }
+
+    lastResultData = { distA, dureeSec: route.dureeSec, litresA, coutA, coutPeage, tollQuotaRestant, vinciUrl, passagers, unit };
     renderResultMode();
 
     // Itinéraire Maps : force le mode voiture (travelmode=driving) + étapes.
@@ -2459,17 +2491,12 @@ async function calculer() {
     let mapsUrl = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}`;
     if (waypoints) mapsUrl += `&waypoints=${waypoints}`;
     document.getElementById('mapsLink').href = mapsUrl;
-    const startObj = JSON.stringify({place: depart, lat: c1[1], lng: c1[0]});
-    const endObj = JSON.stringify({place: arrivee, lat: c2[1], lng: c2[0]});
     const vinciLink = document.getElementById('vinciLink');
-    // Le calculateur de péages Vinci ne gère qu'un trajet direct départ→arrivée :
-    // on masque le bouton dès qu'il y a au moins une étape intermédiaire.
-    if (lieux.length > 2) {
+    if (!vinciUrl) {
       vinciLink.style.display = 'none';
     } else {
       vinciLink.style.display = '';
-      vinciLink.href =
-        `https://www.vinci-autoroutes.com/fr/mon-trajet/?area=service&filter-status=0&start=${encodeURIComponent(startObj)}&end=${encodeURIComponent(endObj)}`;
+      vinciLink.href = vinciUrl;
     }
 
     // Station la moins chère à proximité du départ (best-effort, ne bloque rien).
