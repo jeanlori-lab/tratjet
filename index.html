@@ -1663,6 +1663,25 @@ function buildStationMap(lat, lon) {
 const STATION_RAYON_KM = 8;
 const STATION_RAYON_MIN = 1;
 const STATION_RAYON_MAX = 1000;
+
+// Récupère TOUS les enregistrements d'une recherche opendatasoft v1 (l'API
+// plafonne chaque appel à ODS_PAGE_SIZE résultats) en paginant avec "start"
+// jusqu'à épuisement, avec un garde-fou sur le nombre de pages.
+const ODS_PAGE_SIZE = 1000;
+const ODS_MAX_PAGES = 20; // jusqu'à 20 000 enregistrements, largement au-delà du nombre de stations en France.
+async function fetchAllODSRecords(baseUrl) {
+  const records = [];
+  for (let page = 0; page < ODS_MAX_PAGES; page++) {
+    const r = await fetch(`${baseUrl}&rows=${ODS_PAGE_SIZE}&start=${page * ODS_PAGE_SIZE}`);
+    if (!r.ok) break;
+    const d = await r.json();
+    if (!d.records || !d.records.length) break;
+    records.push(...d.records);
+    if (d.records.length < ODS_PAGE_SIZE || records.length >= d.nhits) break;
+  }
+  return records;
+}
+
 // mode: 'min' (station la moins chère, par défaut) ou 'max' (la plus chère).
 async function fetchStationMoinsChere(lat, lon, type, rayonKm, mode) {
   rayonKm = rayonKm || STATION_RAYON_KM;
@@ -1671,15 +1690,13 @@ async function fetchStationMoinsChere(lat, lon, type, rayonKm, mode) {
   try {
     // Le tri "sort" de l'API porte sur un champ texte : il n'est pas fiable pour
     // classer les prix numériquement (ex. "1.9" avant "1.85"). On récupère donc
-    // toutes les stations du rayon et on calcule nous-mêmes le minimum/maximum.
-    const url = `https://data.economie.gouv.fr/api/records/1.0/search/?dataset=prix-des-carburants-en-france-flux-instantane-v2&geofilter.distance=${lat},${lon},${rayonKm * 1000}&rows=100`;
-    const r = await fetch(url);
-    if (!r.ok) return null;
-    const d = await r.json();
-    if (!d.records || !d.records.length) return null;
+    // toutes les stations du rayon (paginé) et on calcule nous-mêmes le minimum/maximum.
+    const url = `https://data.economie.gouv.fr/api/records/1.0/search/?dataset=prix-des-carburants-en-france-flux-instantane-v2&geofilter.distance=${lat},${lon},${rayonKm * 1000}`;
+    const records = await fetchAllODSRecords(url);
+    if (!records.length) return null;
     const veutMax = mode === 'max';
     let best = null;
-    for (const rec of d.records) {
+    for (const rec of records) {
       const f = rec.fields || {};
       const prix = parseFloat(f[field]);
       if (isNaN(prix) || prix <= 0) continue;
@@ -1702,13 +1719,11 @@ async function fetchStationMoinsChere(lat, lon, type, rayonKm, mode) {
 async function fetchBorneRecharge(lat, lon, rayonKm) {
   rayonKm = rayonKm || STATION_RAYON_KM;
   try {
-    const url = `https://odre.opendatasoft.com/api/records/1.0/search/?dataset=bornes-irve&geofilter.distance=${lat},${lon},${rayonKm * 1000}&rows=100`;
-    const r = await fetch(url);
-    if (!r.ok) return null;
-    const d = await r.json();
-    if (!d.records || !d.records.length) return null;
+    const url = `https://odre.opendatasoft.com/api/records/1.0/search/?dataset=bornes-irve&geofilter.distance=${lat},${lon},${rayonKm * 1000}`;
+    const records = await fetchAllODSRecords(url);
+    if (!records.length) return null;
     let best = null, bestDist = Infinity;
-    for (const rec of d.records) {
+    for (const rec of records) {
       const f = rec.fields || {};
       const geo = rec.geometry && rec.geometry.coordinates; // [lon, lat]
       const sLat = geo ? geo[1] : (f.consolidated_latitude !== undefined ? parseFloat(f.consolidated_latitude) : (f.ylatitude !== undefined ? parseFloat(f.ylatitude) : null));
