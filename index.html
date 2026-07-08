@@ -1138,6 +1138,12 @@
 
 </div>
 <script>
+// Débogage : ?peage=vinci force le repli Vinci pour les péages (sans passer
+// par TollGuru ni le cache), pour pouvoir le tester même quand TollGuru
+// répond normalement. Capturé tout de suite : chargerRechercheDepuisLien()
+// nettoie l'URL (retire tous les paramètres) dès le chargement de la page.
+const DEBUG_FORCE_VINCI = new URLSearchParams(location.search).get('peage') === 'vinci';
+
 // Autocomplétion
 const autoTimers = new WeakMap();
 
@@ -2344,6 +2350,8 @@ function encodePolyline(coords, precision) {
 async function getTolls(route, c1, c2) {
   const polyline = route && typeof route.polyline === 'string' ? route.polyline : null;
   if (!polyline || !TOLL_PROXY_URL) return null;
+
+  if (DEBUG_FORCE_VINCI) return await getTollsVinci(route);
 
   // Cache : si ce trajet a déjà été calculé, on réutilise (économise le quota).
   const cacheKey = (c1 && c2) ? tollCacheKey(c1, c2) : null;
