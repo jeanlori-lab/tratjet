@@ -2428,7 +2428,9 @@ const TOLL_PROXY_URL = 'https://peage.jeanlorilleux37.workers.dev/';
 // le quota TollGuru (plan gratuit = 15 calculs/jour).
 function tollCacheKey(c1, c2) {
   const r = n => n.toFixed(4); // ~11 m de précision, suffisant pour identifier un trajet
-  return 'toll:' + r(c1[1]) + ',' + r(c1[0]) + '>' + r(c2[1]) + ',' + r(c2[0]);
+  // Préfixe "toll2" : invalide les prix mis en cache avant le correctif qui
+  // additionne tous les tronçons (l'ancien cache ne comptait que le premier).
+  return 'toll2:' + r(c1[1]) + ',' + r(c1[0]) + '>' + r(c2[1]) + ',' + r(c2[0]);
 }
 function tollCacheGet(key) {
   try { const v = localStorage.getItem(key); return v === null ? undefined : JSON.parse(v); }
@@ -2591,8 +2593,12 @@ async function getTollsVinci(route) {
     });
     if (!rateResp.ok) return null;
     const rateData = await rateResp.json();
-    if (Array.isArray(rateData) && rateData[0] && typeof rateData[0].price === 'number') {
-      return rateData[0].price;
+    // L'API renvoie un tarif par tronçon à péage (une entrée par section
+    // d'autoroute traversée) : on additionne tous les tronçons du trajet,
+    // pas seulement le premier.
+    if (Array.isArray(rateData)) {
+      const prix = rateData.filter(t => t && typeof t.price === 'number').map(t => t.price);
+      if (prix.length) return prix.reduce((somme, p) => somme + p, 0);
     }
     return null;
   } catch (e) {
