@@ -2073,6 +2073,19 @@ async function afficherStationStandalone() {
   if (illimite) {
     const backRow = document.createElement('div');
     backRow.className = 'cheapest-btn-row';
+
+    if (!electrique) {
+      const modeBtn = document.createElement('button');
+      modeBtn.type = 'button';
+      modeBtn.className = 'cheapest-mode-btn ' + (veutMax ? 'mode-moins-chere' : 'mode-plus-chere');
+      modeBtn.textContent = veutMax ? 'Voir la station la moins chère' : 'Voir la station la plus chère';
+      modeBtn.onclick = () => {
+        lastStationSearchStandalone.mode = veutMax ? 'min' : 'max';
+        afficherStationStandalone();
+      };
+      backRow.appendChild(modeBtn);
+    }
+
     const backBtn = document.createElement('button');
     backBtn.type = 'button';
     backBtn.className = 'cheapest-nolimit-btn';
@@ -2082,6 +2095,7 @@ async function afficherStationStandalone() {
       afficherStationStandalone();
     };
     backRow.appendChild(backBtn);
+
     cheapestNote.appendChild(backRow);
     return;
   }
