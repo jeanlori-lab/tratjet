@@ -5,6 +5,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Tratjet</title>
+  <!-- Aperçu de partage (og/Twitter) : logo Tratjet (URL absolue obligatoire). -->
+  <meta property="og:title" content="Tratjet">
+  <meta property="og:description" content="Entrez les paramètres de votre trajet, on s'occupe des calculs : coût du carburant, litres consommés et prix des péages.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://jeanlori-lab.github.io/copilote.budget2/logo%20trajet%20rat.png">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:image" content="https://jeanlori-lab.github.io/copilote.budget2/logo%20trajet%20rat.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
@@ -175,8 +182,8 @@
       margin-bottom: 12px;
     }
     .section-carburant {
-      background: #fff6e6;
-      border-color: #f3d999;
+      background: #fff3d1;
+      border-color: #f0be45;
     }
     .carburant-row { padding-bottom: 26px; }
     .carburant-row .param-input { position: relative; }
@@ -646,9 +653,37 @@
     .cost-chip-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #90a4ae; }
     .cost-chip-value { font-size: 14px; font-weight: 800; color: #1a2433; }
     .cost-chip-peage .cost-chip-value { color: #2e7d32; }
-    .cost-chip-peage.unavailable .cost-chip-value { font-size: 10.5px; font-weight: 700; color: #90a4ae; line-height: 1.3; }
-    .cost-chip-peage .cost-chip-value a { color: inherit; text-decoration: underline; }
+    .cost-chip-peage.unavailable .cost-chip-value { font-size: 10.5px; font-weight: 700; line-height: 1.3; }
+    .cost-chip-peage .cost-chip-value a { color: #2e7d32; text-decoration: underline; }
     .cost-chip-quota { font-size: 8.5px; font-weight: 600; color: #b0bcc8; margin-top: 2px; }
+    /* Bouton "Détail" de la pastille péages + lignes de détail par tronçon. */
+    .cost-chip-detail-btn {
+      display: block;
+      margin: 2px auto 0;
+      padding: 1px 8px;
+      border: 1px solid #bcd9bc;
+      border-radius: 999px;
+      background: #eef7ee;
+      color: #2e7d32;
+      font-size: 9.5px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .cost-chip-detail-btn:hover { background: #ddefdd; }
+    .cost-chip-lines {
+      margin-top: 5px;
+      padding-top: 5px;
+      border-top: 1px dashed #cfe0cf;
+      text-align: left;
+      font-size: 10px;
+      font-weight: 600;
+      color: #455060;
+      line-height: 1.5;
+    }
+    .cost-chip-line { display: flex; justify-content: space-between; gap: 8px; }
+    .cost-chip-line .tarif { color: #2e7d32; white-space: nowrap; }
 
     /* Bascule Aller simple / Aller-retour : remplace les deux colonnes du
        tableau par une seule valeur, qu'on peut basculer d'un mode à
@@ -916,6 +951,7 @@
       transition: background 0.15s;
     }
     .maps-link:hover { background: #bbdefb; }
+    #wazeLink:hover { background: #cfe3fb !important; }
     #vinciLink:hover { background: #cce8cc !important; }
   </style>
   <!-- PWA -->
@@ -1054,20 +1090,22 @@
     </div>
     <div class="maps-wrap" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
     <a class="maps-link" id="mapsLink" href="#" target="_blank"
-       style="width:220px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;">
+       style="width:185px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;">
         <img src="logo maps.png" alt="" style="width:18px;height:18px;object-fit:contain;">
         Maps
     </a>
-    <a class="maps-link" id="vinciLink" href="#" target="_blank"
-       style="width:220px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;background:#eef7ee;color:#2e7d32;box-sizing:border-box;">
-        <img src="logo prix peages.png" alt="" style="width:18px;height:18px;object-fit:contain;">
-        Voir le prix des péages
-    </a>
     <a class="maps-link" id="wazeLink" href="#" target="_blank"
-       style="width:220px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;background:#eaf3ff;color:#1976d2;box-sizing:border-box;">
+       style="width:185px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;background:#eaf3ff;color:#1976d2;box-sizing:border-box;">
         <img src="logo waze.png" alt="" style="width:26px;height:26px;object-fit:contain;">
         Waze
     </a>
+    <div style="flex-basis:100%;display:flex;justify-content:center;">
+      <a class="maps-link" id="vinciLink" href="#" target="_blank"
+         style="width:220px !important;height:38px;display:none;align-items:center;justify-content:center;gap:8px;background:#eef7ee;color:#2e7d32;box-sizing:border-box;">
+          <img src="logo prix peages.png" alt="" style="width:18px;height:18px;object-fit:contain;">
+          Voir le prix des péages
+      </a>
+    </div>
 </div>
     <div class="cheapest-note" id="cheapestNote" style="display:none;"></div>
   </div>
@@ -2428,9 +2466,9 @@ const TOLL_PROXY_URL = 'https://peage.jeanlorilleux37.workers.dev/';
 // le quota TollGuru (plan gratuit = 15 calculs/jour).
 function tollCacheKey(c1, c2) {
   const r = n => n.toFixed(4); // ~11 m de précision, suffisant pour identifier un trajet
-  // Préfixe "toll2" : invalide les prix mis en cache avant le correctif qui
-  // additionne tous les tronçons (l'ancien cache ne comptait que le premier).
-  return 'toll2:' + r(c1[1]) + ',' + r(c1[0]) + '>' + r(c2[1]) + ',' + r(c2[0]);
+  // Préfixe "toll3" : le cache stocke désormais { cost, details } (détail par
+  // tronçon) au lieu d'un simple nombre.
+  return 'toll3:' + r(c1[1]) + ',' + r(c1[0]) + '>' + r(c2[1]) + ',' + r(c2[0]);
 }
 function tollCacheGet(key) {
   try { const v = localStorage.getItem(key); return v === null ? undefined : JSON.parse(v); }
@@ -2495,27 +2533,32 @@ function encodePolyline(coords, precision) {
   return out;
 }
 
-// Péages : TollGuru en source principale, Vinci-autoroutes en secours quand
-// TollGuru est indisponible (quota de 15/jour dépassé, erreur réseau...).
+// Péages : Vinci-autoroutes en source principale (gratuit, sans quota, et
+// fournit le détail par tronçon), TollGuru en secours si Vinci échoue.
+// Renvoie { cost: <€>, details: [{label, price}]|null } ou null si échec total.
 async function getTolls(route, c1, c2) {
   const polyline = route && typeof route.polyline === 'string' ? route.polyline : null;
   if (!polyline || !TOLL_PROXY_URL) return null;
 
   if (DEBUG_FORCE_VINCI) return await getTollsVinci(route);
 
-  // Cache : si ce trajet a déjà été calculé, on réutilise (économise le quota).
+  // Cache : si ce trajet a déjà été calculé, on réutilise.
   const cacheKey = (c1 && c2) ? tollCacheKey(c1, c2) : null;
   if (cacheKey) {
     const cached = tollCacheGet(cacheKey);
-    if (typeof cached === 'number') return cached;
+    if (cached && typeof cached.cost === 'number') return cached;
+    if (typeof cached === 'number') return { cost: cached, details: null };
   }
 
-  let cost = await getTollsGuru(polyline, c1, c2);
-  if (typeof cost !== 'number') cost = await getTollsVinci(route);
+  let result = await getTollsVinci(route);
+  if (!result) {
+    const cost = await getTollsGuru(polyline, c1, c2);
+    if (typeof cost === 'number') result = { cost, details: null };
+  }
 
   // On ne met en cache qu'un coût valide (jamais un échec/N/A).
-  if (cacheKey && typeof cost === 'number') tollCacheSet(cacheKey, cost);
-  return cost;
+  if (cacheKey && result && typeof result.cost === 'number') tollCacheSet(cacheKey, result);
+  return result;
 }
 
 async function getTollsGuru(polyline, c1, c2) {
@@ -2551,10 +2594,25 @@ async function getTollsGuru(polyline, c1, c2) {
   }
 }
 
-// Repli via l'API interne (non documentée) de Vinci-autoroutes : reproduit
+// Nom lisible d'une gare de péage dans la réponse "legs" de Vinci : les
+// champs exacts n'étant pas documentés, on essaie plusieurs candidats et on
+// renvoie null si aucun n'existe (le détail affichera alors "Tronçon N").
+function vinciGateName(leg) {
+  const p = leg && leg.Placemark;
+  if (!p) return null;
+  const t = p.Tags || {};
+  const candidats = [t.LIBELLE, t.NOM, t.NAME, t.LIBELLE_GARE, t.nom, p.Name, p.name, p.title];
+  for (const c of candidats) {
+    if (typeof c === 'string' && c.trim()) return c.trim();
+  }
+  return null;
+}
+
+// Via l'API interne (non documentée) de Vinci-autoroutes : reproduit
 // la chaîne "tracé -> gares de péage traversées -> tarif" observée sur leur
 // site. Best-effort : le moindre souci (API qui change, réseau...) renvoie
 // simplement null, sans bloquer le reste du calcul.
+// Renvoie { cost, details: [{label, price}] } ou null.
 async function getTollsVinci(route) {
   if (!TOLL_PROXY_URL) return null;
   const polyline5 = route && route.polyline;
@@ -2571,9 +2629,14 @@ async function getTollsVinci(route) {
     const legs = await legsResp.json();
     if (!Array.isArray(legs) || legs.length < 2) return null;
 
+    // Gares traversées, dans l'ordre du tracé : code (pour l'API tarif) + nom
+    // lisible (pour le détail par tronçon affiché à l'utilisateur).
     const gates = legs
-      .map(l => l && l.Placemark && l.Placemark.Tags && l.Placemark.Tags.ID_PEAGE)
-      .filter(code => typeof code === 'string' && code.length > 2);
+      .map(l => {
+        const code = l && l.Placemark && l.Placemark.Tags && l.Placemark.Tags.ID_PEAGE;
+        return (typeof code === 'string' && code.length > 2) ? { code, name: vinciGateName(l) } : null;
+      })
+      .filter(Boolean);
     if (gates.length < 2) return null;
 
     // Dates de passage estimées (entrée = maintenant, sortie = maintenant +
@@ -2581,8 +2644,8 @@ async function getTollsVinci(route) {
     // l'abscisse le long du tracé à une heure de passage.
     const now = Date.now();
     const durationMs = (route.dureeSec || 0) * 1000;
-    const tollPassages = gates.map((code, i) => ({
-      toll: { operatorId: code.slice(0, 2), tollId: code.slice(2) },
+    const tollPassages = gates.map((g, i) => ({
+      toll: { operatorId: g.code.slice(0, 2), tollId: g.code.slice(2) },
       passageDate: new Date(i === 0 ? now : now + durationMs).toISOString(),
     }));
 
@@ -2595,12 +2658,23 @@ async function getTollsVinci(route) {
     const rateData = await rateResp.json();
     // L'API renvoie un tarif par tronçon à péage (une entrée par section
     // d'autoroute traversée) : on additionne tous les tronçons du trajet,
-    // pas seulement le premier.
-    if (Array.isArray(rateData)) {
-      const prix = rateData.filter(t => t && typeof t.price === 'number').map(t => t.price);
-      if (prix.length) return prix.reduce((somme, p) => somme + p, 0);
-    }
-    return null;
+    // pas seulement le premier, et on garde le détail par tronçon.
+    if (!Array.isArray(rateData)) return null;
+    const tarifs = rateData.filter(t => t && typeof t.price === 'number');
+    if (!tarifs.length) return null;
+
+    const cost = tarifs.reduce((somme, t) => somme + t.price, 0);
+    // Libellé de chaque tronçon : "gare A → gare B" quand les tarifs
+    // s'alignent sur les paires de gares consécutives, sinon "Tronçon N".
+    const details = tarifs.map((t, i) => {
+      let label = 'Tronçon ' + (i + 1);
+      if (tarifs.length === gates.length - 1) {
+        const a = gates[i].name, b = gates[i + 1].name;
+        if (a || b) label = (a || 'Péage ' + (i + 1)) + ' → ' + (b || 'Péage ' + (i + 2));
+      }
+      return { label, price: t.price };
+    });
+    return { cost, details };
   } catch (e) {
     return null;
   }
@@ -2649,8 +2723,8 @@ function renderResultMode() {
   document.getElementById('r-litres-label').textContent = d.unit === 'kWh' ? 'Électricité consommée' : 'Litres consommés';
 
   // Détail carburant/péages en petit, coût total (carburant + péages) en
-  // gros. Les péages sont estimés via TollGuru ; s'ils sont indisponibles,
-  // le total ne compte que le carburant et on renvoie vers le lien Vinci.
+  // gros. Les péages sont estimés via l'API Vinci ; s'ils sont indisponibles,
+  // le total ne compte que le carburant et la pastille renvoie vers Vinci.
   const coutCarburantAffiche = isAR ? d.coutA * 2 : d.coutA;
   const peageConnu = typeof d.coutPeage === 'number';
   const coutPeageAffiche = peageConnu ? (isAR ? d.coutPeage * 2 : d.coutPeage) : null;
@@ -2663,21 +2737,51 @@ function renderResultMode() {
   peageValEl.textContent = '';
   if (peageConnu) {
     peageValEl.appendChild(document.createTextNode(fmtEur(coutPeageAffiche)));
+    // Bouton "Détail" : déplie la pastille pour montrer le coût par tronçon.
+    if (Array.isArray(d.peageDetails) && d.peageDetails.length) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cost-chip-detail-btn';
+      btn.textContent = 'Détail';
+      const lignes = document.createElement('div');
+      lignes.className = 'cost-chip-lines';
+      lignes.style.display = 'none';
+      d.peageDetails.forEach(t => {
+        const ligne = document.createElement('div');
+        ligne.className = 'cost-chip-line';
+        const lbl = document.createElement('span');
+        lbl.textContent = t.label;
+        const val = document.createElement('span');
+        val.className = 'tarif';
+        val.textContent = fmtEur(isAR ? t.price * 2 : t.price);
+        ligne.appendChild(lbl);
+        ligne.appendChild(val);
+        lignes.appendChild(ligne);
+      });
+      btn.addEventListener('click', () => {
+        const ouvert = lignes.style.display !== 'none';
+        lignes.style.display = ouvert ? 'none' : '';
+        btn.textContent = ouvert ? 'Détail' : 'Masquer';
+      });
+      peageValEl.appendChild(btn);
+      peageValEl.appendChild(lignes);
+    }
   } else if (d.vinciUrl) {
+    // Pas de résultat : le lien Vinci prend la place du prix, en vert.
     const lien = document.createElement('a');
     lien.href = d.vinciUrl;
     lien.target = '_blank';
-    lien.textContent = 'Voir le prix des péages';
+    lien.textContent = 'Voir le prix des péages sur Vinci';
     peageValEl.appendChild(lien);
   } else {
-    peageValEl.appendChild(document.createTextNode('Voir le prix des péages ci-dessous'));
+    peageValEl.appendChild(document.createTextNode('Prix des péages indisponible'));
   }
-  // Quota TollGuru restant (24h glissantes, plan gratuit) : discret, sous la valeur.
-  if (typeof d.tollQuotaRestant === 'number') {
-    const quota = document.createElement('div');
-    quota.className = 'cost-chip-quota';
-    quota.textContent = d.tollQuotaRestant + '/' + TOLL_QUOTA_MAX + ' calculs restants';
-    peageValEl.appendChild(quota);
+  // Bouton Vinci sous Maps/Waze : seulement quand le prix n'a pas pu être calculé.
+  const vinciBtn = document.getElementById('vinciLink');
+  if (vinciBtn) {
+    const montrer = !peageConnu && d.vinciUrl;
+    vinciBtn.style.display = montrer ? 'flex' : 'none';
+    if (montrer) vinciBtn.href = d.vinciUrl;
   }
 
   const rCout = document.getElementById('r-cout');
@@ -2723,13 +2827,12 @@ async function calculer() {
     const coutA   = litresA * prixActuel;
     const passagers = passagersValeur();
     const unit = document.getElementById('carburant').value === 'electrique' ? 'kWh' : 'L';
-    // Péages (best-effort, TollGuru puis repli Vinci) : n'importe quel échec
+    // Péages (best-effort, Vinci puis repli TollGuru) : n'importe quel échec
     // laisse simplement le total au seul carburant.
-    const coutPeage = await getTolls(route, c1, c2);
-    const tollQuotaRestant = tollQuotaRemaining();
+    const peage = await getTolls(route, c1, c2);
 
     // Lien Vinci calculé avant l'affichage des résultats : la pastille
-    // péages s'en sert comme lien de secours quand TollGuru est indisponible.
+    // péages s'en sert comme lien de secours quand le calcul est indisponible.
     // Le calculateur de péages Vinci ne gère qu'un trajet direct départ→arrivée :
     // pas de lien dès qu'il y a au moins une étape intermédiaire.
     let vinciUrl = null;
@@ -2739,7 +2842,12 @@ async function calculer() {
       vinciUrl = `https://www.vinci-autoroutes.com/fr/mon-trajet/?area=service&filter-status=0&start=${encodeURIComponent(startObj)}&end=${encodeURIComponent(endObj)}`;
     }
 
-    lastResultData = { distA, dureeSec: route.dureeSec, litresA, coutA, coutPeage, tollQuotaRestant, vinciUrl, passagers, unit };
+    lastResultData = {
+      distA, dureeSec: route.dureeSec, litresA, coutA,
+      coutPeage: peage && typeof peage.cost === 'number' ? peage.cost : null,
+      peageDetails: (peage && peage.details) || null,
+      vinciUrl, passagers, unit,
+    };
     renderResultMode();
 
     // Itinéraire Maps : force le mode voiture (travelmode=driving) + étapes.
@@ -2752,13 +2860,6 @@ async function calculer() {
     // Waze navigue toujours depuis la position GPS actuelle de l'appareil (il
     // n'accepte pas de point de départ personnalisé) : seule la destination compte.
     document.getElementById('wazeLink').href = `https://waze.com/ul?ll=${c2[1]},${c2[0]}&navigate=yes`;
-    const vinciLink = document.getElementById('vinciLink');
-    if (!vinciUrl) {
-      vinciLink.style.display = 'none';
-    } else {
-      vinciLink.style.display = '';
-      vinciLink.href = vinciUrl;
-    }
 
     // Station la moins chère à proximité du départ (best-effort, ne bloque rien).
     const carburantType = document.getElementById('carburant').value;
