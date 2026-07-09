@@ -1065,7 +1065,7 @@
     </a>
     <a class="maps-link" id="wazeLink" href="#" target="_blank"
        style="width:220px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;background:#eaf3ff;color:#1976d2;box-sizing:border-box;">
-        <img src="logo waze.png" alt="" style="width:18px;height:18px;object-fit:contain;">
+        <img src="logo waze.png" alt="" style="width:26px;height:26px;object-fit:contain;">
         Y aller avec Waze
     </a>
 </div>
@@ -2058,7 +2058,12 @@ async function afficherStationStandalone() {
       link.className = 'cheapest-link';
       link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${lat},${lon}&destination=${station.lat},${station.lon}`;
       link.target = '_blank';
-      link.textContent = electrique ? 'Itinéraire vers cette borne' : 'Itinéraire vers cette station';
+      const linkIcon = document.createElement('img');
+      linkIcon.src = 'logo fleche maps.png';
+      linkIcon.alt = '';
+      linkIcon.style.cssText = 'width:14px;height:14px;object-fit:contain;';
+      link.appendChild(linkIcon);
+      link.appendChild(document.createTextNode(electrique ? 'Itinéraire vers cette borne' : 'Itinéraire vers cette station'));
       cheapestNote.appendChild(link);
     }
   } else {
