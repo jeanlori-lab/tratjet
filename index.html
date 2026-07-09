@@ -1090,12 +1090,12 @@
     </div>
     <div class="maps-wrap" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
     <a class="maps-link" id="mapsLink" href="#" target="_blank"
-       style="width:185px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;">
+       style="width:130px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;">
         <img src="logo maps.png" alt="" style="width:18px;height:18px;object-fit:contain;">
         Maps
     </a>
     <a class="maps-link" id="wazeLink" href="#" target="_blank"
-       style="width:185px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;background:#eaf3ff;color:#1976d2;box-sizing:border-box;">
+       style="width:130px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;background:#eaf3ff;color:#1976d2;box-sizing:border-box;">
         <img src="logo waze.png" alt="" style="width:26px;height:26px;object-fit:contain;">
         Waze
     </a>
@@ -2466,9 +2466,9 @@ const TOLL_PROXY_URL = 'https://peage.jeanlorilleux37.workers.dev/';
 // le quota TollGuru (plan gratuit = 15 calculs/jour).
 function tollCacheKey(c1, c2) {
   const r = n => n.toFixed(4); // ~11 m de précision, suffisant pour identifier un trajet
-  // Préfixe "toll3" : le cache stocke désormais { cost, details } (détail par
+  // Préfixe "toll4" : le cache stocke désormais { cost, details } (détail par
   // tronçon) au lieu d'un simple nombre.
-  return 'toll3:' + r(c1[1]) + ',' + r(c1[0]) + '>' + r(c2[1]) + ',' + r(c2[0]);
+  return 'toll4:' + r(c1[1]) + ',' + r(c1[0]) + '>' + r(c2[1]) + ',' + r(c2[0]);
 }
 function tollCacheGet(key) {
   try { const v = localStorage.getItem(key); return v === null ? undefined : JSON.parse(v); }
@@ -2605,6 +2605,26 @@ function vinciGateName(leg) {
   for (const c of candidats) {
     if (typeof c === 'string' && c.trim()) return c.trim();
   }
+  // Repli générique : première valeur texte des Tags (puis du Placemark) qui
+  // ressemble à un nom (contient des lettres), pas un code comme ID_PEAGE.
+  for (const obj of [t, p]) {
+    for (const [k, v] of Object.entries(obj)) {
+      if (k === 'ID_PEAGE' || k === 'Tags') continue;
+      if (typeof v === 'string' && /[A-Za-zÀ-ÿ]{3,}/.test(v) && v.trim().length >= 3 && v.trim().length <= 60) {
+        return v.trim();
+      }
+    }
+  }
+  return null;
+}
+
+// Nom d'une gare dans une entrée de la réponse tarif (si l'API l'y porte).
+function vinciRateGateName(o) {
+  if (!o || typeof o !== 'object') return null;
+  const candidats = [o.name, o.label, o.libelle, o.tollName, o.stationName];
+  for (const c of candidats) {
+    if (typeof c === 'string' && c.trim()) return c.trim();
+  }
   return null;
 }
 
@@ -2664,15 +2684,21 @@ async function getTollsVinci(route) {
     if (!tarifs.length) return null;
 
     const cost = tarifs.reduce((somme, t) => somme + t.price, 0);
-    // Libellé de chaque tronçon : "gare A → gare B" quand les tarifs
-    // s'alignent sur les paires de gares consécutives, sinon "Tronçon N".
+    // Libellé de chaque tronçon, par ordre de préférence : gares portées par
+    // le tarif lui-même, sinon paires de gares consécutives du tracé, sinon
+    // "Tronçon N" en dernier recours.
     const details = tarifs.map((t, i) => {
-      let label = 'Tronçon ' + (i + 1);
-      if (tarifs.length === gates.length - 1) {
-        const a = gates[i].name, b = gates[i + 1].name;
+      let label = null;
+      const entree = vinciRateGateName(t.entryToll || t.entryTollStation || t.entry
+        || (Array.isArray(t.tollPassages) && t.tollPassages[0] && t.tollPassages[0].toll));
+      const sortie = vinciRateGateName(t.exitToll || t.exitTollStation || t.exit
+        || (Array.isArray(t.tollPassages) && t.tollPassages[1] && t.tollPassages[1].toll));
+      if (entree || sortie) label = (entree || '?') + ' → ' + (sortie || '?');
+      if (!label && tarifs.length <= gates.length - 1) {
+        const a = gates[i] && gates[i].name, b = gates[i + 1] && gates[i + 1].name;
         if (a || b) label = (a || 'Péage ' + (i + 1)) + ' → ' + (b || 'Péage ' + (i + 2));
       }
-      return { label, price: t.price };
+      return { label: label || ('Tronçon ' + (i + 1)), price: t.price };
     });
     return { cost, details };
   } catch (e) {
