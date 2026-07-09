@@ -1157,15 +1157,15 @@ function photonLabel(p) {
   return parts.filter(Boolean).join(', ');
 }
 
-// Extrait le nom du département depuis le "context" BAN, ex. "21, Côte-d'Or,
-// Bourgogne-Franche-Comté" -> "Côte-d'Or". Sert à désambiguïser les
+// Extrait le numéro du département depuis le "context" BAN, ex. "21,
+// Côte-d'Or, Bourgogne-Franche-Comté" -> "21". Sert à désambiguïser les
 // homonymes (plusieurs communes portent le même nom dans des départements
 // différents), affiché seulement dans la liste — jamais injecté dans la
 // valeur du champ (qui doit rester une adresse géocodable telle quelle).
 function banDept(properties) {
   if (!properties || !properties.context) return null;
   const parts = properties.context.split(',').map(s => s.trim());
-  return parts[1] || null;
+  return parts[0] || null;
 }
 
 // Recherche de lieux : API Adresse officielle (BAN, data.gouv.fr) en priorité
