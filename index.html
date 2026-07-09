@@ -1886,7 +1886,7 @@ async function rechercherStationMoinsChere() {
       const destination = encodeURIComponent(arrivee || `${station.lat},${station.lon}`);
       link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}&waypoints=${station.lat},${station.lon}`;
       link.target = '_blank';
-      link.textContent = electrique ? 'Ajouter cette borne à mon trajet' : 'Ajouter cette station à mon trajet';
+      link.textContent = electrique ? '📍 Ajouter cette borne à mon trajet' : '📍 Ajouter cette station à mon trajet';
       cheapestNote.appendChild(link);
     }
   } else {
