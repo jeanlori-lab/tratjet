@@ -209,12 +209,11 @@
       color: #b06000;
     }
     .vehicule-resume:hover .vehicule-resume-edit { text-decoration: underline; }
-    /* "C'est bon ✓" : en haut à droite du bloc déplié. */
-    /* Marge basse négative : rapproche la ligne Carburant du bouton (le bouton
-       est à droite, le libellé à gauche — pas de chevauchement possible).
-       padding-right : dégage le coin arrondi de la carte, sinon le texte le
-       chevauche (le rayon de la carte grignote la largeur utile à droite). */
-    .vehicule-replier-wrap { display: flex; justify-content: flex-end; padding: 8px 6px 0 0; margin-bottom: -14px; }
+    /* "C'est bon ✓" : en haut à droite du bloc déplié, sur sa propre ligne
+       avec un espacement normal (pas de marge négative pour "grappiller" de
+       la place — trop fragile près d'un coin arrondi, ça a fini par
+       chevaucher la bordure). */
+    .vehicule-replier-wrap { display: flex; justify-content: flex-end; padding: 2px 0 10px; }
     .vehicule-replier {
       background: none;
       border: none;
@@ -2544,9 +2543,12 @@ const TOLL_PROXY_URL = 'https://peage.jeanlorilleux37.workers.dev/';
 // le quota TollGuru (plan gratuit = 15 calculs/jour).
 function tollCacheKey(c1, c2) {
   const r = n => n.toFixed(4); // ~11 m de précision, suffisant pour identifier un trajet
-  // Préfixe "toll5" : le cache stocke désormais { cost, details } (détail par
-  // tronçon) au lieu d'un simple nombre.
-  return 'toll5:' + r(c1[1]) + ',' + r(c1[0]) + '>' + r(c2[1]) + ',' + r(c2[0]);
+  // Préfixe "toll6" : incrémenté à l'ajout de ViaMichelin comme source
+  // principale, pour invalider les résultats mis en cache par Vinci avant ce
+  // changement (sinon un vieux "Tronçon N" en cache masque indéfiniment la
+  // nouvelle source, même à code égal). À incrémenter à chaque changement de
+  // source ou de format de détail.
+  return 'toll6:' + r(c1[1]) + ',' + r(c1[0]) + '>' + r(c2[1]) + ',' + r(c2[0]);
 }
 function tollCacheGet(key) {
   try { const v = localStorage.getItem(key); return v === null ? undefined : JSON.parse(v); }
