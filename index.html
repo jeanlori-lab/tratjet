@@ -211,8 +211,10 @@
     .vehicule-resume:hover .vehicule-resume-edit { text-decoration: underline; }
     /* "C'est bon ✓" : en haut à droite du bloc déplié. */
     /* Marge basse négative : rapproche la ligne Carburant du bouton (le bouton
-       est à droite, le libellé à gauche — pas de chevauchement possible). */
-    .vehicule-replier-wrap { display: flex; justify-content: flex-end; padding: 4px 0 0; margin-bottom: -14px; }
+       est à droite, le libellé à gauche — pas de chevauchement possible).
+       padding-right : dégage le coin arrondi de la carte, sinon le texte le
+       chevauche (le rayon de la carte grignote la largeur utile à droite). */
+    .vehicule-replier-wrap { display: flex; justify-content: flex-end; padding: 8px 6px 0 0; margin-bottom: -14px; }
     .vehicule-replier {
       background: none;
       border: none;
@@ -1212,11 +1214,14 @@
 
 </div>
 <script>
-// Débogage : ?peage=vinci force le repli Vinci pour les péages (sans passer
-// par TollGuru ni le cache), pour pouvoir le tester même quand TollGuru
-// répond normalement. Capturé tout de suite : chargerRechercheDepuisLien()
-// nettoie l'URL (retire tous les paramètres) dès le chargement de la page.
-const DEBUG_FORCE_VINCI = new URLSearchParams(location.search).get('peage') === 'vinci';
+// Débogage : ?peage=vinci ou ?peage=viamichelin force un repli péages
+// spécifique (sans passer par les autres sources ni le cache), pour pouvoir
+// tester chacun même quand un précédent répond normalement. Capturé tout de
+// suite : chargerRechercheDepuisLien() nettoie l'URL (retire tous les
+// paramètres) dès le chargement de la page.
+const DEBUG_FORCE_PEAGE = new URLSearchParams(location.search).get('peage'); // 'vinci' | 'viamichelin' | null
+const DEBUG_FORCE_VINCI = DEBUG_FORCE_PEAGE === 'vinci';
+const DEBUG_FORCE_VIAMICHELIN = DEBUG_FORCE_PEAGE === 'viamichelin';
 
 // Autocomplétion
 const autoTimers = new WeakMap();
@@ -1995,14 +2000,13 @@ function buildStationDetail(station, type, lat, lon, big) {
 // Recherche + affichage de la station la moins chère, indépendants du reste
 // du calcul du trajet : le curseur de rayon ne relance que cet encadré, et
 // seulement au relâchement (évite un fetch à chaque pixel glissé).
-let lastStationSearch = null; // { lat, lon, type, rayon, depart, arrivee, rayonAvantIllimite }
+let lastStationSearch = null; // { lat, lon, type, rayon, depart, arrivee }
 
 async function rechercherStationMoinsChere() {
   const cheapestNote = document.getElementById('cheapestNote');
   if (!lastStationSearch) { cheapestNote.style.display = 'none'; return; }
   const { lat, lon, type, rayon, depart, arrivee } = lastStationSearch;
   const electrique = type === 'electrique';
-  const illimite = rayon === STATION_RAYON_ILLIMITE;
   cheapestNote.classList.add('loading');
   const station = await fetchStationOuBorne(lat, lon, type, rayon);
   cheapestNote.classList.remove('loading');
@@ -2018,14 +2022,12 @@ async function rechercherStationMoinsChere() {
   const title = document.createElement('span');
   title.className = 'cheapest-title';
   title.style.fontSize = '0.9em';
-  title.textContent = electrique
-    ? 'Borne de recharge la plus proche du départ'
-    : (illimite ? 'Station la moins chère de France' : 'Station la moins chère près du départ');
+  title.textContent = electrique ? 'Borne de recharge la plus proche du départ' : 'Station la moins chère près du départ';
   header.appendChild(title);
   cheapestNote.appendChild(header);
 
   if (station) {
-    cheapestNote.appendChild(buildStationDetail(station, type, lat, lon, illimite));
+    cheapestNote.appendChild(buildStationDetail(station, type, lat, lon, false));
 
     if (station.lat !== null && station.lon !== null) {
       cheapestNote.appendChild(buildStationMap(station.lat, station.lon));
@@ -2042,32 +2044,14 @@ async function rechercherStationMoinsChere() {
   } else {
     const empty = document.createElement('div');
     empty.className = 'cheapest-empty';
-    empty.textContent = illimite
-      ? (electrique ? 'Aucune borne trouvée.' : 'Aucune station trouvée.')
-      : (electrique ? 'Aucune borne trouvée' : 'Aucune station trouvée') + ' dans un rayon de ' + rayon + ' km.';
+    empty.textContent = (electrique ? 'Aucune borne trouvée' : 'Aucune station trouvée') + ' dans un rayon de ' + rayon + ' km.';
     cheapestNote.appendChild(empty);
   }
 
-  if (illimite) {
-    // Retour à un rayon limité : on réutilise le dernier rayon connu avant la
-    // bascule "pas de limites" (ou le rayon par défaut si on ne l'a pas).
-    const backRow = document.createElement('div');
-    backRow.className = 'cheapest-btn-row';
-    const backBtn = document.createElement('button');
-    backBtn.type = 'button';
-    backBtn.className = 'cheapest-nolimit-btn';
-    backBtn.textContent = 'Revenir à un rayon limité';
-    backBtn.onclick = () => {
-      lastStationSearch.rayon = lastStationSearch.rayonAvantIllimite || STATION_RAYON_KM;
-      rechercherStationMoinsChere();
-    };
-    backRow.appendChild(backBtn);
-    cheapestNote.appendChild(backRow);
-    return;
-  }
-
   // Curseur pour élargir/réduire le rayon de recherche : recalcule uniquement
-  // au relâchement ("change"), pas à chaque cran glissé ("input").
+  // au relâchement ("change"), pas à chaque cran glissé ("input"). Pas de
+  // bouton "pas de limites" ici (contrairement à l'onglet dédié) : une
+  // recherche France entière n'a pas de sens accolée à un trajet précis.
   const radiusWrap = document.createElement('div');
   radiusWrap.className = 'cheapest-radius';
   const label = document.createElement('span');
@@ -2092,24 +2076,6 @@ async function rechercherStationMoinsChere() {
   radiusWrap.appendChild(label);
   radiusWrap.appendChild(slider);
   cheapestNote.appendChild(radiusWrap);
-
-  // "Pas de limites" : recherche la station la moins chère sur toute la
-  // France (n'a de sens que pour un carburant, pas pour les bornes).
-  if (!electrique) {
-    const btnRow = document.createElement('div');
-    btnRow.className = 'cheapest-btn-row';
-    const noLimitBtn = document.createElement('button');
-    noLimitBtn.type = 'button';
-    noLimitBtn.className = 'cheapest-nolimit-btn';
-    noLimitBtn.textContent = 'Pas de limites (France entière)';
-    noLimitBtn.onclick = () => {
-      lastStationSearch.rayonAvantIllimite = rayon;
-      lastStationSearch.rayon = STATION_RAYON_ILLIMITE;
-      rechercherStationMoinsChere();
-    };
-    btnRow.appendChild(noLimitBtn);
-    cheapestNote.appendChild(btnRow);
-  }
 }
 
 // --- Station la moins chère près de chez moi, recherche indépendante d'un
@@ -2645,14 +2611,16 @@ function encodePolyline(coords, precision) {
   return out;
 }
 
-// Péages : Vinci-autoroutes en source principale (gratuit, sans quota, et
-// fournit le détail par tronçon), TollGuru en secours si Vinci échoue.
-// Renvoie { cost: <€>, details: [{label, price}]|null } ou null si échec total.
-async function getTolls(route, c1, c2) {
+// Péages : ViaMichelin en source principale (détail par gare nommée, ex.
+// "Restigné"), Vinci en second recours (détail par tronçon numéroté
+// seulement, "Tronçon N"), TollGuru en dernier repli si les deux précédents
+// échouent. Renvoie { cost: <€>, details: [{label, price}]|null } ou null.
+async function getTolls(route, c1, c2, depart, arrivee) {
   const polyline = route && typeof route.polyline === 'string' ? route.polyline : null;
   if (!polyline || !TOLL_PROXY_URL) return null;
 
   if (DEBUG_FORCE_VINCI) return await getTollsVinci(route);
+  if (DEBUG_FORCE_VIAMICHELIN) return await getTollsViaMichelin(c1, c2, depart, arrivee);
 
   // Cache : si ce trajet a déjà été calculé, on réutilise.
   const cacheKey = (c1 && c2) ? tollCacheKey(c1, c2) : null;
@@ -2662,7 +2630,8 @@ async function getTolls(route, c1, c2) {
     if (typeof cached === 'number') return { cost: cached, details: null };
   }
 
-  let result = await getTollsVinci(route);
+  let result = await getTollsViaMichelin(c1, c2, depart, arrivee);
+  if (!result) result = await getTollsVinci(route);
   if (!result) {
     const cost = await getTollsGuru(polyline, c1, c2);
     if (typeof cost === 'number') result = { cost, details: null };
@@ -2761,6 +2730,50 @@ async function getTollsVinci(route) {
     // la forme exacte des réponses de l'API).
     const details = tarifs.map((t, i) => ({ label: 'Tronçon ' + (i + 1), price: t.price }));
     return { cost, details };
+  } catch (e) {
+    return null;
+  }
+}
+
+// Via l'API GraphQL interne (non documentée) de ViaMichelin : un seul appel
+// (pas de chaîne tracé -> gares -> tarif comme pour Vinci), et surtout le
+// nom réel de chaque gare de péage traversée — mieux que le "Tronçon N" de
+// Vinci en attendant de percer le format de ses réponses. Best-effort comme
+// les autres replis : le moindre souci renvoie simplement null.
+// Renvoie { cost, details: [{label, price}] } ou null.
+async function getTollsViaMichelin(c1, c2, depart, arrivee) {
+  if (!TOLL_PROXY_URL || !c1 || !c2) return null;
+  try {
+    const resp = await fetch(TOLL_PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'viamichelin',
+        coordinates: [{ lat: c1[1], lng: c1[0] }, { lat: c2[1], lng: c2[0] }],
+        departureName: depart || '',
+        arrivalName: arrivee || '',
+        energyCost: typeof prixActuel === 'number' ? prixActuel : undefined,
+      }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const result = data && data.data && data.data.searchItinerary;
+    if (!result || result.__typename !== 'SearchItinerarySuccessResult') return null;
+    const route = result.routes && result.routes[0];
+    if (!route) return null;
+
+    const tollsAmount = route.costs && route.costs.tolls && typeof route.costs.tolls.amount === 'number' ? route.costs.tolls.amount : 0;
+    const vignetteAmount = route.costs && route.costs.vignette && typeof route.costs.vignette.amount === 'number' ? route.costs.vignette.amount : 0;
+    const cost = tollsAmount + vignetteAmount;
+    if (!(cost > 0) && !(Array.isArray(route.tolls) && route.tolls.length)) return null;
+
+    const details = Array.isArray(route.tolls)
+      ? route.tolls
+          .filter(t => t && t.cost && typeof t.cost.amount === 'number')
+          .map(t => ({ label: t.name || 'Péage', price: t.cost.amount }))
+      : null;
+
+    return { cost, details: details && details.length ? details : null };
   } catch (e) {
     return null;
   }
@@ -2913,9 +2926,9 @@ async function calculer() {
     const coutA   = litresA * prixActuel;
     const passagers = passagersValeur();
     const unit = document.getElementById('carburant').value === 'electrique' ? 'kWh' : 'L';
-    // Péages (best-effort, Vinci puis repli TollGuru) : n'importe quel échec
-    // laisse simplement le total au seul carburant.
-    const peage = await getTolls(route, c1, c2);
+    // Péages (best-effort, ViaMichelin puis Vinci puis repli TollGuru) :
+    // n'importe quel échec laisse simplement le total au seul carburant.
+    const peage = await getTolls(route, c1, c2, depart, arrivee);
 
     // Lien Vinci calculé avant l'affichage des résultats : la pastille
     // péages s'en sert comme lien de secours quand le calcul est indisponible.
