@@ -1049,7 +1049,7 @@
          trajet et au résultat. -->
     <div class="section section-carburant">
     <button type="button" class="vehicule-resume" id="vehiculeResume" style="display:none;" onclick="setVehiculeOuvert(true)">
-      <span id="vehiculeResumeText">SP95 · 7,5 L/100 km · 1 pers.</span>
+      <span id="vehiculeResumeText">⛽ SP95 · 7,5 L/100 km · 👤 1 pers.</span>
       <span class="vehicule-resume-edit">Modifier</span>
     </button>
     <div id="vehiculeDetails">
@@ -1782,9 +1782,9 @@ function majVehiculeResume() {
   const electrique = type === 'electrique';
   const txt = document.getElementById('vehiculeResumeText');
   if (txt) {
-    txt.textContent = (CARBURANT_COURT[type] || type)
+    txt.textContent = (electrique ? '🔌 ' : '⛽ ') + (CARBURANT_COURT[type] || type)
       + ' · ' + consoValeur().toFixed(1).replace('.', ',') + ' ' + (electrique ? 'kWh' : 'L') + '/100 km'
-      + ' · ' + passagersValeur() + ' pers.';
+      + ' · 👤 ' + passagersValeur() + ' pers.';
   }
   try {
     localStorage.setItem(VEHICULE_KEY, JSON.stringify({
