@@ -1,7 +1,12 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<link rel="icon" type="ima" content="Tratjet">
+<link rel="icon" type="image/png" href="logo trajet rat.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Tratjet</title>
+  <!-- Aperçu de partage (og/Twitter) : logo Tratjet (URL absolue obligatoire). -->
+  <meta property="og:title" content="Tratjet">
   <meta property="og:description" content="Entrez les paramètres de votre trajet, on s'occupe des calculs : coût du carburant, litres consommés et prix des péages.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://jeanlori-lab.github.io/copilote.budget2/logo%20trajet%20rat.png">
@@ -185,6 +190,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: nowrap;
       gap: 10px;
       width: 100%;
       background: none;
@@ -196,6 +202,14 @@
       color: #7a5a10;
       cursor: pointer;
       text-align: left;
+    }
+    /* Tient sur une seule ligne : tronqué avec "…" plutôt que de passer à
+       la ligne (le bouton Modifier, lui, ne doit jamais rétrécir). */
+    #vehiculeResumeText {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
     }
     .vehicule-resume-edit {
       flex-shrink: 0;
@@ -387,6 +401,10 @@
       #swapBtn:active { transform: translateY(calc(-50% + 11px)) scale(0.9); }
       .param-icon { width: 20px; font-size: 15px; }
       input[type="text"], input[type="number"], select { font-size: 15px; padding: 9px 11px; }
+      /* Résumé véhicule replié : un peu plus petit pour tenir sur une seule
+         ligne même avec "2 pers." et le bouton Modifier à droite. */
+      .vehicule-resume { font-size: 12.5px; gap: 6px; }
+      .vehicule-resume-edit { font-size: 13px; }
       /* Mobile : on garde la règle glissable, les flèches disparaissent. */
       .conso-line .conso-roulette { display: block; }
       .conso-arrow { display: none; }
