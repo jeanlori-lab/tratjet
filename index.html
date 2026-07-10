@@ -758,6 +758,38 @@
       box-shadow: 0 2px 6px rgba(33,150,243,0.35);
     }
 
+    /* Onglets "Près du départ" / "Sur le trajet", au-dessus des deux
+       encadrés station la moins chère (résultat de trajet). Classes
+       dédiées (pas .ar-toggle-btn) pour rester indépendantes de la
+       bascule Aller simple/Aller-retour. */
+    .station-tabs {
+      display: flex;
+      background: #eef2f6;
+      border-radius: 999px;
+      padding: 3px;
+      margin-top: 14px;
+      margin-bottom: 10px;
+    }
+    .station-tab-btn {
+      flex: 1;
+      text-align: center;
+      padding: 7px 0;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 999px;
+      cursor: pointer;
+      color: #607080;
+      background: none;
+      border: none;
+      font-family: inherit;
+      transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+    .station-tab-btn.active {
+      background: #2e7d32;
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(46,125,50,0.3);
+    }
+
     /* Bascule principale Coût carburant / Station la moins chère, en haut de
        page. Classes dédiées (pas .ar-toggle-btn) pour ne pas être affectées
        par le toggle Aller simple/Aller-retour, qui recible tous les
@@ -1156,8 +1188,12 @@
       </a>
     </div>
 </div>
+    <div class="station-tabs" id="stationTabs" style="display:none;">
+      <button type="button" class="station-tab-btn active" data-tab="depart" onclick="setStationTab('depart')">Près du départ</button>
+      <button type="button" class="station-tab-btn" data-tab="trajet" onclick="setStationTab('trajet')">Sur le trajet</button>
+    </div>
     <div class="cheapest-note" id="cheapestNote" style="display:none;"></div>
-    <div class="cheapest-note" id="cheapestNoteTrajet" style="display:none; margin-top:14px;"></div>
+    <div class="cheapest-note" id="cheapestNoteTrajet" style="display:none;"></div>
   </div>
   </div>
 
@@ -1961,16 +1997,34 @@ function buildStationDetail(station, type, lat, lon, big) {
 // seulement au relâchement (évite un fetch à chaque pixel glissé).
 let lastStationSearch = null; // { lat, lon, type, rayon, depart, arrivee }
 
+// Onglets "Près du départ" / "Sur le trajet" (résultat de trajet) : priorité
+// systématique à "Près du départ" à chaque nouveau calcul.
+let currentStationTab = 'depart';
+function setStationTab(tab) {
+  currentStationTab = tab;
+  document.querySelectorAll('.station-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  applyStationTabVisibility();
+}
+function applyStationTabVisibility() {
+  const noteDepart = document.getElementById('cheapestNote');
+  const noteTrajet = document.getElementById('cheapestNoteTrajet');
+  if (noteDepart.dataset.ready === '1') noteDepart.style.display = currentStationTab === 'depart' ? 'block' : 'none';
+  if (noteTrajet.dataset.ready === '1') noteTrajet.style.display = currentStationTab === 'trajet' ? 'block' : 'none';
+  if (noteDepart.dataset.ready === '1' || noteTrajet.dataset.ready === '1') {
+    document.getElementById('stationTabs').style.display = 'flex';
+  }
+}
+
 async function rechercherStationMoinsChere() {
   const cheapestNote = document.getElementById('cheapestNote');
-  if (!lastStationSearch) { cheapestNote.style.display = 'none'; return; }
+  if (!lastStationSearch) { cheapestNote.style.display = 'none'; cheapestNote.dataset.ready = ''; applyStationTabVisibility(); return; }
   const { lat, lon, type, rayon, depart, arrivee } = lastStationSearch;
   const electrique = type === 'electrique';
   cheapestNote.classList.add('loading');
   const station = await fetchStationOuBorne(lat, lon, type, rayon);
   cheapestNote.classList.remove('loading');
   cheapestNote.textContent = '';
-  cheapestNote.style.display = 'block';
+  cheapestNote.dataset.ready = '1';
 
   const header = document.createElement('div');
   header.className = 'cheapest-header';
@@ -2055,6 +2109,7 @@ async function rechercherStationMoinsChere() {
   radiusWrap.appendChild(label);
   radiusWrap.appendChild(slider);
   cheapestNote.appendChild(radiusWrap);
+  applyStationTabVisibility();
 }
 
 // --- Station la moins chère SUR le trajet : parmi les stations proches de
@@ -2128,14 +2183,15 @@ async function fetchStationSurTrajet(polyline5, type) {
 
 async function rechercherStationSurTrajet() {
   const note = document.getElementById('cheapestNoteTrajet');
-  // Pas de prix comparable pour l'électrique : pas de "moins chère sur le trajet".
-  if (!lastStationSurTrajet || lastStationSurTrajet.type === 'electrique') { note.style.display = 'none'; return; }
+  if (!lastStationSurTrajet) { note.style.display = 'none'; note.dataset.ready = ''; applyStationTabVisibility(); return; }
   const { polyline, type, depart, arrivee } = lastStationSurTrajet;
+  const electrique = type === 'electrique';
   note.classList.add('loading');
-  const station = await fetchStationSurTrajet(polyline, type);
+  // Pas de prix comparable pour l'électrique : pas de recherche, juste un message.
+  const station = electrique ? null : await fetchStationSurTrajet(polyline, type);
   note.classList.remove('loading');
   note.textContent = '';
-  note.style.display = 'block';
+  note.dataset.ready = '1';
 
   const header = document.createElement('div');
   header.className = 'cheapest-header';
@@ -2150,7 +2206,12 @@ async function rechercherStationSurTrajet() {
   header.appendChild(title);
   note.appendChild(header);
 
-  if (station) {
+  if (electrique) {
+    const empty = document.createElement('div');
+    empty.className = 'cheapest-empty';
+    empty.textContent = 'Non disponible pour l\'électrique (pas de prix comparable entre bornes).';
+    note.appendChild(empty);
+  } else if (station) {
     const detail = buildStationDetail(station, type, null, null, false);
     if (isFinite(station.distRoute)) {
       detail.appendChild(document.createTextNode(' (à ' + station.distRoute.toFixed(1) + ' km de la route)'));
@@ -2159,6 +2220,8 @@ async function rechercherStationSurTrajet() {
 
     note.appendChild(buildStationMap(station.lat, station.lon));
 
+    const btnRow = document.createElement('div');
+    btnRow.className = 'cheapest-btn-row';
     const link = document.createElement('a');
     link.className = 'cheapest-link';
     const origin = encodeURIComponent(depart);
@@ -2166,13 +2229,15 @@ async function rechercherStationSurTrajet() {
     link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}&waypoints=${station.lat},${station.lon}`;
     link.target = '_blank';
     link.textContent = '📍 Ajouter cette station à mon trajet';
-    note.appendChild(link);
+    btnRow.appendChild(link);
+    note.appendChild(btnRow);
   } else {
     const empty = document.createElement('div');
     empty.className = 'cheapest-empty';
     empty.textContent = 'Aucune station trouvée à moins de ~5 min de la route.';
     note.appendChild(empty);
   }
+  applyStationTabVisibility();
 }
 
 // --- Station la moins chère près de chez moi, recherche indépendante d'un
@@ -3075,6 +3140,7 @@ async function calculer() {
     const carburantType = document.getElementById('carburant').value;
     lastStationSearch = { lat: c1[1], lon: c1[0], type: carburantType, rayon: STATION_RAYON_KM, depart, arrivee };
     lastStationSurTrajet = { polyline: route.polyline, type: carburantType, depart, arrivee };
+    setStationTab('depart'); // priorité systématique à "Près du départ" à chaque nouveau calcul
     await Promise.all([rechercherStationMoinsChere(), rechercherStationSurTrajet()]);
 
     document.getElementById('sectionResultats').style.display = 'block';
