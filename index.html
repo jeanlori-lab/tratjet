@@ -204,12 +204,13 @@
     }
     .vehicule-resume-edit {
       flex-shrink: 0;
-      font-size: 11.5px;
+      font-size: 13.5px;
       font-weight: 700;
       color: #b06000;
     }
     .vehicule-resume:hover .vehicule-resume-edit { text-decoration: underline; }
-    .vehicule-replier-wrap { text-align: center; padding: 2px 0 6px; }
+    /* "C'est bon ✓" : en haut à droite du bloc déplié. */
+    .vehicule-replier-wrap { display: flex; justify-content: flex-end; padding: 6px 0 0; }
     .vehicule-replier {
       background: none;
       border: none;
@@ -218,7 +219,7 @@
       font-weight: 700;
       color: #b06000;
       cursor: pointer;
-      padding: 4px 10px;
+      padding: 2px 2px;
     }
     .vehicule-replier:hover { text-decoration: underline; }
     .carburant-row { padding-bottom: 26px; }
@@ -378,6 +379,11 @@
       /* Étapes : pas de ligne de libellé (numéro en placeholder), encadré + ✕ sur une ligne */
       .is-stop .param-label { display: none; }
       .is-stop .param-input { flex: 1 1 auto; }
+      /* Poignées de glisser-déposer : calées sur l'encadré de saisie. Sans ça,
+         elles se centrent sur la hauteur totale de la ligne — or Départ/Arrivée
+         ont leur libellé au-dessus (2 lignes) là où une étape n'en a qu'une,
+         donc les poignées ne tombaient pas à la même hauteur. */
+      .point-row:not(.is-stop) .drag-handle { top: auto; bottom: 8px; height: 43px; }
       /* Recentre les flèches pile entre les deux encadrés (layout empilé) */
       #swapBtn { transform: translateY(calc(-50% + 11px)); }
       #swapBtn:active { transform: translateY(calc(-50% + 11px)) scale(0.9); }
@@ -1046,12 +1052,14 @@
          trajet et au résultat. -->
     <div class="section section-carburant">
     <button type="button" class="vehicule-resume" id="vehiculeResume" style="display:none;" onclick="setVehiculeOuvert(true)">
-      <span id="vehiculeResumeText">⛽ SP95 · 7,5 L/100 km · 👥 1</span>
-      <span class="vehicule-resume-edit">Modifier ✎</span>
+      <span id="vehiculeResumeText">SP95 · 7,5 L/100 km · 1 pers.</span>
+      <span class="vehicule-resume-edit">Modifier</span>
     </button>
     <div id="vehiculeDetails">
+    <div class="vehicule-replier-wrap">
+      <button type="button" class="vehicule-replier" onclick="setVehiculeOuvert(false)">C'est bon ✓</button>
+    </div>
     <div class="param-row carburant-row">
-      <div class="param-icon">⛽</div>
       <div class="param-label">Carburant</div>
       <div class="param-input">
         <select id="carburant" onchange="resetResultat(); chargerPrix(); majUniteConso(); majVehiculeResume();">
@@ -1067,7 +1075,6 @@
     </div>
 
     <div class="param-row conso-row">
-      <div class="param-icon">🚗</div>
       <div class="param-label">Consommation</div>
       <div class="param-input">
         <input type="hidden" id="conso" value="7.5">
@@ -1084,7 +1091,6 @@
     </div>
 
     <div class="param-row passagers-row">
-      <div class="param-icon">👥</div>
       <div class="param-label">Passagers</div>
       <div class="param-input">
         <input type="hidden" id="passagers" value="1">
@@ -1094,9 +1100,6 @@
           <button type="button" class="pass-arrow" id="passPlus" aria-label="Plus de passagers">+</button>
         </div>
       </div>
-    </div>
-    <div class="vehicule-replier-wrap">
-      <button type="button" class="vehicule-replier" onclick="setVehiculeOuvert(false)">✓ C'est bon</button>
     </div>
     </div>
     </div>
@@ -1779,9 +1782,9 @@ function majVehiculeResume() {
   const electrique = type === 'electrique';
   const txt = document.getElementById('vehiculeResumeText');
   if (txt) {
-    txt.textContent = (electrique ? '🔌 ' : '⛽ ') + (CARBURANT_COURT[type] || type)
+    txt.textContent = (CARBURANT_COURT[type] || type)
       + ' · ' + consoValeur().toFixed(1).replace('.', ',') + ' ' + (electrique ? 'kWh' : 'L') + '/100 km'
-      + ' · 👥 ' + passagersValeur();
+      + ' · ' + passagersValeur() + ' pers.';
   }
   try {
     localStorage.setItem(VEHICULE_KEY, JSON.stringify({
