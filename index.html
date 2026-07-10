@@ -182,75 +182,9 @@
       margin-bottom: 12px;
     }
     .section-carburant {
-      position: relative; /* ancre Modifier/Valider (position absolue) au même point dans les deux états */
       background: #fff3d1;
       border-color: #f0be45;
     }
-    /* Réserve la place du bouton Valider (position absolue, sorti du flux)
-       pour que le champ Carburant ne passe pas dessous. */
-    #vehiculeDetails { padding-top: 30px; }
-    /* Bloc véhicule replié : une ligne résumé cliquable dans l'encadré jaune. */
-    .vehicule-resume {
-      display: flex;
-      align-items: center;
-      width: 100%;
-      background: none;
-      border: none;
-      padding: 12px 76px 12px 4px; /* padding-right : laisse la place à la pastille Modifier, ancrée en absolu par-dessus */
-      font-family: inherit;
-      font-size: 14px;
-      font-weight: 700;
-      color: #7a5a10;
-      cursor: pointer;
-      text-align: left;
-    }
-    /* Carburant/conso sur une ligne, passagers juste en dessous sur la
-       sienne. Chaque ligne est tronquée avec "…" plutôt que de déborder
-       (le bouton Modifier, lui, ne doit jamais rétrécir). */
-    #vehiculeResumeText {
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-    }
-    .vehicule-resume-ligne {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    /* Modifier et Valider sont ancrés au même endroit (haut-droite du bloc,
-       en absolu par rapport à .section-carburant) dans les deux états, pour
-       qu'un tap sur l'un tombe exactement là où l'autre apparaît ensuite —
-       sans ça le bouton "saute" visuellement entre replié et déplié. */
-    .vehicule-resume-edit, .vehicule-replier {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      display: inline-flex;
-      align-items: center;
-      gap: 3px;
-      font-family: inherit;
-      font-size: 10.5px;
-      font-weight: 700;
-      border-radius: 999px;
-      cursor: pointer;
-    }
-    /* Petite pastille discrète (contour orange, pas de fond) : ouvre le détail. */
-    .vehicule-resume-edit {
-      color: #b06000;
-      background: #fffaf0;
-      border: 1px solid #e2971a;
-      padding: 3px 9px;
-    }
-    .vehicule-resume:hover .vehicule-resume-edit { background: #fff1d6; }
-    /* Pastille pleine mais discrète (petite, vert doux) : se voit comme une
-       validation sans dominer le bloc. */
-    .vehicule-replier {
-      background: #4c8c52;
-      border: none;
-      color: #ffffff;
-      padding: 4px 10px;
-    }
-    .vehicule-replier:hover { background: #3f7645; }
     .carburant-row { padding-bottom: 26px; }
     .carburant-row .param-input { position: relative; }
     .carburant-row .prix-actuel {
@@ -418,10 +352,6 @@
       #swapBtn:active { transform: translateY(calc(-50% + 11px)) scale(0.9); }
       .param-icon { width: 20px; font-size: 15px; }
       input[type="text"], input[type="number"], select { font-size: 15px; padding: 9px 11px; }
-      /* Résumé véhicule replié : un peu plus petit pour tenir sur une seule
-         ligne même avec "2 pers." et le bouton Modifier à droite. */
-      .vehicule-resume { font-size: 12.5px; gap: 6px; }
-      .vehicule-resume-edit { font-size: 9.5px; padding: 3px 8px; }
       /* Mobile : on garde la règle glissable, les flèches disparaissent. */
       .conso-line .conso-roulette { display: block; }
       .conso-arrow { display: none; }
@@ -1083,16 +1013,10 @@
          résumé "⛽ SP95 · 7,5 L/100 km · 👥 2" pour laisser l'écran au
          trajet et au résultat. -->
     <div class="section section-carburant">
-    <button type="button" class="vehicule-resume" id="vehiculeResume" style="display:none;" onclick="setVehiculeOuvert(true)">
-      <span id="vehiculeResumeText"><span class="vehicule-resume-ligne">⛽ SP95</span><span class="vehicule-resume-ligne">🚗 7,5 L/100 km</span><span class="vehicule-resume-ligne">👤 1</span></span>
-      <span class="vehicule-resume-edit">✎ Modifier</span>
-    </button>
-    <div id="vehiculeDetails">
-      <button type="button" class="vehicule-replier" onclick="setVehiculeOuvert(false)">✓ Valider</button>
     <div class="param-row carburant-row">
       <div class="param-label">Carburant</div>
       <div class="param-input">
-        <select id="carburant" onchange="resetResultat(); chargerPrix(); majUniteConso(); majVehiculeResume();">
+        <select id="carburant" onchange="resetResultat(); chargerPrix(); majUniteConso();">
           <option value="sp95">Sans plomb 95</option>
           <option value="sp98">Sans plomb 98</option>
           <option value="gazole">Gazole (Diesel)</option>
@@ -1130,7 +1054,6 @@
           <button type="button" class="pass-arrow" id="passPlus" aria-label="Plus de passagers">+</button>
         </div>
       </div>
-    </div>
     </div>
     </div>
   </div>
@@ -1574,7 +1497,6 @@ function consoSet(v, doReset) {
   const slider = document.getElementById('consoRoulette');
   if (slider) slider.setAttribute('aria-valuenow', v);
   if (doReset) resetResultat();
-  majVehiculeResume();
 }
 function consoInit() {
   const track = document.getElementById('rouletteTrack');
@@ -1697,7 +1619,6 @@ function passagersSet(v) {
   const disp = document.getElementById('passagersVal');
   if (disp) disp.textContent = v;
   resetResultat();
-  majVehiculeResume();
 }
 // Messages rotatifs quand on clique sur + alors qu'on est déjà au maximum.
 const PASS_MAX_MESSAGES = [
@@ -1797,75 +1718,8 @@ async function chargerPrix() {
     document.getElementById('prixAffiche').textContent = 'Erreur réseau';
   }
 }
-// --- Bloc véhicule repliable, réglages mémorisés ---
-// Carburant, consommation et passagers changent rarement : on les retient
-// dans le navigateur et, dès qu'ils sont connus, le bloc s'affiche replié en
-// une ligne résumé. Un tap sur "Modifier" redéploie les contrôles.
-const VEHICULE_KEY = 'vehiculeReglages';
-const CARBURANT_COURT = { sp95: 'SP95', sp98: 'SP98', gazole: 'Gazole', e85: 'E85', gplc: 'GPLc', electrique: 'Électrique' };
-// "var" à dessein : consoSet() (appelée pendant l'init de la roulette, plus
-// haut dans le script) passe par majVehiculeResume() avant que cette ligne ne
-// s'exécute — avec let/const ce serait une erreur (zone morte temporelle),
-// avec var le drapeau vaut undefined et la fonction ressort simplement.
-var vehiculeInitDone = false; // n'écrit rien tant que l'init n'est pas passée
-
-function majVehiculeResume() {
-  if (!vehiculeInitDone) return;
-  const type = document.getElementById('carburant').value;
-  const electrique = type === 'electrique';
-  const txt = document.getElementById('vehiculeResumeText');
-  if (txt) {
-    txt.textContent = '';
-    const ligne1 = document.createElement('span');
-    ligne1.className = 'vehicule-resume-ligne';
-    ligne1.textContent = (electrique ? '🔌 ' : '⛽ ') + (CARBURANT_COURT[type] || type);
-    const ligne2 = document.createElement('span');
-    ligne2.className = 'vehicule-resume-ligne';
-    ligne2.textContent = '🚗 ' + consoValeur().toFixed(1).replace('.', ',') + ' ' + (electrique ? 'kWh' : 'L') + '/100 km';
-    const ligne3 = document.createElement('span');
-    ligne3.className = 'vehicule-resume-ligne';
-    ligne3.textContent = '👤 ' + passagersValeur();
-    txt.appendChild(ligne1);
-    txt.appendChild(ligne2);
-    txt.appendChild(ligne3);
-  }
-  try {
-    localStorage.setItem(VEHICULE_KEY, JSON.stringify({
-      carburant: type, conso: consoValeur(), passagers: passagersValeur(),
-    }));
-  } catch (e) {}
-}
-
-function setVehiculeOuvert(ouvert) {
-  document.getElementById('vehiculeDetails').style.display = ouvert ? '' : 'none';
-  document.getElementById('vehiculeResume').style.display = ouvert ? 'none' : '';
-  // La roulette ne peut pas se centrer tant qu'elle est masquée (largeur
-  // nulle) : on la repositionne au moment où elle redevient visible.
-  if (ouvert) consoSet(consoValeur(), false);
-  else majVehiculeResume();
-}
-
-(function vehiculeInit() {
-  let saved = null;
-  try { saved = JSON.parse(localStorage.getItem(VEHICULE_KEY) || 'null'); } catch (e) {}
-  if (saved && CARBURANT_COURT[saved.carburant]) {
-    document.getElementById('carburant').value = saved.carburant;
-  }
-  chargerPrix();
-  majUniteConso();
-  if (saved) {
-    if (typeof saved.conso === 'number') consoSet(saved.conso, false);
-    if (typeof saved.passagers === 'number') passagersSet(saved.passagers);
-    vehiculeInitDone = true;
-    setVehiculeOuvert(false); // réglages connus : replié, l'écran reste au trajet
-  } else {
-    // Première visite : tout est visible, et on n'active la mémorisation
-    // qu'après (le simple chargement de la page ne doit rien enregistrer —
-    // seule une vraie action de l'utilisateur "confirme" ses réglages).
-    setVehiculeOuvert(true);
-    vehiculeInitDone = true;
-  }
-})();
+chargerPrix();
+majUniteConso();
 
 // Distance à vol d'oiseau (km), pour situer la station la moins chère trouvée.
 function distKm(lat1, lon1, lat2, lon2) {
