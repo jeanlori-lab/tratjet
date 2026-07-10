@@ -2000,14 +2000,13 @@ function buildStationDetail(station, type, lat, lon, big) {
 // Recherche + affichage de la station la moins chère, indépendants du reste
 // du calcul du trajet : le curseur de rayon ne relance que cet encadré, et
 // seulement au relâchement (évite un fetch à chaque pixel glissé).
-let lastStationSearch = null; // { lat, lon, type, rayon, depart, arrivee, rayonAvantIllimite }
+let lastStationSearch = null; // { lat, lon, type, rayon, depart, arrivee }
 
 async function rechercherStationMoinsChere() {
   const cheapestNote = document.getElementById('cheapestNote');
   if (!lastStationSearch) { cheapestNote.style.display = 'none'; return; }
   const { lat, lon, type, rayon, depart, arrivee } = lastStationSearch;
   const electrique = type === 'electrique';
-  const illimite = rayon === STATION_RAYON_ILLIMITE;
   cheapestNote.classList.add('loading');
   const station = await fetchStationOuBorne(lat, lon, type, rayon);
   cheapestNote.classList.remove('loading');
@@ -2023,14 +2022,12 @@ async function rechercherStationMoinsChere() {
   const title = document.createElement('span');
   title.className = 'cheapest-title';
   title.style.fontSize = '0.9em';
-  title.textContent = electrique
-    ? 'Borne de recharge la plus proche du départ'
-    : (illimite ? 'Station la moins chère de France' : 'Station la moins chère près du départ');
+  title.textContent = electrique ? 'Borne de recharge la plus proche du départ' : 'Station la moins chère près du départ';
   header.appendChild(title);
   cheapestNote.appendChild(header);
 
   if (station) {
-    cheapestNote.appendChild(buildStationDetail(station, type, lat, lon, illimite));
+    cheapestNote.appendChild(buildStationDetail(station, type, lat, lon, false));
 
     if (station.lat !== null && station.lon !== null) {
       cheapestNote.appendChild(buildStationMap(station.lat, station.lon));
@@ -2047,32 +2044,14 @@ async function rechercherStationMoinsChere() {
   } else {
     const empty = document.createElement('div');
     empty.className = 'cheapest-empty';
-    empty.textContent = illimite
-      ? (electrique ? 'Aucune borne trouvée.' : 'Aucune station trouvée.')
-      : (electrique ? 'Aucune borne trouvée' : 'Aucune station trouvée') + ' dans un rayon de ' + rayon + ' km.';
+    empty.textContent = (electrique ? 'Aucune borne trouvée' : 'Aucune station trouvée') + ' dans un rayon de ' + rayon + ' km.';
     cheapestNote.appendChild(empty);
   }
 
-  if (illimite) {
-    // Retour à un rayon limité : on réutilise le dernier rayon connu avant la
-    // bascule "pas de limites" (ou le rayon par défaut si on ne l'a pas).
-    const backRow = document.createElement('div');
-    backRow.className = 'cheapest-btn-row';
-    const backBtn = document.createElement('button');
-    backBtn.type = 'button';
-    backBtn.className = 'cheapest-nolimit-btn';
-    backBtn.textContent = 'Revenir à un rayon limité';
-    backBtn.onclick = () => {
-      lastStationSearch.rayon = lastStationSearch.rayonAvantIllimite || STATION_RAYON_KM;
-      rechercherStationMoinsChere();
-    };
-    backRow.appendChild(backBtn);
-    cheapestNote.appendChild(backRow);
-    return;
-  }
-
   // Curseur pour élargir/réduire le rayon de recherche : recalcule uniquement
-  // au relâchement ("change"), pas à chaque cran glissé ("input").
+  // au relâchement ("change"), pas à chaque cran glissé ("input"). Pas de
+  // bouton "pas de limites" ici (contrairement à l'onglet dédié) : une
+  // recherche France entière n'a pas de sens accolée à un trajet précis.
   const radiusWrap = document.createElement('div');
   radiusWrap.className = 'cheapest-radius';
   const label = document.createElement('span');
@@ -2097,24 +2076,6 @@ async function rechercherStationMoinsChere() {
   radiusWrap.appendChild(label);
   radiusWrap.appendChild(slider);
   cheapestNote.appendChild(radiusWrap);
-
-  // "Pas de limites" : recherche la station la moins chère sur toute la
-  // France (n'a de sens que pour un carburant, pas pour les bornes).
-  if (!electrique) {
-    const btnRow = document.createElement('div');
-    btnRow.className = 'cheapest-btn-row';
-    const noLimitBtn = document.createElement('button');
-    noLimitBtn.type = 'button';
-    noLimitBtn.className = 'cheapest-nolimit-btn';
-    noLimitBtn.textContent = 'Pas de limites (France entière)';
-    noLimitBtn.onclick = () => {
-      lastStationSearch.rayonAvantIllimite = rayon;
-      lastStationSearch.rayon = STATION_RAYON_ILLIMITE;
-      rechercherStationMoinsChere();
-    };
-    btnRow.appendChild(noLimitBtn);
-    cheapestNote.appendChild(btnRow);
-  }
 }
 
 // --- Station la moins chère près de chez moi, recherche indépendante d'un
