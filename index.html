@@ -65,18 +65,18 @@
     /* Carte */
     .card {
       background: #ffffff;
-      border-radius: 18px;
+      border-radius: 16px;
       padding: 20px;
       margin-bottom: 14px;
-      box-shadow: 0 6px 22px rgba(15,23,41,0.14);
+      box-shadow: 0 4px 16px rgba(15,23,41,0.07);
     }
 
     .card-title {
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.09em;
-      color: #90a4ae;
+      color: #98a6b6;
       margin-bottom: 14px;
     }
 
@@ -125,8 +125,8 @@
 
     input[type="text"], input[type="number"], select {
       width: 100%;
-      padding: 8px 11px;
-      border: 2.5px solid #1976d2;
+      padding: 9px 11px;
+      border: 1.5px solid #d5e0ee;
       border-radius: 10px;
       background: #ffffff;
       font-size: 13px;
@@ -134,12 +134,12 @@
       font-family: inherit;
       color: #0f1729;
       outline: none;
-      box-shadow: 0 2px 6px rgba(25,118,210,0.15);
+      box-shadow: none;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
     input[type="text"]:focus, input[type="number"]:focus, select:focus {
-      border-color: #0d47a1;
-      box-shadow: 0 0 0 3px rgba(25,118,210,0.2);
+      border-color: #1976d2;
+      box-shadow: 0 0 0 3px rgba(25,118,210,0.15);
     }
     select {
       appearance: none;
@@ -150,12 +150,11 @@
       background-color: #ffffff;
     }
     .section-carburant input[type="text"], .section-carburant input[type="number"], .section-carburant select {
-      border-color: #e2971a;
-      box-shadow: 0 2px 6px rgba(226,151,26,0.18);
+      border-color: #ecd6a0;
     }
     .section-carburant input[type="text"]:focus, .section-carburant input[type="number"]:focus, .section-carburant select:focus {
-      border-color: #c9760a;
-      box-shadow: 0 0 0 3px rgba(226,151,26,0.22);
+      border-color: #e2971a;
+      box-shadow: 0 0 0 3px rgba(226,151,26,0.18);
     }
 
     /* Prix moyen actuel : une ligne, alignée avec le champ Carburant */
@@ -175,15 +174,15 @@
     /* Trait séparateur entre le bloc Départ/Destination (au-dessus) et Carburant/Conso */
     /* Panneaux teintés : un pour Départ/Destination, un pour Carburant/Conso */
     .section {
-      background: #eaf3ff;
-      border: 1.5px solid #bcd9f7;
+      background: #f4f8fd;
+      border: 1px solid #e2ecf7;
       border-radius: 14px;
       padding: 4px 14px;
       margin-bottom: 12px;
     }
     .section-carburant {
-      background: #fff3d1;
-      border-color: #f0be45;
+      background: #fdf8ec;
+      border-color: #f0e2c2;
     }
     /* Choix du carburant : 6 pastilles visibles d'un coup (pas de menu déroulant). */
     .carb-choices {
@@ -615,7 +614,7 @@
       border-radius: 14px;
       cursor: pointer;
       letter-spacing: 0.02em;
-      box-shadow: 0 6px 18px rgba(13,71,161,0.4);
+      box-shadow: 0 6px 16px rgba(13,71,161,0.28);
       transition: opacity 0.15s, transform 0.1s;
     }
     .btn:hover { opacity: 0.92; }
