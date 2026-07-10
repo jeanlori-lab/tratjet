@@ -185,6 +185,43 @@
       background: #fff3d1;
       border-color: #f0be45;
     }
+    /* Bloc véhicule replié : une ligne résumé cliquable dans l'encadré jaune. */
+    .vehicule-resume {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 9px 2px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      color: #7a5a10;
+      cursor: pointer;
+      text-align: left;
+    }
+    .vehicule-resume-edit {
+      flex-shrink: 0;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #b06000;
+    }
+    .vehicule-resume:hover .vehicule-resume-edit { text-decoration: underline; }
+    /* "C'est bon ✓" : en haut à droite du bloc déplié. */
+    .vehicule-replier-wrap { display: flex; justify-content: flex-end; padding: 6px 0 0; }
+    .vehicule-replier {
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      color: #b06000;
+      cursor: pointer;
+      padding: 2px 2px;
+    }
+    .vehicule-replier:hover { text-decoration: underline; }
     .carburant-row { padding-bottom: 26px; }
     .carburant-row .param-input { position: relative; }
     .carburant-row .prix-actuel {
@@ -342,6 +379,11 @@
       /* Étapes : pas de ligne de libellé (numéro en placeholder), encadré + ✕ sur une ligne */
       .is-stop .param-label { display: none; }
       .is-stop .param-input { flex: 1 1 auto; }
+      /* Poignées de glisser-déposer : calées sur l'encadré de saisie. Sans ça,
+         elles se centrent sur la hauteur totale de la ligne — or Départ/Arrivée
+         ont leur libellé au-dessus (2 lignes) là où une étape n'en a qu'une,
+         donc les poignées ne tombaient pas à la même hauteur. */
+      .point-row:not(.is-stop) .drag-handle { top: auto; bottom: 8px; height: 43px; }
       /* Recentre les flèches pile entre les deux encadrés (layout empilé) */
       #swapBtn { transform: translateY(calc(-50% + 11px)); }
       #swapBtn:active { transform: translateY(calc(-50% + 11px)) scale(0.9); }
@@ -1004,13 +1046,23 @@
       </div>
     </div>
 
-    <!-- Bloc Carburant / Consommation -->
+    <!-- Bloc Carburant / Consommation. Repliable : une fois les réglages
+         connus (mémorisés dans le navigateur), il s'affiche en une ligne
+         résumé "⛽ SP95 · 7,5 L/100 km · 👥 2" pour laisser l'écran au
+         trajet et au résultat. -->
     <div class="section section-carburant">
+    <button type="button" class="vehicule-resume" id="vehiculeResume" style="display:none;" onclick="setVehiculeOuvert(true)">
+      <span id="vehiculeResumeText">SP95 · 7,5 L/100 km · 1 pers.</span>
+      <span class="vehicule-resume-edit">Modifier</span>
+    </button>
+    <div id="vehiculeDetails">
+    <div class="vehicule-replier-wrap">
+      <button type="button" class="vehicule-replier" onclick="setVehiculeOuvert(false)">C'est bon ✓</button>
+    </div>
     <div class="param-row carburant-row">
-      <div class="param-icon">⛽</div>
       <div class="param-label">Carburant</div>
       <div class="param-input">
-        <select id="carburant" onchange="resetResultat(); chargerPrix(); majUniteConso();">
+        <select id="carburant" onchange="resetResultat(); chargerPrix(); majUniteConso(); majVehiculeResume();">
           <option value="sp95">Sans plomb 95</option>
           <option value="sp98">Sans plomb 98</option>
           <option value="gazole">Gazole (Diesel)</option>
@@ -1023,7 +1075,6 @@
     </div>
 
     <div class="param-row conso-row">
-      <div class="param-icon">🚗</div>
       <div class="param-label">Consommation</div>
       <div class="param-input">
         <input type="hidden" id="conso" value="7.5">
@@ -1040,7 +1091,6 @@
     </div>
 
     <div class="param-row passagers-row">
-      <div class="param-icon">👥</div>
       <div class="param-label">Passagers</div>
       <div class="param-input">
         <input type="hidden" id="passagers" value="1">
@@ -1050,6 +1100,7 @@
           <button type="button" class="pass-arrow" id="passPlus" aria-label="Plus de passagers">+</button>
         </div>
       </div>
+    </div>
     </div>
     </div>
   </div>
@@ -1490,6 +1541,7 @@ function consoSet(v, doReset) {
   const slider = document.getElementById('consoRoulette');
   if (slider) slider.setAttribute('aria-valuenow', v);
   if (doReset) resetResultat();
+  majVehiculeResume();
 }
 function consoInit() {
   const track = document.getElementById('rouletteTrack');
@@ -1612,6 +1664,7 @@ function passagersSet(v) {
   const disp = document.getElementById('passagersVal');
   if (disp) disp.textContent = v;
   resetResultat();
+  majVehiculeResume();
 }
 // Messages rotatifs quand on clique sur + alors qu'on est déjà au maximum.
 const PASS_MAX_MESSAGES = [
@@ -1711,8 +1764,65 @@ async function chargerPrix() {
     document.getElementById('prixAffiche').textContent = 'Erreur réseau';
   }
 }
-chargerPrix();
-majUniteConso();
+// --- Bloc véhicule repliable, réglages mémorisés ---
+// Carburant, consommation et passagers changent rarement : on les retient
+// dans le navigateur et, dès qu'ils sont connus, le bloc s'affiche replié en
+// une ligne résumé. Un tap sur "Modifier" redéploie les contrôles.
+const VEHICULE_KEY = 'vehiculeReglages';
+const CARBURANT_COURT = { sp95: 'SP95', sp98: 'SP98', gazole: 'Gazole', e85: 'E85', gplc: 'GPLc', electrique: 'Électrique' };
+// "var" à dessein : consoSet() (appelée pendant l'init de la roulette, plus
+// haut dans le script) passe par majVehiculeResume() avant que cette ligne ne
+// s'exécute — avec let/const ce serait une erreur (zone morte temporelle),
+// avec var le drapeau vaut undefined et la fonction ressort simplement.
+var vehiculeInitDone = false; // n'écrit rien tant que l'init n'est pas passée
+
+function majVehiculeResume() {
+  if (!vehiculeInitDone) return;
+  const type = document.getElementById('carburant').value;
+  const electrique = type === 'electrique';
+  const txt = document.getElementById('vehiculeResumeText');
+  if (txt) {
+    txt.textContent = (CARBURANT_COURT[type] || type)
+      + ' · ' + consoValeur().toFixed(1).replace('.', ',') + ' ' + (electrique ? 'kWh' : 'L') + '/100 km'
+      + ' · ' + passagersValeur() + ' pers.';
+  }
+  try {
+    localStorage.setItem(VEHICULE_KEY, JSON.stringify({
+      carburant: type, conso: consoValeur(), passagers: passagersValeur(),
+    }));
+  } catch (e) {}
+}
+
+function setVehiculeOuvert(ouvert) {
+  document.getElementById('vehiculeDetails').style.display = ouvert ? '' : 'none';
+  document.getElementById('vehiculeResume').style.display = ouvert ? 'none' : '';
+  // La roulette ne peut pas se centrer tant qu'elle est masquée (largeur
+  // nulle) : on la repositionne au moment où elle redevient visible.
+  if (ouvert) consoSet(consoValeur(), false);
+  else majVehiculeResume();
+}
+
+(function vehiculeInit() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(VEHICULE_KEY) || 'null'); } catch (e) {}
+  if (saved && CARBURANT_COURT[saved.carburant]) {
+    document.getElementById('carburant').value = saved.carburant;
+  }
+  chargerPrix();
+  majUniteConso();
+  if (saved) {
+    if (typeof saved.conso === 'number') consoSet(saved.conso, false);
+    if (typeof saved.passagers === 'number') passagersSet(saved.passagers);
+    vehiculeInitDone = true;
+    setVehiculeOuvert(false); // réglages connus : replié, l'écran reste au trajet
+  } else {
+    // Première visite : tout est visible, et on n'active la mémorisation
+    // qu'après (le simple chargement de la page ne doit rien enregistrer —
+    // seule une vraie action de l'utilisateur "confirme" ses réglages).
+    setVehiculeOuvert(true);
+    vehiculeInitDone = true;
+  }
+})();
 
 // Distance à vol d'oiseau (km), pour situer la station la moins chère trouvée.
 function distKm(lat1, lon1, lat2, lon2) {
