@@ -700,7 +700,6 @@
     .cost-chip-peage .cost-chip-value { color: #2e7d32; }
     .cost-chip-peage.unavailable .cost-chip-value { font-size: 10.5px; font-weight: 700; line-height: 1.3; }
     .cost-chip-peage .cost-chip-value a { color: #2e7d32; text-decoration: underline; }
-    .cost-chip-quota { font-size: 8.5px; font-weight: 600; color: #b0bcc8; margin-top: 2px; }
     /* Bouton "Détail" de la pastille péages + lignes de détail par tronçon. */
     .cost-chip-detail-btn {
       display: block;
@@ -2535,12 +2534,12 @@ async function getRoute(coords, apiKey) {
   return { distanceKm: s.distance / 1000, dureeSec: s.duration, polyline };
 }
 
-// URL du relais Cloudflare Worker qui appelle TollGuru (contourne le blocage CORS).
+// URL du relais Cloudflare Worker (ViaMichelin, Vinci-autoroutes — contourne le blocage CORS).
 // ⚠️ Colle ici l'URL de TON Worker, ex : https://peage.toncompte.workers.dev
 const TOLL_PROXY_URL = 'https://peage.jeanlorilleux37.workers.dev/';
 
-// Cache des péages (localStorage) : un trajet déjà calculé ne reconsomme pas
-// le quota TollGuru (plan gratuit = 15 calculs/jour).
+// Cache des péages (localStorage) : un trajet déjà calculé n'est pas
+// recalculé à chaque fois.
 function tollCacheKey(c1, c2) {
   const r = n => n.toFixed(4); // ~11 m de précision, suffisant pour identifier un trajet
   // Préfixe "toll6" : incrémenté à l'ajout de ViaMichelin comme source
@@ -2556,27 +2555,6 @@ function tollCacheGet(key) {
 }
 function tollCacheSet(key, cost) {
   try { localStorage.setItem(key, JSON.stringify(cost)); } catch(e) {}
-}
-
-// Suivi du quota TollGuru (15 requêtes / 24 h glissantes), estimé côté navigateur :
-// on horodate chaque appel réellement consommé (ni cache, ni refus quota).
-const TOLL_QUOTA_MAX = 15;
-const TOLL_QUOTA_WINDOW = 24 * 3600 * 1000;
-function tollQuotaCalls() {
-  let arr;
-  try { arr = JSON.parse(localStorage.getItem('tollQuotaCalls') || '[]'); } catch(e) { arr = []; }
-  const cutoff = Date.now() - TOLL_QUOTA_WINDOW;
-  arr = arr.filter(t => t > cutoff);
-  try { localStorage.setItem('tollQuotaCalls', JSON.stringify(arr)); } catch(e) {}
-  return arr;
-}
-function tollQuotaRemaining() {
-  return Math.max(0, TOLL_QUOTA_MAX - tollQuotaCalls().length);
-}
-function recordTollCall() {
-  const arr = tollQuotaCalls();
-  arr.push(Date.now());
-  try { localStorage.setItem('tollQuotaCalls', JSON.stringify(arr)); } catch(e) {}
 }
 
 // Décodage/encodage polyline (algorithme Google), paramétrable en précision :
@@ -2615,8 +2593,8 @@ function encodePolyline(coords, precision) {
 
 // Péages : ViaMichelin en source principale (détail par gare nommée, ex.
 // "Restigné"), Vinci en second recours (détail par tronçon numéroté
-// seulement, "Tronçon N"), TollGuru en dernier repli si les deux précédents
-// échouent. Renvoie { cost: <€>, details: [{label, price}]|null } ou null.
+// seulement, "Tronçon N") si ViaMichelin échoue.
+// Renvoie { cost: <€>, details: [{label, price}]|null } ou null si échec total.
 async function getTolls(route, c1, c2, depart, arrivee) {
   const polyline = route && typeof route.polyline === 'string' ? route.polyline : null;
   if (!polyline || !TOLL_PROXY_URL) return null;
@@ -2634,47 +2612,10 @@ async function getTolls(route, c1, c2, depart, arrivee) {
 
   let result = await getTollsViaMichelin(c1, c2, depart, arrivee);
   if (!result) result = await getTollsVinci(route);
-  if (!result) {
-    const cost = await getTollsGuru(polyline, c1, c2);
-    if (typeof cost === 'number') result = { cost, details: null };
-  }
 
   // On ne met en cache qu'un coût valide (jamais un échec/N/A).
   if (cacheKey && result && typeof result.cost === 'number') tollCacheSet(cacheKey, result);
   return result;
-}
-
-async function getTollsGuru(polyline, c1, c2) {
-  try {
-    // c1/c2 sont des coordonnées [lng, lat] (format ORS/GeoJSON).
-    const from = c1 ? { lat: c1[1], lng: c1[0] } : null;
-    const to   = c2 ? { lat: c2[1], lng: c2[0] } : null;
-    const r = await fetch(TOLL_PROXY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ polyline: polyline, from: from, to: to, vehicleType: '2AxlesAuto' })
-    });
-    const d = await r.json();
-    // Le Worker renvoie un coût normalisé { cost: <nombre|null> }.
-    let cost = null;
-    if (typeof d.cost === 'number') {
-      cost = d.cost;
-    } else if (d.cost === undefined) {
-      // Compat : ancienne forme (réponse brute TollGuru).
-      if (d.route && d.route.hasTolls === false) cost = 0;
-      else {
-        const costs = (d.route && d.route.costs)
-          || (d.routes && d.routes[0] && d.routes[0].costs)
-          || d.costs;
-        cost = extractToll(costs);
-      }
-    }
-    // Un coût obtenu par appel réseau = 1 transaction TollGuru consommée.
-    if (typeof cost === 'number') recordTollCall();
-    return cost;
-  } catch(e) {
-    return null;
-  }
 }
 
 // Via l'API interne (non documentée) de Vinci-autoroutes : reproduit
@@ -2779,20 +2720,6 @@ async function getTollsViaMichelin(c1, c2, depart, arrivee) {
   } catch (e) {
     return null;
   }
-}
-
-function extractToll(costs) {
-  if (!costs || typeof costs !== 'object') return null;
-  // On parcourt les champs de coût possibles, du plus pertinent au plus générique.
-  const candidats = [
-    costs.tag, costs.cash, costs.creditCard, costs.licensePlate,
-    costs.minimumTollCost, costs.maximumTollCost, costs.prepaidCard, costs.EUR
-  ];
-  for (const c of candidats) {
-    const n = parseFloat(c);
-    if (c !== undefined && c !== null && !isNaN(n)) return n;
-  }
-  return null;
 }
 
 function formatDuree(sec) {
@@ -2928,8 +2855,8 @@ async function calculer() {
     const coutA   = litresA * prixActuel;
     const passagers = passagersValeur();
     const unit = document.getElementById('carburant').value === 'electrique' ? 'kWh' : 'L';
-    // Péages (best-effort, ViaMichelin puis Vinci puis repli TollGuru) :
-    // n'importe quel échec laisse simplement le total au seul carburant.
+    // Péages (best-effort, ViaMichelin puis Vinci) : n'importe quel échec
+    // laisse simplement le total au seul carburant.
     const peage = await getTolls(route, c1, c2, depart, arrivee);
 
     // Lien Vinci calculé avant l'affichage des résultats : la pastille
