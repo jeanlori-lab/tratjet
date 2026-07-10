@@ -1214,11 +1214,14 @@
 
 </div>
 <script>
-// Débogage : ?peage=vinci force le repli Vinci pour les péages (sans passer
-// par TollGuru ni le cache), pour pouvoir le tester même quand TollGuru
-// répond normalement. Capturé tout de suite : chargerRechercheDepuisLien()
-// nettoie l'URL (retire tous les paramètres) dès le chargement de la page.
-const DEBUG_FORCE_VINCI = new URLSearchParams(location.search).get('peage') === 'vinci';
+// Débogage : ?peage=vinci ou ?peage=viamichelin force un repli péages
+// spécifique (sans passer par les autres sources ni le cache), pour pouvoir
+// tester chacun même quand un précédent répond normalement. Capturé tout de
+// suite : chargerRechercheDepuisLien() nettoie l'URL (retire tous les
+// paramètres) dès le chargement de la page.
+const DEBUG_FORCE_PEAGE = new URLSearchParams(location.search).get('peage'); // 'vinci' | 'viamichelin' | null
+const DEBUG_FORCE_VINCI = DEBUG_FORCE_PEAGE === 'vinci';
+const DEBUG_FORCE_VIAMICHELIN = DEBUG_FORCE_PEAGE === 'viamichelin';
 
 // Autocomplétion
 const autoTimers = new WeakMap();
@@ -2656,6 +2659,7 @@ async function getTolls(route, c1, c2, depart, arrivee) {
   if (!polyline || !TOLL_PROXY_URL) return null;
 
   if (DEBUG_FORCE_VINCI) return await getTollsVinci(route);
+  if (DEBUG_FORCE_VIAMICHELIN) return await getTollsViaMichelin(c1, c2, depart, arrivee);
 
   // Cache : si ce trajet a déjà été calculé, on réutilise.
   const cacheKey = (c1 && c2) ? tollCacheKey(c1, c2) : null;
