@@ -204,14 +204,18 @@
       cursor: pointer;
       text-align: left;
     }
-    /* Tient sur une seule ligne : tronqué avec "…" plutôt que de passer à
-       la ligne (le bouton Modifier, lui, ne doit jamais rétrécir). */
+    /* Carburant/conso sur une ligne, passagers juste en dessous sur la
+       sienne. Chaque ligne est tronquée avec "…" plutôt que de déborder
+       (le bouton Modifier, lui, ne doit jamais rétrécir). */
     #vehiculeResumeText {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .vehicule-resume-ligne {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      min-width: 0;
     }
     /* Modifier et Valider sont ancrés au même endroit (haut-droite du bloc,
        en absolu par rapport à .section-carburant) dans les deux états, pour
@@ -1080,7 +1084,7 @@
          trajet et au résultat. -->
     <div class="section section-carburant">
     <button type="button" class="vehicule-resume" id="vehiculeResume" style="display:none;" onclick="setVehiculeOuvert(true)">
-      <span id="vehiculeResumeText">⛽ SP95 · 7,5 L/100 km · 👤 1</span>
+      <span id="vehiculeResumeText"><span class="vehicule-resume-ligne">⛽ SP95 · 7,5 L/100 km</span><span class="vehicule-resume-ligne">👤 1</span></span>
       <span class="vehicule-resume-edit">✎ Modifier</span>
     </button>
     <div id="vehiculeDetails">
@@ -1811,9 +1815,16 @@ function majVehiculeResume() {
   const electrique = type === 'electrique';
   const txt = document.getElementById('vehiculeResumeText');
   if (txt) {
-    txt.textContent = (electrique ? '🔌 ' : '⛽ ') + (CARBURANT_COURT[type] || type)
-      + ' · ' + consoValeur().toFixed(1).replace('.', ',') + ' ' + (electrique ? 'kWh' : 'L') + '/100 km'
-      + ' · 👤 ' + passagersValeur();
+    txt.textContent = '';
+    const ligne1 = document.createElement('span');
+    ligne1.className = 'vehicule-resume-ligne';
+    ligne1.textContent = (electrique ? '🔌 ' : '⛽ ') + (CARBURANT_COURT[type] || type)
+      + ' · ' + consoValeur().toFixed(1).replace('.', ',') + ' ' + (electrique ? 'kWh' : 'L') + '/100 km';
+    const ligne2 = document.createElement('span');
+    ligne2.className = 'vehicule-resume-ligne';
+    ligne2.textContent = '👤 ' + passagersValeur();
+    txt.appendChild(ligne1);
+    txt.appendChild(ligne2);
   }
   try {
     localStorage.setItem(VEHICULE_KEY, JSON.stringify({
