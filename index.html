@@ -196,7 +196,7 @@
       width: 100%;
       background: none;
       border: none;
-      padding: 12px 76px 12px 4px; /* padding-right : laisse la place à la pastille Modifier, ancrée en absolu par-dessus */
+      padding: 12px 40px 12px 4px; /* padding-right : laisse la place à la flèche Modifier, ancrée en absolu par-dessus */
       font-family: inherit;
       font-size: 14px;
       font-weight: 700;
@@ -217,40 +217,45 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    /* Modifier et Valider sont ancrés au même endroit (haut-droite du bloc,
-       en absolu par rapport à .section-carburant) dans les deux états, pour
-       qu'un tap sur l'un tombe exactement là où l'autre apparaît ensuite —
-       sans ça le bouton "saute" visuellement entre replié et déplié. */
+    /* Conso et passagers : même taille que les champs adresse (mêmes seuils
+       responsives), pour un aperçu cohérent avec le reste du formulaire. */
+    .vehicule-resume-value {
+      font-size: 13px;
+    }
+    @media (max-width: 768px) {
+      .vehicule-resume-value { font-size: 16px; }
+    }
+    @media (max-width: 480px) {
+      .vehicule-resume-value { font-size: 15px; }
+    }
+    /* Modifier et Valider sont deux flèches discrètes (pas de texte), ancrées
+       au même endroit (haut-droite du bloc, en absolu par rapport à
+       .section-carburant) dans les deux états, pour qu'un tap sur l'une
+       tombe exactement là où l'autre apparaît ensuite — sans ça la flèche
+       "saute" visuellement entre replié et déplié. */
     .vehicule-resume-edit, .vehicule-replier {
       position: absolute;
-      top: 10px;
-      right: 10px;
+      top: 8px;
+      right: 8px;
+      width: 26px;
+      height: 26px;
       display: inline-flex;
       align-items: center;
-      gap: 3px;
-      font-family: inherit;
-      font-size: 10.5px;
-      font-weight: 700;
-      border-radius: 999px;
-      cursor: pointer;
-    }
-    /* Petite pastille discrète (contour orange, pas de fond) : ouvre le détail. */
-    .vehicule-resume-edit {
-      color: #b06000;
-      background: #fffaf0;
-      border: 1px solid #e2971a;
-      padding: 3px 9px;
-    }
-    .vehicule-resume:hover .vehicule-resume-edit { background: #fff1d6; }
-    /* Pastille pleine mais discrète (petite, vert doux) : se voit comme une
-       validation sans dominer le bloc. */
-    .vehicule-replier {
-      background: #4c8c52;
+      justify-content: center;
+      background: none;
       border: none;
-      color: #ffffff;
-      padding: 4px 10px;
+      border-radius: 50%;
+      color: #c99a4a;
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
     }
-    .vehicule-replier:hover { background: #3f7645; }
+    .vehicule-resume:hover .vehicule-resume-edit,
+    .vehicule-replier:hover {
+      background: rgba(226, 151, 26, 0.14);
+      color: #b06000;
+    }
     .carburant-row { padding-bottom: 26px; }
     .carburant-row .param-input { position: relative; }
     .carburant-row .prix-actuel {
@@ -418,10 +423,8 @@
       #swapBtn:active { transform: translateY(calc(-50% + 11px)) scale(0.9); }
       .param-icon { width: 20px; font-size: 15px; }
       input[type="text"], input[type="number"], select { font-size: 15px; padding: 9px 11px; }
-      /* Résumé véhicule replié : un peu plus petit pour tenir sur une seule
-         ligne même avec "2 pers." et le bouton Modifier à droite. */
+      /* Résumé véhicule replié : un peu plus petit sur mobile. */
       .vehicule-resume { font-size: 12.5px; gap: 6px; }
-      .vehicule-resume-edit { font-size: 9.5px; padding: 3px 8px; }
       /* Mobile : on garde la règle glissable, les flèches disparaissent. */
       .conso-line .conso-roulette { display: block; }
       .conso-arrow { display: none; }
@@ -1085,10 +1088,10 @@
     <div class="section section-carburant">
     <button type="button" class="vehicule-resume" id="vehiculeResume" style="display:none;" onclick="setVehiculeOuvert(true)">
       <span id="vehiculeResumeText"><span class="vehicule-resume-ligne">⛽ SP95</span><span class="vehicule-resume-ligne">🚗 7,5 L/100 km</span><span class="vehicule-resume-ligne">👤 1</span></span>
-      <span class="vehicule-resume-edit">✎ Modifier</span>
+      <span class="vehicule-resume-edit" aria-label="Modifier" title="Modifier">⌄</span>
     </button>
     <div id="vehiculeDetails">
-      <button type="button" class="vehicule-replier" onclick="setVehiculeOuvert(false)">✓ Valider</button>
+      <button type="button" class="vehicule-replier" onclick="setVehiculeOuvert(false)" aria-label="Valider" title="Valider">⌃</button>
     <div class="param-row carburant-row">
       <div class="param-label">Carburant</div>
       <div class="param-input">
@@ -1820,10 +1823,10 @@ function majVehiculeResume() {
     ligne1.className = 'vehicule-resume-ligne';
     ligne1.textContent = (electrique ? '🔌 ' : '⛽ ') + (CARBURANT_COURT[type] || type);
     const ligne2 = document.createElement('span');
-    ligne2.className = 'vehicule-resume-ligne';
+    ligne2.className = 'vehicule-resume-ligne vehicule-resume-value';
     ligne2.textContent = '🚗 ' + consoValeur().toFixed(1).replace('.', ',') + ' ' + (electrique ? 'kWh' : 'L') + '/100 km';
     const ligne3 = document.createElement('span');
-    ligne3.className = 'vehicule-resume-ligne';
+    ligne3.className = 'vehicule-resume-ligne vehicule-resume-value';
     ligne3.textContent = '👤 ' + passagersValeur();
     txt.appendChild(ligne1);
     txt.appendChild(ligne2);
