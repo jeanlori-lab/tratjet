@@ -1084,7 +1084,7 @@
          trajet et au résultat. -->
     <div class="section section-carburant">
     <button type="button" class="vehicule-resume" id="vehiculeResume" style="display:none;" onclick="setVehiculeOuvert(true)">
-      <span id="vehiculeResumeText"><span class="vehicule-resume-ligne">⛽ SP95 · 7,5 L/100 km</span><span class="vehicule-resume-ligne">👤 1</span></span>
+      <span id="vehiculeResumeText"><span class="vehicule-resume-ligne">⛽ SP95</span><span class="vehicule-resume-ligne">🚗 7,5 L/100 km</span><span class="vehicule-resume-ligne">👤 1</span></span>
       <span class="vehicule-resume-edit">✎ Modifier</span>
     </button>
     <div id="vehiculeDetails">
@@ -1818,13 +1818,16 @@ function majVehiculeResume() {
     txt.textContent = '';
     const ligne1 = document.createElement('span');
     ligne1.className = 'vehicule-resume-ligne';
-    ligne1.textContent = (electrique ? '🔌 ' : '⛽ ') + (CARBURANT_COURT[type] || type)
-      + ' · ' + consoValeur().toFixed(1).replace('.', ',') + ' ' + (electrique ? 'kWh' : 'L') + '/100 km';
+    ligne1.textContent = (electrique ? '🔌 ' : '⛽ ') + (CARBURANT_COURT[type] || type);
     const ligne2 = document.createElement('span');
     ligne2.className = 'vehicule-resume-ligne';
-    ligne2.textContent = '👤 ' + passagersValeur();
+    ligne2.textContent = '🚗 ' + consoValeur().toFixed(1).replace('.', ',') + ' ' + (electrique ? 'kWh' : 'L') + '/100 km';
+    const ligne3 = document.createElement('span');
+    ligne3.className = 'vehicule-resume-ligne';
+    ligne3.textContent = '👤 ' + passagersValeur();
     txt.appendChild(ligne1);
     txt.appendChild(ligne2);
+    txt.appendChild(ligne3);
   }
   try {
     localStorage.setItem(VEHICULE_KEY, JSON.stringify({
