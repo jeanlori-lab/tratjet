@@ -196,7 +196,7 @@
       width: 100%;
       background: none;
       border: none;
-      padding: 12px 40px 12px 4px; /* padding-right : laisse la place à la flèche Modifier, ancrée en absolu par-dessus */
+      padding: 12px 66px 12px 4px; /* padding-right : laisse la place au bouton Modifier, ancré en absolu par-dessus */
       font-family: inherit;
       font-size: 14px;
       font-weight: 700;
@@ -210,6 +210,7 @@
     #vehiculeResumeText {
       display: flex;
       flex-direction: column;
+      gap: 4px;
       min-width: 0;
     }
     .vehicule-resume-ligne {
@@ -228,25 +229,26 @@
     @media (max-width: 480px) {
       .vehicule-resume-value { font-size: 15px; }
     }
-    /* Modifier et Valider sont deux flèches discrètes (pas de texte), ancrées
-       au même endroit (haut-droite du bloc, en absolu par rapport à
-       .section-carburant) dans les deux états, pour qu'un tap sur l'une
-       tombe exactement là où l'autre apparaît ensuite — sans ça la flèche
+    /* Modifier et Ok : texte discret (pas de fond plein), ancrés au même
+       endroit (haut-droite du bloc, en absolu par rapport à
+       .section-carburant) dans les deux états, pour qu'un tap sur l'un
+       tombe exactement là où l'autre apparaît ensuite — sans ça le bouton
        "saute" visuellement entre replié et déplié. */
     .vehicule-resume-edit, .vehicule-replier {
       position: absolute;
       top: 8px;
       right: 8px;
-      width: 26px;
-      height: 26px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       background: none;
       border: none;
-      border-radius: 50%;
-      color: #c99a4a;
-      font-size: 13px;
+      border-radius: 999px;
+      padding: 4px 9px;
+      color: #b06000;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
       line-height: 1;
       cursor: pointer;
       transition: background 0.15s, color 0.15s;
@@ -1088,10 +1090,10 @@
     <div class="section section-carburant">
     <button type="button" class="vehicule-resume" id="vehiculeResume" style="display:none;" onclick="setVehiculeOuvert(true)">
       <span id="vehiculeResumeText"><span class="vehicule-resume-ligne">⛽ SP95</span><span class="vehicule-resume-ligne">🚗 7,5 L/100 km</span><span class="vehicule-resume-ligne">👤 1</span></span>
-      <span class="vehicule-resume-edit" aria-label="Modifier" title="Modifier">⌄</span>
+      <span class="vehicule-resume-edit">Modifier</span>
     </button>
     <div id="vehiculeDetails">
-      <button type="button" class="vehicule-replier" onclick="setVehiculeOuvert(false)" aria-label="Valider" title="Valider">⌃</button>
+      <button type="button" class="vehicule-replier" onclick="setVehiculeOuvert(false)">Ok</button>
     <div class="param-row carburant-row">
       <div class="param-label">Carburant</div>
       <div class="param-input">
