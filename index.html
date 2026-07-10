@@ -624,16 +624,17 @@
     /* Conteneur du bouton Calculer : ancre la voiture-rat qui roule
        au-dessus, en la laissant déborder du bouton (pas de overflow:hidden
        sur .btn lui-même, sinon elle serait rognée). */
-    .btn-wrap { position: relative; }
+    .btn-wrap { position: relative; z-index: 0; }
     .btn-car {
       display: none;
       position: absolute;
-      top: -22px;
+      top: -30px;
       left: 0;
       width: 56px;
       height: 56px;
       object-fit: contain;
       pointer-events: none;
+      z-index: 5; /* au-dessus du bouton : posée sur sa bordure supérieure, pas dessous */
       filter: drop-shadow(0 3px 5px rgba(13,71,161,0.35));
     }
     .btn-wrap.loading .btn-car { display: block; animation: btnCarRoule 2.6s linear infinite; }
