@@ -2,20 +2,22 @@
  * Relais Cloudflare Worker pour le calcul des péages.
  *
  * Contourne le blocage CORS : le navigateur appelle ce Worker, qui interroge
- * l'API côté serveur (ViaMichelin en source principale, Vinci-autoroutes en
- * second recours) et renvoie la réponse avec les en-têtes CORS.
+ * l'API côté serveur (Vinci-autoroutes en source principale, ViaMichelin en
+ * second essai) et renvoie la réponse avec les en-têtes CORS.
  *
  * Trois usages, distingués par le corps de la requête POST :
- *  - { action: 'viamichelin', ... }      -> ViaMichelin : tracé -> coûts détaillés (source principale)
- *  - { action: 'vinci-legs', polyline }   -> Vinci : tracé -> gares de péage (second recours)
+ *  - { action: 'vinci-legs', polyline }   -> Vinci : tracé -> gares de péage (source principale)
  *  - { action: 'vinci-rate', ... }        -> Vinci : gares de péage -> tarif
+ *  - { action: 'viamichelin', ... }      -> ViaMichelin : tracé -> coûts détaillés (second essai)
  *
  * Vinci-autoroutes et ViaMichelin : APIs internes non documentées,
  * reverse-engineered depuis l'onglet Réseau des sites officiels (clé Vinci
  * "Ocp-Apim-Subscription-Key" trouvée dans le JS public du site ; ViaMichelin
  * n'a pas de clé, juste un contrôle Origin/Referer usurpé ici). Peuvent
  * casser sans prévenir si le site change — ce sont des replis best-effort,
- * pas une garantie.
+ * pas une garantie. ViaMichelin bloque d'ailleurs systématiquement (403)
+ * depuis le Worker Cloudflare au 10/07/2026, probablement un blocage par IP
+ * indépendant des en-têtes — gardé en second essai au cas où ça se débloque.
  *
  * TollGuru (utilisé un temps comme dernier repli) a été retiré — le code est
  * conservé dans archive/tollguru.md au cas où on voudrait le réintégrer.
