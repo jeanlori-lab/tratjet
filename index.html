@@ -628,10 +628,10 @@
     .btn-car {
       display: none;
       position: absolute;
-      top: -30px;
+      top: -35px;
       left: 0;
-      width: 56px;
-      height: 56px;
+      width: 66px;
+      height: 66px;
       object-fit: contain;
       pointer-events: none;
       z-index: 5; /* au-dessus du bouton : posée sur sa bordure supérieure, pas dessous */
@@ -640,8 +640,8 @@
     .btn-wrap.loading .btn-car { display: block; animation: btnCarRoule 2.6s linear infinite; }
     @keyframes btnCarRoule {
       0%    { left: -10px;              transform: scaleX(1); }
-      49.9% { left: calc(100% - 46px);  transform: scaleX(1); }
-      50%   { left: calc(100% - 46px);  transform: scaleX(-1); }
+      49.9% { left: calc(100% - 56px);  transform: scaleX(1); }
+      50%   { left: calc(100% - 56px);  transform: scaleX(-1); }
       100%  { left: -10px;              transform: scaleX(-1); }
     }
     @media (prefers-reduced-motion: reduce) {
