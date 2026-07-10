@@ -621,6 +621,33 @@
     .btn:active { transform: scale(0.98); }
     .btn:disabled { background: linear-gradient(135deg, #90caf9, #78a9d1); box-shadow: none; cursor: not-allowed; }
 
+    /* Conteneur du bouton Calculer : ancre la voiture-rat qui roule
+       au-dessus, en la laissant déborder du bouton (pas de overflow:hidden
+       sur .btn lui-même, sinon elle serait rognée). */
+    .btn-wrap { position: relative; z-index: 0; }
+    .btn-car {
+      display: none;
+      position: absolute;
+      top: -35px;
+      left: 0;
+      width: 66px;
+      height: 66px;
+      object-fit: contain;
+      pointer-events: none;
+      z-index: 5; /* au-dessus du bouton : posée sur sa bordure supérieure, pas dessous */
+      filter: drop-shadow(0 3px 5px rgba(13,71,161,0.35));
+    }
+    .btn-wrap.loading .btn-car { display: block; animation: btnCarRoule 2.6s linear infinite; }
+    @keyframes btnCarRoule {
+      0%    { left: -10px;              transform: scaleX(1); }
+      49.9% { left: calc(100% - 56px);  transform: scaleX(1); }
+      50%   { left: calc(100% - 56px);  transform: scaleX(-1); }
+      100%  { left: -10px;              transform: scaleX(-1); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .btn-wrap.loading .btn-car { animation: none; left: 10px; }
+    }
+
     /* Loader */
     .loader {
       display: none;
@@ -1135,7 +1162,10 @@
     <span>Éviter les péages</span>
   </label>
 
-  <button class="btn" id="calcBtn" onclick="calculer()">Calculer le coût du trajet</button>
+  <div class="btn-wrap" id="calcBtnWrap">
+    <img src="logo rat seul.png" alt="" class="btn-car">
+    <button class="btn" id="calcBtn" onclick="calculer()">Calculer le coût du trajet</button>
+  </div>
   <div class="loader" id="loader">⏳ Calcul en cours…</div>
   <div class="error" id="error"></div>
 
@@ -1523,7 +1553,11 @@ function majUniteConso() {
 
 function showError(msg) { const e=document.getElementById('error'); e.textContent=msg; e.style.display='block'; }
 function hideError() { document.getElementById('error').style.display='none'; }
-function setLoading(on) { document.getElementById('loader').style.display=on?'block':'none'; document.getElementById('calcBtn').disabled=on; }
+function setLoading(on) {
+  document.getElementById('loader').style.display = on ? 'block' : 'none';
+  document.getElementById('calcBtn').disabled = on;
+  document.getElementById('calcBtnWrap').classList.toggle('loading', on); // fait rouler la voiture-rat au-dessus du bouton
+}
 function resetResultat() { document.getElementById('sectionResultats').style.display='none'; hideError(); }
 
 // Bascule principale : Coût carburant (trajet complet) / Station la moins
