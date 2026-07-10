@@ -65,18 +65,18 @@
     /* Carte */
     .card {
       background: #ffffff;
-      border-radius: 18px;
+      border-radius: 16px;
       padding: 20px;
       margin-bottom: 14px;
-      box-shadow: 0 6px 22px rgba(15,23,41,0.14);
+      box-shadow: 0 4px 16px rgba(15,23,41,0.07);
     }
 
     .card-title {
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.09em;
-      color: #90a4ae;
+      color: #98a6b6;
       margin-bottom: 14px;
     }
 
@@ -125,8 +125,8 @@
 
     input[type="text"], input[type="number"], select {
       width: 100%;
-      padding: 8px 11px;
-      border: 2.5px solid #1976d2;
+      padding: 9px 11px;
+      border: 1.5px solid #d5e0ee;
       border-radius: 10px;
       background: #ffffff;
       font-size: 13px;
@@ -134,12 +134,12 @@
       font-family: inherit;
       color: #0f1729;
       outline: none;
-      box-shadow: 0 2px 6px rgba(25,118,210,0.15);
+      box-shadow: none;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
     input[type="text"]:focus, input[type="number"]:focus, select:focus {
-      border-color: #0d47a1;
-      box-shadow: 0 0 0 3px rgba(25,118,210,0.2);
+      border-color: #1976d2;
+      box-shadow: 0 0 0 3px rgba(25,118,210,0.15);
     }
     select {
       appearance: none;
@@ -150,12 +150,11 @@
       background-color: #ffffff;
     }
     .section-carburant input[type="text"], .section-carburant input[type="number"], .section-carburant select {
-      border-color: #e2971a;
-      box-shadow: 0 2px 6px rgba(226,151,26,0.18);
+      border-color: #ecd6a0;
     }
     .section-carburant input[type="text"]:focus, .section-carburant input[type="number"]:focus, .section-carburant select:focus {
-      border-color: #c9760a;
-      box-shadow: 0 0 0 3px rgba(226,151,26,0.22);
+      border-color: #e2971a;
+      box-shadow: 0 0 0 3px rgba(226,151,26,0.18);
     }
 
     /* Prix moyen actuel : une ligne, alignée avec le champ Carburant */
@@ -175,16 +174,42 @@
     /* Trait séparateur entre le bloc Départ/Destination (au-dessus) et Carburant/Conso */
     /* Panneaux teintés : un pour Départ/Destination, un pour Carburant/Conso */
     .section {
-      background: #eaf3ff;
-      border: 1.5px solid #bcd9f7;
+      background: #f4f8fd;
+      border: 1px solid #e2ecf7;
       border-radius: 14px;
       padding: 4px 14px;
       margin-bottom: 12px;
     }
     .section-carburant {
-      background: #fff3d1;
-      border-color: #f0be45;
+      background: #fdf8ec;
+      border-color: #f0e2c2;
     }
+    /* Choix du carburant : 6 pastilles visibles d'un coup (pas de menu déroulant). */
+    .carb-choices {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .carb-choice {
+      padding: 8px 10px;
+      border: 1.5px solid #e2971a;
+      border-radius: 999px;
+      background: #fffaf0;
+      color: #7a5a10;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .carb-choice:hover { background: #fff1d6; }
+    .carb-choice.active {
+      background: #e2971a;
+      border-color: #e2971a;
+      color: #fff;
+    }
+    /* Bloc lieu (onglet station) : "position actuelle" à gauche, "France entière" à droite. */
+    .lieu-controls { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
     .carburant-row { padding-bottom: 26px; }
     .carburant-row .param-input { position: relative; }
     .carburant-row .prix-actuel {
@@ -408,6 +433,20 @@
       padding: 4px 0;
     }
     .link-btn:hover { text-decoration: underline; }
+    /* Le "+" d'Ajouter une étape, un peu plus visible que le texte. */
+    .plus-etape { font-size: 15px; vertical-align: -1px; }
+    /* Case "Éviter les péages" : juste au-dessus du bouton Calculer. */
+    .avoid-tolls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 2px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #455060;
+      cursor: pointer;
+    }
+    .avoid-tolls input { width: 17px; height: 17px; accent-color: #1976d2; cursor: pointer; }
     .points-wrap { position: relative; }
 
     /* Flèches d'inversion : à droite, chevauchent le coin des encadrés, discrètes */
@@ -575,7 +614,7 @@
       border-radius: 14px;
       cursor: pointer;
       letter-spacing: 0.02em;
-      box-shadow: 0 6px 18px rgba(13,71,161,0.4);
+      box-shadow: 0 6px 16px rgba(13,71,161,0.28);
       transition: opacity 0.15s, transform 0.1s;
     }
     .btn:hover { opacity: 0.92; }
@@ -1004,7 +1043,7 @@
       </div>
 
       <div class="itinerary-controls">
-        <button type="button" class="link-btn" onclick="addPoint()">+ Ajouter une étape</button>
+        <button type="button" class="link-btn" onclick="addPoint()"><span class="plus-etape">+</span> Ajouter une étape</button>
       </div>
     </div>
 
@@ -1016,14 +1055,15 @@
     <div class="param-row carburant-row">
       <div class="param-label">Carburant</div>
       <div class="param-input">
-        <select id="carburant" onchange="resetResultat(); chargerPrix(); majUniteConso();">
-          <option value="sp95">Sans plomb 95</option>
-          <option value="sp98">Sans plomb 98</option>
-          <option value="gazole">Gazole (Diesel)</option>
-          <option value="e85">Superéthanol E85</option>
-          <option value="gplc">GPLc</option>
-          <option value="electrique">Électrique</option>
-        </select>
+        <input type="hidden" id="carburant" value="sp95">
+        <div class="carb-choices" id="carbChoices">
+          <button type="button" class="carb-choice active" data-value="sp95" onclick="setCarburant('sp95', this)">SP95</button>
+          <button type="button" class="carb-choice" data-value="gazole" onclick="setCarburant('gazole', this)">Gazole</button>
+          <button type="button" class="carb-choice" data-value="sp98" onclick="setCarburant('sp98', this)">SP98</button>
+          <button type="button" class="carb-choice" data-value="gplc" onclick="setCarburant('gplc', this)">GPL</button>
+          <button type="button" class="carb-choice" data-value="e85" onclick="setCarburant('e85', this)">E85</button>
+          <button type="button" class="carb-choice" data-value="electrique" onclick="setCarburant('electrique', this)">Électrique</button>
+        </div>
         <div class="prix-actuel">Prix moyen actuel : <span id="prixAffiche">Chargement…</span></div>
       </div>
     </div>
@@ -1057,6 +1097,11 @@
     </div>
     </div>
   </div>
+
+  <label class="avoid-tolls" for="avoidTolls">
+    <input type="checkbox" id="avoidTolls" onchange="resetResultat()">
+    <span>Éviter les péages</span>
+  </label>
 
   <button class="btn" id="calcBtn" onclick="calculer()">Calculer le coût du trajet</button>
   <div class="loader" id="loader">⏳ Calcul en cours…</div>
@@ -1112,6 +1157,7 @@
     </div>
 </div>
     <div class="cheapest-note" id="cheapestNote" style="display:none;"></div>
+    <div class="cheapest-note" id="cheapestNoteTrajet" style="display:none; margin-top:14px;"></div>
   </div>
   </div>
 
@@ -1131,7 +1177,10 @@
             <button type="button" class="fav-star" title="Enregistrer en favori" onclick="toggleFavPlace(document.getElementById('stationAdresse').value, this)">☆</button>
           </div>
         </div>
-        <button type="button" class="link-btn" onclick="utiliserPositionActuelle()"> Utiliser ma position actuelle</button>
+        <div class="lieu-controls">
+          <button type="button" class="link-btn" onclick="utiliserPositionActuelle()"> Utiliser ma position actuelle</button>
+          <button type="button" class="link-btn" id="franceEntiereBtn" onclick="toggleFranceEntiere()">France entière 🇫🇷</button>
+        </div>
         <div class="prix-actuel" id="stationPosStatus"></div>
       </div>
 
@@ -1139,14 +1188,15 @@
         <div class="param-row carburant-row">
           <div class="param-label">Carburant</div>
           <div class="param-input">
-            <select id="carburantStation">
-              <option value="sp95">Sans plomb 95</option>
-              <option value="sp98">Sans plomb 98</option>
-              <option value="gazole">Gazole (Diesel)</option>
-              <option value="e85">Superéthanol E85</option>
-              <option value="gplc">GPLc</option>
-              <option value="electrique">Électrique</option>
-            </select>
+            <input type="hidden" id="carburantStation" value="sp95">
+            <div class="carb-choices" id="carbChoicesStation">
+              <button type="button" class="carb-choice active" data-value="sp95" onclick="setCarburantStation('sp95', this)">SP95</button>
+              <button type="button" class="carb-choice" data-value="gazole" onclick="setCarburantStation('gazole', this)">Gazole</button>
+              <button type="button" class="carb-choice" data-value="sp98" onclick="setCarburantStation('sp98', this)">SP98</button>
+              <button type="button" class="carb-choice" data-value="gplc" onclick="setCarburantStation('gplc', this)">GPL</button>
+              <button type="button" class="carb-choice" data-value="e85" onclick="setCarburantStation('e85', this)">E85</button>
+              <button type="button" class="carb-choice" data-value="electrique" onclick="setCarburantStation('electrique', this)">Électrique</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1401,6 +1451,23 @@ let prixActuel = null;
 const CONSO_ELECTRIQUE_DEFAUT = 17;
 const CONSO_THERMIQUE_DEFAUT = 7.5;
 let carburantTypePrecedent = null;
+// Choix du carburant par pastilles (remplace l'ancien menu déroulant) : met
+// à jour la valeur cachée + l'état visuel, puis déclenche les mêmes mises à
+// jour que l'ancien onchange du <select>.
+function setCarburant(value, btn) {
+  document.getElementById('carburant').value = value;
+  document.querySelectorAll('#carbChoices .carb-choice').forEach(b => b.classList.toggle('active', b === btn));
+  resetResultat();
+  chargerPrix();
+  majUniteConso();
+}
+function setCarburantStation(value, btn) {
+  document.getElementById('carburantStation').value = value;
+  document.querySelectorAll('#carbChoicesStation .carb-choice').forEach(b => b.classList.toggle('active', b === btn));
+  // Un changement de carburant invalide le résultat affiché.
+  document.getElementById('cheapestNoteStation').style.display = 'none';
+}
+
 function majUniteConso() {
   const type = document.getElementById('carburant').value;
   const electrique = type === 'electrique';
@@ -1878,7 +1945,11 @@ function buildStationDetail(station, type, lat, lon, big) {
     const lieu = [station.nom, station.ville].filter(Boolean).join(', ');
     if (lieu) detail.appendChild(document.createTextNode(' à ' + lieu));
   }
-  if (station.lat !== null && station.lon !== null) {
+  // Distance affichée seulement si on a un point de référence (lat/lon) ET
+  // les coordonnées de la station. (Ni la recherche "France entière" ni la
+  // recherche "sur le trajet" n'ont de point de référence unique pertinent.)
+  if (lat !== null && lat !== undefined && lon !== null && lon !== undefined
+      && station.lat !== null && station.lon !== null) {
     const dKm = distKm(lat, lon, station.lat, station.lon);
     if (isFinite(dKm)) detail.appendChild(document.createTextNode(' (' + dKm.toFixed(1) + ' km)'));
   }
@@ -1986,11 +2057,130 @@ async function rechercherStationMoinsChere() {
   cheapestNote.appendChild(radiusWrap);
 }
 
+// --- Station la moins chère SUR le trajet : parmi les stations proches de
+// la route (à vol d'oiseau, approximation de "à ~5 min en voiture"), on
+// cherche la moins chère — complète la recherche "près du départ". ---
+// ~5 min en voiture ≈ 4 km à vol d'oiseau (routes locales à ~50 km/h) : une
+// vraie isochrone par station coûterait un appel routage par candidate.
+const RAYON_TRAJET_KM = 4;
+let lastStationSurTrajet = null; // { polyline, type, depart, arrivee }
+
+async function fetchStationSurTrajet(polyline5, type) {
+  const field = (type === 'sp95') ? 'e10_prix' : CARB_FIELD[type];
+  if (!field || typeof polyline5 !== 'string') return null;
+  try {
+    const points = decodePolyline(polyline5, 5); // [[lat, lng], ...]
+    if (points.length < 2) return null;
+
+    // Échantillonne le tracé (~1 point par km) : assez fin pour mesurer la
+    // distance station->route au vol d'oiseau, sans exploser le temps de calcul.
+    const kmParDegLat = 110.57;
+    const echantillons = [points[0]];
+    let dernier = points[0];
+    for (const p of points) {
+      const dLat = (p[0] - dernier[0]) * kmParDegLat;
+      const dLng = (p[1] - dernier[1]) * 111.32 * Math.cos(p[0] * Math.PI / 180);
+      if (dLat * dLat + dLng * dLng >= 1) { echantillons.push(p); dernier = p; }
+    }
+    echantillons.push(points[points.length - 1]);
+
+    // Toutes les stations dans la boîte englobante du tracé (+ marge), en une
+    // seule recherche paginée, puis filtrage par distance à la route côté client.
+    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+    for (const [la, ln] of points) {
+      if (la < minLat) minLat = la; if (la > maxLat) maxLat = la;
+      if (ln < minLng) minLng = ln; if (ln > maxLng) maxLng = ln;
+    }
+    const margeDeg = RAYON_TRAJET_KM / 100; // ~marge du rayon en degrés
+    minLat -= margeDeg; maxLat += margeDeg; minLng -= margeDeg; maxLng += margeDeg;
+    const polygon = `(${minLat},${minLng}),(${minLat},${maxLng}),(${maxLat},${maxLng}),(${maxLat},${minLng})`;
+    const url = `https://data.economie.gouv.fr/api/records/1.0/search/?dataset=prix-des-carburants-en-france-flux-instantane-v2&geofilter.polygon=${encodeURIComponent(polygon)}`;
+    const records = await fetchAllODSRecords(url);
+    if (!records.length) return null;
+
+    let best = null;
+    for (const rec of records) {
+      const f = rec.fields || {};
+      const prix = parseFloat(f[field]);
+      if (isNaN(prix) || prix <= 0) continue;
+      const geo = rec.geometry && rec.geometry.coordinates; // [lon, lat]
+      const sLat = geo ? geo[1] : (f.latitude !== undefined ? parseFloat(f.latitude) : null);
+      const sLon = geo ? geo[0] : (f.longitude !== undefined ? parseFloat(f.longitude) : null);
+      if (sLat === null || sLon === null || isNaN(sLat) || isNaN(sLon)) continue;
+      // Élimine vite les candidates plus chères qu'une station déjà validée :
+      // pas la peine de mesurer leur distance à la route.
+      if (best && prix >= best.prix) continue;
+      const cosLat = Math.cos(sLat * Math.PI / 180);
+      let d2min = Infinity;
+      for (const [la, ln] of echantillons) {
+        const dLat = (sLat - la) * kmParDegLat;
+        const dLng = (sLon - ln) * 111.32 * cosLat;
+        const d2 = dLat * dLat + dLng * dLng;
+        if (d2 < d2min) d2min = d2;
+      }
+      const distRoute = Math.sqrt(d2min);
+      if (distRoute > RAYON_TRAJET_KM) continue;
+      best = { prix, nom: f.nom || '', ville: f.ville || '', lat: sLat, lon: sLon, distRoute };
+    }
+    return best;
+  } catch (e) { return null; }
+}
+
+async function rechercherStationSurTrajet() {
+  const note = document.getElementById('cheapestNoteTrajet');
+  // Pas de prix comparable pour l'électrique : pas de "moins chère sur le trajet".
+  if (!lastStationSurTrajet || lastStationSurTrajet.type === 'electrique') { note.style.display = 'none'; return; }
+  const { polyline, type, depart, arrivee } = lastStationSurTrajet;
+  note.classList.add('loading');
+  const station = await fetchStationSurTrajet(polyline, type);
+  note.classList.remove('loading');
+  note.textContent = '';
+  note.style.display = 'block';
+
+  const header = document.createElement('div');
+  header.className = 'cheapest-header';
+  const icon = document.createElement('span');
+  icon.className = 'cheapest-icon';
+  icon.textContent = '🐀';
+  header.appendChild(icon);
+  const title = document.createElement('span');
+  title.className = 'cheapest-title';
+  title.style.fontSize = '0.9em';
+  title.textContent = 'Station la moins chère sur le trajet';
+  header.appendChild(title);
+  note.appendChild(header);
+
+  if (station) {
+    const detail = buildStationDetail(station, type, null, null, false);
+    if (isFinite(station.distRoute)) {
+      detail.appendChild(document.createTextNode(' (à ' + station.distRoute.toFixed(1) + ' km de la route)'));
+    }
+    note.appendChild(detail);
+
+    note.appendChild(buildStationMap(station.lat, station.lon));
+
+    const link = document.createElement('a');
+    link.className = 'cheapest-link';
+    const origin = encodeURIComponent(depart);
+    const destination = encodeURIComponent(arrivee);
+    link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}&waypoints=${station.lat},${station.lon}`;
+    link.target = '_blank';
+    link.textContent = '📍 Ajouter cette station à mon trajet';
+    note.appendChild(link);
+  } else {
+    const empty = document.createElement('div');
+    empty.className = 'cheapest-empty';
+    empty.textContent = 'Aucune station trouvée à moins de ~5 min de la route.';
+    note.appendChild(empty);
+  }
+}
+
 // --- Station la moins chère près de chez moi, recherche indépendante d'un
 // trajet (onglet dédié) : même logique de recherche/curseur que ci-dessus,
 // mais son propre état et ses propres éléments (IDs distincts). ---
 let stationGeoCoords = null; // [lon, lat] fixé par géolocalisation, invalidé dès que l'adresse est modifiée à la main
 let lastStationSearchStandalone = null; // { lat, lon, type, rayon, mode: 'min'|'max' }
+let stationFranceEntiere = false; // mode "France entière" : pas de lieu, recherche sur tout le pays
 
 function onStationAdresseInput(el) {
   stationGeoCoords = null;
@@ -1999,6 +2189,27 @@ function onStationAdresseInput(el) {
   if (el.value.trim().length === 0) showFavoritesIfEmpty(el);
   else onAutoComplete(el);
   syncStarForInput(el);
+}
+
+// Bascule "France entière" : fige le champ lieu (non modifiable) et recherche
+// sur tout le pays ; le bouton devient "Choisir le lieu" pour revenir au mode
+// normal (champ vidé et rendu modifiable).
+function toggleFranceEntiere() {
+  const input = document.getElementById('stationAdresse');
+  const btn = document.getElementById('franceEntiereBtn');
+  stationFranceEntiere = !stationFranceEntiere;
+  document.getElementById('cheapestNoteStation').style.display = 'none';
+  hideStationError();
+  if (stationFranceEntiere) {
+    stationGeoCoords = null;
+    input.value = 'France entière 🇫🇷';
+    input.readOnly = true;
+    btn.textContent = 'Choisir le lieu 📍';
+  } else {
+    input.value = '';
+    input.readOnly = false;
+    btn.textContent = 'France entière 🇫🇷';
+  }
 }
 
 function utiliserPositionActuelle() {
@@ -2027,11 +2238,21 @@ async function rechercherStationStandalone() {
   const adresse = document.getElementById('stationAdresse').value.trim();
   const type = document.getElementById('carburantStation').value;
 
-  if (!stationGeoCoords && !adresse) return showStationError('⚠️ Indiquez votre adresse ou utilisez votre position actuelle.');
-
   setStationLoading(true);
   document.getElementById('cheapestNoteStation').style.display = 'none';
   try {
+    if (stationFranceEntiere) {
+      // Les bornes électriques n'ont pas de prix comparable : chercher "la
+      // moins chère de France" n'a pas de sens, et la plus proche nécessite
+      // un lieu.
+      if (type === 'electrique') { showStationError('⚠️ La recherche France entière ne fonctionne pas pour l\'électrique (on cherche la borne la plus proche d\'un lieu).'); return; }
+      // France entière : pas de lieu, rayon illimité. lat/lon à null : le
+      // filtre géographique est ignoré et la distance n'est pas affichée.
+      lastStationSearchStandalone = { lat: null, lon: null, type, rayon: STATION_RAYON_ILLIMITE, mode: 'min' };
+      await afficherStationStandalone();
+      return;
+    }
+    if (!stationGeoCoords && !adresse) { showStationError('⚠️ Indiquez votre adresse ou utilisez votre position actuelle.'); return; }
     const coords = stationGeoCoords || await geocode(adresse);
     lastStationSearchStandalone = { lat: coords[1], lon: coords[0], type, rayon: STATION_RAYON_KM, mode: 'min' };
     await afficherStationStandalone();
@@ -2115,15 +2336,27 @@ async function afficherStationStandalone() {
       backRow.appendChild(modeBtn);
     }
 
-    const backBtn = document.createElement('button');
-    backBtn.type = 'button';
-    backBtn.className = 'cheapest-nolimit-btn';
-    backBtn.textContent = 'Revenir à un rayon limité';
-    backBtn.onclick = () => {
-      lastStationSearchStandalone.rayon = lastStationSearchStandalone.rayonAvantIllimite || STATION_RAYON_KM;
-      afficherStationStandalone();
-    };
-    backRow.appendChild(backBtn);
+    // En mode "France entière" (pas de lieu), impossible de revenir à un
+    // rayon limité sans adresse : le bouton rebascule le champ lieu en mode
+    // normal et cache le résultat, à l'utilisateur de saisir une adresse.
+    if (stationFranceEntiere) {
+      const backBtn = document.createElement('button');
+      backBtn.type = 'button';
+      backBtn.className = 'cheapest-nolimit-btn';
+      backBtn.textContent = 'Choisir un lieu 📍';
+      backBtn.onclick = () => { toggleFranceEntiere(); };
+      backRow.appendChild(backBtn);
+    } else {
+      const backBtn = document.createElement('button');
+      backBtn.type = 'button';
+      backBtn.className = 'cheapest-nolimit-btn';
+      backBtn.textContent = 'Revenir à un rayon limité';
+      backBtn.onclick = () => {
+        lastStationSearchStandalone.rayon = lastStationSearchStandalone.rayonAvantIllimite || STATION_RAYON_KM;
+        afficherStationStandalone();
+      };
+      backRow.appendChild(backBtn);
+    }
 
     cheapestNote.appendChild(backRow);
     return;
@@ -2421,20 +2654,26 @@ async function geocode(lieu) {
   return [f.lng, f.lat];
 }
 
-async function getRoute(coords, apiKey) {
+async function getRoute(coords, apiKey, avoidTolls) {
   // coords : tableau de points [lng, lat] (départ, étapes…, destination).
   // radiuses: -1 = rayon illimité pour raccrocher chaque point à la route la
   // plus proche. Sans ça, ORS échoue (404) si le point géocodé est à plus de
   // ~350 m d'une route carrossable (centre piéton, village, montagne…).
+  // avoidTolls : demande à ORS un itinéraire sans autoroutes à péage
+  // (avoid_features: tollways).
+  const body = { coordinates: coords, geometry: true, radiuses: coords.map(() => -1) };
+  if (avoidTolls) body.options = { avoid_features: ['tollways'] };
   const r = await fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
     method: 'POST',
     headers: { 'Authorization': apiKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ coordinates: coords, geometry: true, radiuses: coords.map(() => -1) })
+    body: JSON.stringify(body)
   });
   if (!r.ok) {
     let msg = 'Erreur itinéraire (code ' + r.status + ')';
     if (r.status === 403) msg = 'Clé API invalide ou quota dépassé';
-    if (r.status === 404) msg = 'Itinéraire introuvable, essayez de préciser l\'adresse';
+    if (r.status === 404) msg = avoidTolls
+      ? 'Aucun itinéraire sans péage trouvé pour ce trajet.'
+      : 'Itinéraire introuvable, essayez de préciser l\'adresse';
     if (r.status === 400) msg = 'Itinéraire introuvable, essayez de préciser l\'adresse';
     throw new Error(msg);
   }
@@ -2782,11 +3021,13 @@ async function calculer() {
   setLoading(true);
   document.getElementById('sectionResultats').style.display = 'none';
 
+  const avoidTolls = document.getElementById('avoidTolls').checked;
+
   try {
     // Géocode tous les points dans l'ordre : départ, étapes…, destination.
     const coords = await Promise.all(lieux.map(l => geocode(l)));
     const c1 = coords[0], c2 = coords[coords.length - 1];
-    const route = await getRoute(coords, apiKey);
+    const route = await getRoute(coords, apiKey, avoidTolls);
     // ORS renvoie déjà la distance/durée totale cumulée sur tous les tronçons.
     const distA   = route.distanceKm;
     const litresA = (distA * conso) / 100;
@@ -2794,15 +3035,17 @@ async function calculer() {
     const passagers = passagersValeur();
     const unit = document.getElementById('carburant').value === 'electrique' ? 'kWh' : 'L';
     // Péages (best-effort, Vinci puis ViaMichelin) : n'importe quel échec
-    // laisse simplement le total au seul carburant.
-    const peage = await getTolls(route, c1, c2, depart, arrivee);
+    // laisse simplement le total au seul carburant. Itinéraire "sans péage" :
+    // par construction 0 €, on n'interroge pas les API.
+    const peage = avoidTolls ? { cost: 0, details: null } : await getTolls(route, c1, c2, depart, arrivee);
 
     // Lien Vinci calculé avant l'affichage des résultats : la pastille
     // péages s'en sert comme lien de secours quand le calcul est indisponible.
     // Le calculateur de péages Vinci ne gère qu'un trajet direct départ→arrivée :
-    // pas de lien dès qu'il y a au moins une étape intermédiaire.
+    // pas de lien dès qu'il y a au moins une étape intermédiaire. Inutile en
+    // mode sans péage.
     let vinciUrl = null;
-    if (lieux.length <= 2) {
+    if (!avoidTolls && lieux.length <= 2) {
       const startObj = JSON.stringify({place: depart, lat: c1[1], lng: c1[0]});
       const endObj = JSON.stringify({place: arrivee, lat: c2[1], lng: c2[0]});
       vinciUrl = `https://www.vinci-autoroutes.com/fr/mon-trajet/?area=service&filter-status=0&start=${encodeURIComponent(startObj)}&end=${encodeURIComponent(endObj)}`;
@@ -2822,6 +3065,7 @@ async function calculer() {
     const waypoints = lieux.slice(1, -1).map(l => encodeURIComponent(l)).join('|');
     let mapsUrl = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}`;
     if (waypoints) mapsUrl += `&waypoints=${waypoints}`;
+    if (avoidTolls) mapsUrl += `&avoid=tolls`;
     document.getElementById('mapsLink').href = mapsUrl;
     // Waze navigue toujours depuis la position GPS actuelle de l'appareil (il
     // n'accepte pas de point de départ personnalisé) : seule la destination compte.
@@ -2830,7 +3074,8 @@ async function calculer() {
     // Station la moins chère à proximité du départ (best-effort, ne bloque rien).
     const carburantType = document.getElementById('carburant').value;
     lastStationSearch = { lat: c1[1], lon: c1[0], type: carburantType, rayon: STATION_RAYON_KM, depart, arrivee };
-    await rechercherStationMoinsChere();
+    lastStationSurTrajet = { polyline: route.polyline, type: carburantType, depart, arrivee };
+    await Promise.all([rechercherStationMoinsChere(), rechercherStationSurTrajet()]);
 
     document.getElementById('sectionResultats').style.display = 'block';
     document.getElementById('sectionResultats').scrollIntoView({ behavior: 'smooth', block: 'nearest' });

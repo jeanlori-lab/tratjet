@@ -1,0 +1,85 @@
+From 38b0035b6529205fc7bdd030c4e10bfd3648a9dd Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 10 Jul 2026 15:56:00 +0000
+Subject: [PATCH] Voiture-rat qui roule sur le bouton Calculer pendant le
+ chargement
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Pendant le calcul du trajet, le logo voiture-rat traverse le bouton
+"Calculer le coût du trajet" en boucle (aller vers la droite, retour en
+miroir) jusqu'à ce que la recherche aboutisse. Animation coupée si
+l'utilisateur préfère réduire les animations (prefers-reduced-motion).
+---
+ index.html | 33 +++++++++++++++++++++++++++++++--
+ 1 file changed, 31 insertions(+), 2 deletions(-)
+
+diff --git a/index.html b/index.html
+index f6c2fa9..5b4c7e9 100644
+--- a/index.html
++++ b/index.html
+@@ -565,6 +565,8 @@
+ 
+     /* Bouton */
+     .btn {
++      position: relative; /* ancre la voiture-rat qui roule pendant le calcul */
++      overflow: hidden;
+       width: 100%;
+       padding: 13px;
+       background: linear-gradient(135deg, #2196f3, #0d47a1);
+@@ -581,6 +583,28 @@
+     .btn:hover { opacity: 0.92; }
+     .btn:active { transform: scale(0.98); }
+     .btn:disabled { background: linear-gradient(135deg, #90caf9, #78a9d1); box-shadow: none; cursor: not-allowed; }
++    /* Voiture-rat qui traverse le bouton pendant le calcul : aller vers la
++       droite, puis retour en miroir, en boucle tant que ça charge. */
++    .btn .btn-car {
++      display: none;
++      position: absolute;
++      top: 50%;
++      left: 0;
++      width: 34px;
++      height: 34px;
++      object-fit: contain;
++      pointer-events: none;
++    }
++    .btn.loading .btn-car { display: block; animation: btnCarRoule 2.6s linear infinite; }
++    @keyframes btnCarRoule {
++      0%    { left: -38px;              transform: translateY(-50%) scaleX(1); }
++      49.9% { left: calc(100% + 4px);   transform: translateY(-50%) scaleX(1); }
++      50%   { left: calc(100% + 4px);   transform: translateY(-50%) scaleX(-1); }
++      100%  { left: -38px;              transform: translateY(-50%) scaleX(-1); }
++    }
++    @media (prefers-reduced-motion: reduce) {
++      .btn.loading .btn-car { animation: none; left: 10px; transform: translateY(-50%); }
++    }
+ 
+     /* Loader */
+     .loader {
+@@ -1058,7 +1082,7 @@
+     </div>
+   </div>
+ 
+-  <button class="btn" id="calcBtn" onclick="calculer()">Calculer le coût du trajet</button>
++  <button class="btn" id="calcBtn" onclick="calculer()">Calculer le coût du trajet<img src="logo trajet rat.png" alt="" class="btn-car"></button>
+   <div class="loader" id="loader">⏳ Calcul en cours…</div>
+   <div class="error" id="error"></div>
+ 
+@@ -1422,7 +1446,12 @@ function majUniteConso() {
+ 
+ function showError(msg) { const e=document.getElementById('error'); e.textContent=msg; e.style.display='block'; }
+ function hideError() { document.getElementById('error').style.display='none'; }
+-function setLoading(on) { document.getElementById('loader').style.display=on?'block':'none'; document.getElementById('calcBtn').disabled=on; }
++function setLoading(on) {
++  document.getElementById('loader').style.display = on ? 'block' : 'none';
++  const btn = document.getElementById('calcBtn');
++  btn.disabled = on;
++  btn.classList.toggle('loading', on); // fait rouler la voiture-rat sur le bouton
++}
+ function resetResultat() { document.getElementById('sectionResultats').style.display='none'; hideError(); }
+ 
+ // Bascule principale : Coût carburant (trajet complet) / Station la moins
+-- 
+2.43.0
+
