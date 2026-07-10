@@ -1049,7 +1049,7 @@
          trajet et au résultat. -->
     <div class="section section-carburant">
     <button type="button" class="vehicule-resume" id="vehiculeResume" style="display:none;" onclick="setVehiculeOuvert(true)">
-      <span id="vehiculeResumeText">SP95 · 7,5 L/100 km · 1 pers.</span>
+      <span id="vehiculeResumeText">⛽ SP95 · 7,5 L/100 km · 👤 1 pers.</span>
       <span class="vehicule-resume-edit">Modifier</span>
     </button>
     <div id="vehiculeDetails">
@@ -1782,9 +1782,9 @@ function majVehiculeResume() {
   const electrique = type === 'electrique';
   const txt = document.getElementById('vehiculeResumeText');
   if (txt) {
-    txt.textContent = (CARBURANT_COURT[type] || type)
+    txt.textContent = (electrique ? '🔌 ' : '⛽ ') + (CARBURANT_COURT[type] || type)
       + ' · ' + consoValeur().toFixed(1).replace('.', ',') + ' ' + (electrique ? 'kWh' : 'L') + '/100 km'
-      + ' · ' + passagersValeur() + ' pers.';
+      + ' · 👤 ' + passagersValeur() + ' pers.';
   }
   try {
     localStorage.setItem(VEHICULE_KEY, JSON.stringify({
@@ -2586,9 +2586,12 @@ function encodePolyline(coords, precision) {
   return out;
 }
 
-// Péages : ViaMichelin en source principale (détail par gare nommée, ex.
-// "Restigné"), Vinci en second recours (détail par tronçon numéroté
-// seulement, "Tronçon N") si ViaMichelin échoue.
+// Péages : Vinci-autoroutes en source principale (détail par tronçon
+// numéroté seulement, "Tronçon N"), ViaMichelin en second essai (détail par
+// gare nommée, ex. "Restigné") si Vinci échoue — mais ViaMichelin bloque
+// systématiquement les requêtes depuis le Worker Cloudflare (403, probable
+// blocage anti-bot par IP) depuis le 10/07/2026 : on le garde en second
+// essai best-effort au cas où ça se débloque, sans compter dessus.
 // Renvoie { cost: <€>, details: [{label, price}]|null } ou null si échec total.
 async function getTolls(route, c1, c2, depart, arrivee) {
   const polyline = route && typeof route.polyline === 'string' ? route.polyline : null;
@@ -2605,8 +2608,8 @@ async function getTolls(route, c1, c2, depart, arrivee) {
     if (typeof cached === 'number') return { cost: cached, details: null };
   }
 
-  let result = await getTollsViaMichelin(c1, c2, depart, arrivee);
-  if (!result) result = await getTollsVinci(route);
+  let result = await getTollsVinci(route);
+  if (!result) result = await getTollsViaMichelin(c1, c2, depart, arrivee);
 
   // On ne met en cache qu'un coût valide (jamais un échec/N/A).
   if (cacheKey && result && typeof result.cost === 'number') tollCacheSet(cacheKey, result);
@@ -2850,7 +2853,7 @@ async function calculer() {
     const coutA   = litresA * prixActuel;
     const passagers = passagersValeur();
     const unit = document.getElementById('carburant').value === 'electrique' ? 'kWh' : 'L';
-    // Péages (best-effort, ViaMichelin puis Vinci) : n'importe quel échec
+    // Péages (best-effort, Vinci puis ViaMichelin) : n'importe quel échec
     // laisse simplement le total au seul carburant.
     const peage = await getTolls(route, c1, c2, depart, arrivee);
 

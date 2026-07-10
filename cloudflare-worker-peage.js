@@ -2,20 +2,22 @@
  * Relais Cloudflare Worker pour le calcul des péages.
  *
  * Contourne le blocage CORS : le navigateur appelle ce Worker, qui interroge
- * l'API côté serveur (ViaMichelin en source principale, Vinci-autoroutes en
- * second recours) et renvoie la réponse avec les en-têtes CORS.
+ * l'API côté serveur (Vinci-autoroutes en source principale, ViaMichelin en
+ * second essai) et renvoie la réponse avec les en-têtes CORS.
  *
  * Trois usages, distingués par le corps de la requête POST :
- *  - { action: 'viamichelin', ... }      -> ViaMichelin : tracé -> coûts détaillés (source principale)
- *  - { action: 'vinci-legs', polyline }   -> Vinci : tracé -> gares de péage (second recours)
+ *  - { action: 'vinci-legs', polyline }   -> Vinci : tracé -> gares de péage (source principale)
  *  - { action: 'vinci-rate', ... }        -> Vinci : gares de péage -> tarif
+ *  - { action: 'viamichelin', ... }      -> ViaMichelin : tracé -> coûts détaillés (second essai)
  *
  * Vinci-autoroutes et ViaMichelin : APIs internes non documentées,
  * reverse-engineered depuis l'onglet Réseau des sites officiels (clé Vinci
  * "Ocp-Apim-Subscription-Key" trouvée dans le JS public du site ; ViaMichelin
  * n'a pas de clé, juste un contrôle Origin/Referer usurpé ici). Peuvent
  * casser sans prévenir si le site change — ce sont des replis best-effort,
- * pas une garantie.
+ * pas une garantie. ViaMichelin bloque d'ailleurs systématiquement (403)
+ * depuis le Worker Cloudflare au 10/07/2026, probablement un blocage par IP
+ * indépendant des en-têtes — gardé en second essai au cas où ça se débloque.
  *
  * TollGuru (utilisé un temps comme dernier repli) a été retiré — le code est
  * conservé dans archive/tollguru.md au cas où on voudrait le réintégrer.
@@ -136,9 +138,18 @@ async function handleViaMichelin(body, env) {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/graphql+json, application/json',
+        'Accept-Language': 'fr-FR,fr;q=0.9',
         'Origin': 'https://www.viamichelin.fr',
         'Referer': 'https://www.viamichelin.fr/',
         'platform': 'WEB_TABLET',
+        'language': 'fr-FR',
+        'sec-ch-ua': '"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'cross-site',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
       },
       body: JSON.stringify({
         operationName: 'SearchItinerary',
@@ -162,7 +173,10 @@ async function handleViaMichelin(body, env) {
         },
       }),
     });
-    if (!r.ok) return json({ cost: null, status: r.status }, 200);
+    if (!r.ok) {
+      const text = await r.text().catch(() => '');
+      return json({ cost: null, status: r.status, body: text.slice(0, 250) }, 200);
+    }
     const data = await r.json();
     return json(data, 200);
   } catch (e) {
