@@ -136,9 +136,18 @@ async function handleViaMichelin(body, env) {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/graphql+json, application/json',
+        'Accept-Language': 'fr-FR,fr;q=0.9',
         'Origin': 'https://www.viamichelin.fr',
         'Referer': 'https://www.viamichelin.fr/',
         'platform': 'WEB_TABLET',
+        'language': 'fr-FR',
+        'sec-ch-ua': '"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'cross-site',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
       },
       body: JSON.stringify({
         operationName: 'SearchItinerary',
@@ -162,7 +171,10 @@ async function handleViaMichelin(body, env) {
         },
       }),
     });
-    if (!r.ok) return json({ cost: null, status: r.status }, 200);
+    if (!r.ok) {
+      const text = await r.text().catch(() => '');
+      return json({ cost: null, status: r.status, body: text.slice(0, 250) }, 200);
+    }
     const data = await r.json();
     return json(data, 200);
   } catch (e) {
