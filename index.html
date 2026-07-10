@@ -2555,19 +2555,44 @@ async function getTollsVinci(route) {
     if (!Array.isArray(legs) || legs.length < 2) return null;
 
     const gates = legs
-      .map(l => l && l.Placemark && l.Placemark.Tags && l.Placemark.Tags.ID_PEAGE)
-      .filter(code => typeof code === 'string' && code.length > 2);
+      .map(l => {
+        const tags = l && l.Placemark && l.Placemark.Tags;
+        const code = tags && tags.ID_PEAGE;
+        if (typeof code !== 'string' || code.length <= 2) return null;
+        // L'abscisse (distance en mètres depuis le départ du tracé) sert à
+        // estimer l'heure réelle de passage à CETTE gare précise, plutôt que
+        // de caler toutes les gares intermédiaires sur l'heure d'arrivée
+        // (voir plus bas) — le nom du champ n'étant pas garanti stable côté
+        // Vinci, on essaie plusieurs variantes et on se rabat sur null si
+        // aucune n'est présente.
+        const absBrute = tags.StartAbscissa ?? tags.startAbscissa ?? tags.START_ABSCISSA;
+        const abscissa = parseFloat(absBrute);
+        return { code, abscissa: isNaN(abscissa) ? null : abscissa };
+      })
+      .filter(Boolean);
     if (gates.length < 2) return null;
 
-    // Dates de passage estimées (entrée = maintenant, sortie = maintenant +
-    // durée du trajet) : on n'a pas reproduit le calcul exact d'Vinci reliant
-    // l'abscisse le long du tracé à une heure de passage.
+    // Dates de passage estimées. Vinci calcule le tarif selon l'heure réelle
+    // de passage à CHAQUE gare (certains tarifs varient jour/nuit, heures
+    // pleines/creuses) : on interpole donc la date de chaque gare selon sa
+    // position sur le trajet (abscisse / distance totale), au lieu de tout
+    // caler sur l'heure d'arrivée pour les gares après la première — ce qui
+    // donnait une heure de passage fausse dès qu'il y avait plus de 2 gares.
+    // Repli : si l'abscisse manque, interpolation linéaire par index (mieux
+    // répartie que "tout à l'arrivée", même si moins précise).
     const now = Date.now();
     const durationMs = (route.dureeSec || 0) * 1000;
-    const tollPassages = gates.map((code, i) => ({
-      toll: { operatorId: code.slice(0, 2), tollId: code.slice(2) },
-      passageDate: new Date(i === 0 ? now : now + durationMs).toISOString(),
-    }));
+    const totalDistanceM = (route.distanceKm || 0) * 1000;
+    const abscissesDisponibles = totalDistanceM > 0 && gates.every(g => typeof g.abscissa === 'number');
+    const tollPassages = gates.map((g, i) => {
+      const ratio = abscissesDisponibles
+        ? Math.min(1, Math.max(0, g.abscissa / totalDistanceM))
+        : (gates.length > 1 ? i / (gates.length - 1) : 0);
+      return {
+        toll: { operatorId: g.code.slice(0, 2), tollId: g.code.slice(2) },
+        passageDate: new Date(now + ratio * durationMs).toISOString(),
+      };
+    });
 
     const rateResp = await fetch(TOLL_PROXY_URL, {
       method: 'POST',
