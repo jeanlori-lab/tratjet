@@ -2,25 +2,27 @@
  * Relais Cloudflare Worker pour le calcul des péages.
  *
  * Contourne le blocage CORS : le navigateur appelle ce Worker, qui interroge
- * l'API côté serveur (TollGuru, ou Vinci-autoroutes en secours) et renvoie
- * la réponse avec les en-têtes CORS.
+ * l'API côté serveur (TollGuru, ou Vinci-autoroutes / ViaMichelin en secours)
+ * et renvoie la réponse avec les en-têtes CORS.
  *
- * Trois usages, distingués par le corps de la requête POST :
- *  - { from, to, vehicleType }         -> TollGuru (source principale)
- *  - { action: 'vinci-legs', polyline } -> Vinci : tracé -> gares de péage
- *  - { action: 'vinci-rate', ... }      -> Vinci : gares de péage -> tarif
+ * Quatre usages, distingués par le corps de la requête POST :
+ *  - { from, to, vehicleType }           -> TollGuru (dernier repli)
+ *  - { action: 'vinci-legs', polyline }   -> Vinci : tracé -> gares de péage
+ *  - { action: 'vinci-rate', ... }        -> Vinci : gares de péage -> tarif
+ *  - { action: 'viamichelin', ... }        -> ViaMichelin : tracé -> coûts détaillés
  *
  * TollGuru : endpoint v2 "origin-destination-waypoints" (le seul auquel la
  * clé a accès — l'endpoint polyline renvoie 403 "TollTally").
  * Réponse renvoyée au site pour TollGuru : { "cost": <nombre €>|null, ... }
  * ⚠️ Plan gratuit TollGuru = 15 calculs/jour. Au-delà : 403 "exceeded daily
- *    quota". Le site met les trajets en cache pour économiser ce quota, et
- *    bascule automatiquement sur Vinci si TollGuru échoue.
+ *    quota". Le site met les trajets en cache pour économiser ce quota.
  *
- * Vinci-autoroutes : API interne non documentée (clé "Ocp-Apim-Subscription-
- * Key" trouvée dans le JS public du site), reverse-engineered depuis l'onglet
- * Réseau du site officiel. Peut casser sans prévenir si Vinci la modifie —
- * c'est un repli best-effort, pas une garantie.
+ * Vinci-autoroutes et ViaMichelin : APIs internes non documentées,
+ * reverse-engineered depuis l'onglet Réseau des sites officiels (clé Vinci
+ * "Ocp-Apim-Subscription-Key" trouvée dans le JS public du site ; ViaMichelin
+ * n'a pas de clé, juste un contrôle Origin/Referer usurpé ici). Peuvent
+ * casser sans prévenir si le site change — ce sont des replis best-effort,
+ * pas une garantie.
  *
  * Déploiement : Cloudflare → Workers & Pages → ton Worker → Edit code →
  *   coller TOUT ce fichier → Deploy.
@@ -46,6 +48,7 @@ export default {
 
     if (body && body.action === 'vinci-legs') return handleVinciLegs(body, env);
     if (body && body.action === 'vinci-rate') return handleVinciRate(body, env);
+    if (body && body.action === 'viamichelin') return handleViaMichelin(body, env);
     return handleTollGuru(body, env);
   },
 };
@@ -150,6 +153,76 @@ async function handleVinciRate(body, env) {
     return json(data, 200);
   } catch (e) {
     return json([], 200);
+  }
+}
+
+// --- ViaMichelin (repli, cf. commentaire d'en-tête) ---
+// GraphQL public (bff.viamichelin.com), pas de clé : juste Origin/Referer
+// usurpés ici pour passer le contrôle CORS/anti-bot basique du site.
+// carId fixe (Renault Clio V essence) : les péages dépendent de la catégorie
+// du véhicule (léger), pas du modèle exact, donc une voiture "standard"
+// suffit — Tratjet ne s'en sert que pour le tarif péages, jamais pour le
+// carburant (déjà calculé par Tratjet lui-même avec la conso réelle saisie).
+const VIAMICHELIN_CAR_ID = '29074';
+const VIAMICHELIN_QUERY = `query SearchItinerary($input: SearchItineraryInput!) {
+  searchItinerary(input: $input) {
+    ... on SearchItinerarySuccessResult {
+      __typename
+      routes {
+        costs {
+          fuel { amount currency }
+          tolls { amount currency }
+          vignette { amount currency }
+        }
+        totalCost { amount currency }
+        tolls { name cost { amount currency } }
+      }
+    }
+    ... on SearchItineraryNotFoundResult { message }
+    __typename
+  }
+}`;
+
+async function handleViaMichelin(body, env) {
+  const { coordinates, departureName, arrivalName, energyCost } = body || {};
+  if (!Array.isArray(coordinates) || coordinates.length < 2) return json({ cost: null, error: 'missing coordinates' }, 200);
+  try {
+    const r = await fetch('https://bff.viamichelin.com/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/graphql+json, application/json',
+        'Origin': 'https://www.viamichelin.fr',
+        'Referer': 'https://www.viamichelin.fr/',
+        'platform': 'WEB_TABLET',
+      },
+      body: JSON.stringify({
+        operationName: 'SearchItinerary',
+        query: VIAMICHELIN_QUERY,
+        variables: {
+          input: {
+            coordinates,
+            departureName: departureName || '',
+            arrivalName: arrivalName || '',
+            carId: VIAMICHELIN_CAR_ID,
+            constraint: 'NONE',
+            distanceSystem: 'METRIC',
+            mode: 'CAR',
+            device: 'DESKTOP',
+            energyCost: typeof energyCost === 'number' ? energyCost : 1.9,
+            currency: 'eur',
+            rechargeTreshold: 20,
+            traffic: 'CLOSINGS',
+            temperatureMode: 'summer',
+          },
+        },
+      }),
+    });
+    if (!r.ok) return json({ cost: null, status: r.status }, 200);
+    const data = await r.json();
+    return json(data, 200);
+  } catch (e) {
+    return json({ cost: null, error: String(e) }, 200);
   }
 }
 
