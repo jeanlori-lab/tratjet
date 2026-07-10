@@ -981,6 +981,10 @@
       transition: background 0.15s;
     }
     .cheapest-link:hover { background: #bbdefb; }
+    .cheapest-btn-row:has(.cheapest-link + .cheapest-link) .cheapest-link {
+      flex: 1 1 0;
+      justify-content: center;
+    }
     .cheapest-empty { font-size: 12.5px; color: #90a4ae; font-style: italic; }
     .cheapest-note.loading { opacity: 0.6; }
     .cheapest-radius {
@@ -2101,7 +2105,7 @@ async function rechercherStationMoinsChere() {
       const linkIcon = document.createElement('img');
       linkIcon.src = 'logo fleche maps.png';
       linkIcon.alt = '';
-      linkIcon.style.cssText = 'width:14px;height:14px;object-fit:contain;';
+      linkIcon.style.cssText = 'width:14px;height:14px;object-fit:contain;margin-top:-2px;';
       linkDirect.appendChild(linkIcon);
       linkDirect.appendChild(document.createTextNode(electrique ? 'Itinéraire vers cette borne' : 'Itinéraire vers cette station'));
       btnRow.appendChild(linkDirect);
@@ -2405,7 +2409,7 @@ async function afficherStationStandalone() {
       const linkIcon = document.createElement('img');
       linkIcon.src = 'logo fleche maps.png';
       linkIcon.alt = '';
-      linkIcon.style.cssText = 'width:14px;height:14px;object-fit:contain;';
+      linkIcon.style.cssText = 'width:14px;height:14px;object-fit:contain;margin-top:-2px;';
       link.appendChild(linkIcon);
       link.appendChild(document.createTextNode(electrique ? 'Itinéraire vers cette borne' : 'Itinéraire vers cette station'));
       cheapestNote.appendChild(link);
