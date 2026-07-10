@@ -789,12 +789,19 @@
        encadrés station la moins chère (résultat de trajet). Classes
        dédiées (pas .ar-toggle-btn) pour rester indépendantes de la
        bascule Aller simple/Aller-retour. */
+    .station-section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #455060;
+      margin-top: 26px;
+      margin-bottom: 8px;
+    }
     .station-tabs {
       display: flex;
       background: #eef2f6;
       border-radius: 999px;
       padding: 3px;
-      margin-top: 14px;
+      margin-top: 0;
       margin-bottom: 10px;
     }
     .station-tab-btn {
@@ -1222,6 +1229,7 @@
       </a>
     </div>
 </div>
+    <div class="station-section-title" id="stationSectionTitle" style="display:none;">Où faire le plein</div>
     <div class="station-tabs" id="stationTabs" style="display:none;">
       <button type="button" class="station-tab-btn active" data-tab="depart" onclick="setStationTab('depart')">Près du départ</button>
       <button type="button" class="station-tab-btn" data-tab="trajet" onclick="setStationTab('trajet')">Sur le trajet</button>
@@ -2050,6 +2058,7 @@ function applyStationTabVisibility() {
   if (noteTrajet.dataset.ready === '1') noteTrajet.style.display = currentStationTab === 'trajet' ? 'block' : 'none';
   if (noteDepart.dataset.ready === '1' || noteTrajet.dataset.ready === '1') {
     document.getElementById('stationTabs').style.display = 'flex';
+    document.getElementById('stationSectionTitle').style.display = 'block';
   }
 }
 
