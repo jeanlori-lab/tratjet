@@ -210,7 +210,9 @@
     }
     .vehicule-resume:hover .vehicule-resume-edit { text-decoration: underline; }
     /* "C'est bon ✓" : en haut à droite du bloc déplié. */
-    .vehicule-replier-wrap { display: flex; justify-content: flex-end; padding: 6px 0 0; }
+    /* Marge basse négative : rapproche la ligne Carburant du bouton (le bouton
+       est à droite, le libellé à gauche — pas de chevauchement possible). */
+    .vehicule-replier-wrap { display: flex; justify-content: flex-end; padding: 4px 0 0; margin-bottom: -14px; }
     .vehicule-replier {
       background: none;
       border: none;
