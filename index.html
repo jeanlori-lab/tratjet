@@ -2650,10 +2650,10 @@ function encodePolyline(coords, precision) {
   return out;
 }
 
-// Péages : Vinci-autoroutes en source principale (gratuit, sans quota, et
-// fournit le détail par tronçon), ViaMichelin en second recours (détail par
-// gare nommée), TollGuru en dernier repli si les deux précédents échouent.
-// Renvoie { cost: <€>, details: [{label, price}]|null } ou null si échec total.
+// Péages : ViaMichelin en source principale (détail par gare nommée, ex.
+// "Restigné"), Vinci en second recours (détail par tronçon numéroté
+// seulement, "Tronçon N"), TollGuru en dernier repli si les deux précédents
+// échouent. Renvoie { cost: <€>, details: [{label, price}]|null } ou null.
 async function getTolls(route, c1, c2, depart, arrivee) {
   const polyline = route && typeof route.polyline === 'string' ? route.polyline : null;
   if (!polyline || !TOLL_PROXY_URL) return null;
@@ -2669,8 +2669,8 @@ async function getTolls(route, c1, c2, depart, arrivee) {
     if (typeof cached === 'number') return { cost: cached, details: null };
   }
 
-  let result = await getTollsVinci(route);
-  if (!result) result = await getTollsViaMichelin(c1, c2, depart, arrivee);
+  let result = await getTollsViaMichelin(c1, c2, depart, arrivee);
+  if (!result) result = await getTollsVinci(route);
   if (!result) {
     const cost = await getTollsGuru(polyline, c1, c2);
     if (typeof cost === 'number') result = { cost, details: null };
@@ -2965,7 +2965,7 @@ async function calculer() {
     const coutA   = litresA * prixActuel;
     const passagers = passagersValeur();
     const unit = document.getElementById('carburant').value === 'electrique' ? 'kWh' : 'L';
-    // Péages (best-effort, Vinci puis ViaMichelin puis repli TollGuru) :
+    // Péages (best-effort, ViaMichelin puis Vinci puis repli TollGuru) :
     // n'importe quel échec laisse simplement le total au seul carburant.
     const peage = await getTolls(route, c1, c2, depart, arrivee);
 

@@ -2,14 +2,14 @@
  * Relais Cloudflare Worker pour le calcul des péages.
  *
  * Contourne le blocage CORS : le navigateur appelle ce Worker, qui interroge
- * l'API côté serveur (TollGuru, ou Vinci-autoroutes / ViaMichelin en secours)
- * et renvoie la réponse avec les en-têtes CORS.
+ * l'API côté serveur (ViaMichelin en source principale, Vinci-autoroutes puis
+ * TollGuru en secours) et renvoie la réponse avec les en-têtes CORS.
  *
  * Quatre usages, distingués par le corps de la requête POST :
- *  - { from, to, vehicleType }           -> TollGuru (dernier repli)
- *  - { action: 'vinci-legs', polyline }   -> Vinci : tracé -> gares de péage
+ *  - { action: 'viamichelin', ... }        -> ViaMichelin : tracé -> coûts détaillés (source principale)
+ *  - { action: 'vinci-legs', polyline }   -> Vinci : tracé -> gares de péage (second recours)
  *  - { action: 'vinci-rate', ... }        -> Vinci : gares de péage -> tarif
- *  - { action: 'viamichelin', ... }        -> ViaMichelin : tracé -> coûts détaillés
+ *  - { from, to, vehicleType }           -> TollGuru (dernier repli)
  *
  * TollGuru : endpoint v2 "origin-destination-waypoints" (le seul auquel la
  * clé a accès — l'endpoint polyline renvoie 403 "TollTally").
