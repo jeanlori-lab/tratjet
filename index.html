@@ -182,20 +182,21 @@
       margin-bottom: 12px;
     }
     .section-carburant {
+      position: relative; /* ancre Modifier/Valider (position absolue) au même point dans les deux états */
       background: #fff3d1;
       border-color: #f0be45;
     }
+    /* Réserve la place du bouton Valider (position absolue, sorti du flux)
+       pour que le champ Carburant ne passe pas dessous. */
+    #vehiculeDetails { padding-top: 30px; }
     /* Bloc véhicule replié : une ligne résumé cliquable dans l'encadré jaune. */
     .vehicule-resume {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      flex-wrap: nowrap;
-      gap: 10px;
       width: 100%;
       background: none;
       border: none;
-      padding: 12px 4px;
+      padding: 12px 76px 12px 4px; /* padding-right : laisse la place à la pastille Modifier, ancrée en absolu par-dessus */
       font-family: inherit;
       font-size: 14px;
       font-weight: 700;
@@ -206,44 +207,43 @@
     /* Tient sur une seule ligne : tronqué avec "…" plutôt que de passer à
        la ligne (le bouton Modifier, lui, ne doit jamais rétrécir). */
     #vehiculeResumeText {
+      display: block;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       min-width: 0;
     }
-    /* Petite pastille discrète (contour orange, pas de fond) : ouvre le détail. */
-    .vehicule-resume-edit {
-      flex-shrink: 0;
+    /* Modifier et Valider sont ancrés au même endroit (haut-droite du bloc,
+       en absolu par rapport à .section-carburant) dans les deux états, pour
+       qu'un tap sur l'un tombe exactement là où l'autre apparaît ensuite —
+       sans ça le bouton "saute" visuellement entre replié et déplié. */
+    .vehicule-resume-edit, .vehicule-replier {
+      position: absolute;
+      top: 10px;
+      right: 10px;
       display: inline-flex;
       align-items: center;
       gap: 3px;
-      font-size: 10.5px;
-      font-weight: 700;
-      color: #b06000;
-      background: #fffaf0;
-      border: 1px solid #e2971a;
-      border-radius: 999px;
-      padding: 3px 9px;
-    }
-    .vehicule-resume:hover .vehicule-resume-edit { background: #fff1d6; }
-    /* "✓ Valider" : en haut à droite du bloc déplié, sur sa propre ligne
-       avec un espacement normal (pas de marge négative pour "grappiller" de
-       la place — trop fragile près d'un coin arrondi, ça a fini par
-       chevaucher la bordure). Pastille pleine mais discrète (petite, vert
-       doux) : se voit comme une validation sans dominer le bloc. */
-    .vehicule-replier-wrap { display: flex; justify-content: flex-end; padding: 2px 0 10px; }
-    .vehicule-replier {
-      display: inline-flex;
-      align-items: center;
-      gap: 3px;
-      background: #4c8c52;
-      border: none;
-      border-radius: 999px;
       font-family: inherit;
       font-size: 10.5px;
       font-weight: 700;
-      color: #ffffff;
+      border-radius: 999px;
       cursor: pointer;
+    }
+    /* Petite pastille discrète (contour orange, pas de fond) : ouvre le détail. */
+    .vehicule-resume-edit {
+      color: #b06000;
+      background: #fffaf0;
+      border: 1px solid #e2971a;
+      padding: 3px 9px;
+    }
+    .vehicule-resume:hover .vehicule-resume-edit { background: #fff1d6; }
+    /* Pastille pleine mais discrète (petite, vert doux) : se voit comme une
+       validation sans dominer le bloc. */
+    .vehicule-replier {
+      background: #4c8c52;
+      border: none;
+      color: #ffffff;
       padding: 4px 10px;
     }
     .vehicule-replier:hover { background: #3f7645; }
@@ -1084,9 +1084,7 @@
       <span class="vehicule-resume-edit">✎ Modifier</span>
     </button>
     <div id="vehiculeDetails">
-    <div class="vehicule-replier-wrap">
       <button type="button" class="vehicule-replier" onclick="setVehiculeOuvert(false)">✓ Valider</button>
-    </div>
     <div class="param-row carburant-row">
       <div class="param-label">Carburant</div>
       <div class="param-input">
