@@ -684,6 +684,16 @@
       padding: 0 2px 6px;
     }
     .res-section-title:not(:first-child) { padding-top: 6px; }
+    /* Même format de titre que "Où faire le plein" pour "Résultats" et
+       "Coût & conso" (plus lisible que le petit label gris majuscule). */
+    #sectionResultats > .card-title,
+    #sectionResultats .res-section-title {
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: none;
+      letter-spacing: normal;
+      color: #455060;
+    }
     .res-section { margin-bottom: 6px; }
     .res-row {
       display: flex;
