@@ -132,6 +132,26 @@
     }
     .opt-expand-close:hover { color: #607080; }
     .cheapest-fuel-note { font-size: 12px; color: #607080; margin-top: 6px; line-height: 1.45; }
+    /* Badge "économie" sous la station recommandée : ce qu'on gagne en y
+       faisant le plein par rapport au prix moyen national. */
+    .eco-badge {
+      display: flex; align-items: flex-start; gap: 7px;
+      margin-top: 8px; padding: 7px 10px;
+      background: #e8f5e9; border-radius: 10px;
+      font-size: 12px; font-weight: 600; color: #2e7d32; line-height: 1.35;
+    }
+    .eco-badge strong { font-weight: 900; font-size: 13px; white-space: nowrap; }
+    /* Pastille "Péages évités" (mode sans péage) + ligne de détail du gain. */
+    .cost-chip-eco { background: #e8f5e9 !important; border-color: #a5d6a7 !important; }
+    .cost-chip-eco .cost-chip-label { color: #66bb6a; }
+    .cost-chip-eco .cost-chip-value { color: #2e7d32; }
+    .eco-line {
+      display: flex; align-items: flex-start; gap: 8px;
+      margin: 6px 0; padding: 9px 11px;
+      background: #e8f5e9; border-radius: 12px;
+      font-size: 12px; color: #2e7d32; line-height: 1.45; font-weight: 600;
+    }
+    .eco-line strong { font-weight: 900; }
     /* Resserre le bloc en haut (garde l'espacement entre les lignes). */
     .carburant-row { padding-top: 8px; }
     /* Séparation un peu plus marquée entre le bloc Carburant/Conso et Départ/Destination */
@@ -1209,7 +1229,7 @@
           <span class="cost-chip-value" id="r-cout-carburant">—</span>
         </div>
         <div class="cost-chip cost-chip-peage" id="costChipPeage">
-          <span class="cost-chip-label">Péages</span>
+          <span class="cost-chip-label" id="r-peage-label">Péages</span>
           <span class="cost-chip-value" id="r-cout-peage">—</span>
         </div>
       </div>
@@ -1217,6 +1237,7 @@
         <span class="res-label">Coût total</span>
         <span class="res-value res-value-big" id="r-cout">—</span>
       </div>
+      <div class="eco-line" id="ecoPeageLine" style="display:none;"></div>
       <div class="res-row">
         <span class="res-label" id="r-litres-label">Litres consommés</span>
         <span class="res-value res-value-big" id="r-litres">—</span>
@@ -2011,6 +2032,26 @@ function buildStationDetail(station, type, lat, lon, big) {
   return detail;
 }
 
+// Badge "économie" : ce qu'on gagne en faisant le plein à cette station par
+// rapport au prix moyen national du même carburant. litres = taille estimée
+// du plein. null si données manquantes ou économie négligeable (< 5 centimes).
+function buildEcoBadge(prixStation, litres) {
+  if (typeof prixActuel !== 'number' || !isFinite(prixStation) || !isFinite(litres) || litres <= 0) return null;
+  const gain = (prixActuel - prixStation) * litres;
+  if (gain < 0.05) return null;
+  const badge = document.createElement('div');
+  badge.className = 'eco-badge';
+  badge.appendChild(document.createTextNode('💰'));
+  const txt = document.createElement('span');
+  const strong = document.createElement('strong');
+  strong.textContent = '−' + fmtEur(gain);
+  txt.appendChild(document.createTextNode(`Plein de ~${Math.round(litres)} L : `));
+  txt.appendChild(strong);
+  txt.appendChild(document.createTextNode(` par rapport au prix moyen national (${prixActuel.toFixed(3)} €/L)`));
+  badge.appendChild(txt);
+  return badge;
+}
+
 // Recherche + affichage de la station la moins chère, indépendants du reste
 // du calcul du trajet : le curseur de rayon ne relance que cet encadré, et
 // seulement au relâchement (évite un fetch à chaque pixel glissé).
@@ -2061,6 +2102,12 @@ async function rechercherStationMoinsChere() {
 
   if (station) {
     cheapestNote.appendChild(buildStationDetail(station, type, lat, lon, false));
+
+    // Économie estimée sur un plein couvrant le trajet, vs prix moyen national.
+    if (!electrique && lastResultData && isFinite(lastResultData.litresA)) {
+      const badge = buildEcoBadge(station.prix, lastResultData.litresA);
+      if (badge) cheapestNote.appendChild(badge);
+    }
 
     if (station.lat !== null && station.lon !== null) {
       cheapestNote.appendChild(buildStationMap(station.lat, station.lon));
@@ -2230,7 +2277,7 @@ async function rechercherStationSurTrajet() {
   const electrique = type === 'electrique';
   note.classList.add('loading');
   // Pas de prix comparable pour l'électrique : pas de recherche, juste un message.
-  let station = null, fuelNote = '';
+  let station = null, fuelNote = '', litresPlein = null;
   if (!electrique) {
     // Optimisation économique : si réservoir + niveau renseignés, on cible le
     // segment du trajet où la jauge passera de ~20 % à ~10 % restants, et on
@@ -2262,6 +2309,11 @@ async function rechercherStationSurTrajet() {
     if (station && reservoir && conso > 0 && reservoir.capacite > 0 && isFinite(station.kmSurTrajet)) {
       const pctStation = Math.round(reservoir.niveau - station.kmSurTrajet * conso / reservoir.capacite);
       fuelNote += ` Jauge estimée à l'arrêt : ~${Math.max(0, pctStation)} %.`;
+      // Plein réel à cet arrêt : de la jauge estimée jusqu'au plein.
+      litresPlein = reservoir.capacite * (1 - Math.max(0, pctStation) / 100);
+    } else if (station && lastResultData && isFinite(lastResultData.litresA)) {
+      // Sans optimisation : plein estimé sur les litres du trajet.
+      litresPlein = lastResultData.litresA;
     }
   }
   note.classList.remove('loading');
@@ -2299,6 +2351,10 @@ async function rechercherStationSurTrajet() {
       fn.textContent = fuelNote;
       note.appendChild(fn);
     }
+
+    // Économie de ce plein par rapport au prix moyen national.
+    const badge = buildEcoBadge(station.prix, litresPlein);
+    if (badge) note.appendChild(badge);
 
     note.appendChild(buildStationMap(station.lat, station.lon));
 
@@ -3087,7 +3143,35 @@ function renderResultMode() {
   const peageValEl = document.getElementById('r-cout-peage');
   peageChip.classList.toggle('unavailable', !peageConnu);
   peageValEl.textContent = '';
-  if (peageConnu) {
+
+  // Mode "éviter les péages" avec comparaison disponible : la pastille montre
+  // le montant évité en vert, et une ligne détaille le compromis temps/distance.
+  const ecoLine = document.getElementById('ecoPeageLine');
+  const evite = d.peageEvite;
+  peageChip.classList.toggle('cost-chip-eco', !!evite);
+  document.getElementById('r-peage-label').textContent = evite ? 'Péages évités' : 'Péages';
+  ecoLine.style.display = evite ? 'flex' : 'none';
+  ecoLine.textContent = '';
+  if (evite) {
+    const coutEvite = isAR ? evite.cost * 2 : evite.cost;
+    peageValEl.appendChild(document.createTextNode('−' + fmtEur(coutEvite)));
+    ecoLine.appendChild(document.createTextNode('🛣️'));
+    const txt = document.createElement('span');
+    const strong = document.createElement('strong');
+    strong.textContent = fmtEur(coutEvite) + ' de péages évités';
+    txt.appendChild(strong);
+    const detourSec = isAR ? evite.detourSec * 2 : evite.detourSec;
+    const detourKm = isAR ? evite.detourKm * 2 : evite.detourKm;
+    if (detourSec >= 60 || detourKm >= 1) {
+      const morceaux = [];
+      if (detourSec >= 60) morceaux.push('+' + formatDuree(detourSec));
+      if (detourKm >= 1) morceaux.push('+' + fmtKm(detourKm));
+      txt.appendChild(document.createTextNode(' pour ' + morceaux.join(' et ') + ' par rapport à l\'itinéraire avec péages.'));
+    } else {
+      txt.appendChild(document.createTextNode(', quasiment sans détour.'));
+    }
+    ecoLine.appendChild(txt);
+  } else if (peageConnu) {
     peageValEl.appendChild(document.createTextNode(fmtEur(coutPeageAffiche)));
     // Bouton "Détail" : déplie la pastille pour montrer le coût par tronçon.
     if (Array.isArray(d.peageDetails) && d.peageDetails.length) {
@@ -3174,6 +3258,24 @@ async function calculer() {
     // par construction 0 €, on n'interroge pas les API.
     const peage = avoidTolls ? { cost: 0, details: null } : await getTolls(route, c1, c2, depart, arrivee);
 
+    // Mode "éviter les péages" : calcule aussi (best-effort) l'itinéraire
+    // AVEC péages pour afficher le gain réel — combien de péages évités,
+    // pour quel détour en temps et en distance.
+    let peageEvite = null;
+    if (avoidTolls) {
+      try {
+        const routePeage = await getRoute(coords, apiKey, false);
+        const p = await getTolls(routePeage, c1, c2, depart, arrivee);
+        if (p && typeof p.cost === 'number' && p.cost > 0) {
+          peageEvite = {
+            cost: p.cost,
+            detourSec: route.dureeSec - routePeage.dureeSec,
+            detourKm: distA - routePeage.distanceKm,
+          };
+        }
+      } catch (e) { /* comparaison indisponible : on n'affiche rien de plus */ }
+    }
+
     // Lien Vinci calculé avant l'affichage des résultats : la pastille
     // péages s'en sert comme lien de secours quand le calcul est indisponible.
     // Le calculateur de péages Vinci ne gère qu'un trajet direct départ→arrivée :
@@ -3190,7 +3292,7 @@ async function calculer() {
       distA, dureeSec: route.dureeSec, litresA, coutA,
       coutPeage: peage && typeof peage.cost === 'number' ? peage.cost : null,
       peageDetails: (peage && peage.details) || null,
-      vinciUrl, unit,
+      vinciUrl, unit, peageEvite,
     };
     renderResultMode();
 
