@@ -94,25 +94,19 @@
     /* Départ/Arrivée décalés légèrement dès qu'il y a une étape, pour laisser
        un peu d'air aux poignées de glisser-déposer (sinon collées au bord). */
     .point-row.shift-for-handles { margin-left: 8px; }
-    /* Séparations plus marquées entre Carburant / Consommation / Passagers : plus
+    /* Séparations plus marquées entre Carburant / Consommation / Réservoir : plus
        d'espace vertical et un trait un peu plus visible et plus long. */
-    .carburant-row, .conso-row, .passagers-row, .reservoir-row, .niveau-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
+    .carburant-row, .conso-row, .reservoir-row, .niveau-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
     /* Réservoir + niveau : deux lignes visuellement soudées (pas de trait entre
-       les deux), le curseur de niveau prend toute la largeur du bloc. */
+       les deux), les curseurs prennent toute la largeur du bloc. */
     .reservoir-row { border-bottom: none; padding-bottom: 6px; }
-    .niveau-row { padding-top: 0; }
-    .param-optional { display: block; font-size: 10px; font-weight: 600; color: #90a4ae; text-transform: uppercase; letter-spacing: 0.04em; }
-    .reservoir-line { display: flex; align-items: center; gap: 8px; }
-    .reservoir-line input { width: 90px; text-align: center; }
-    .reservoir-unit { font-size: 12px; font-weight: 600; color: #607080; }
-    .reservoir-hint { font-size: 11px; color: #90a4ae; margin-top: 5px; line-height: 1.35; }
+    .niveau-row { padding-top: 0; padding-bottom: 8px; }
     .niveau-label { font-size: 12px; font-weight: 600; color: #607080; margin-bottom: 4px; }
     .niveau-label strong { color: #1976d2; }
     .niveau-slider { width: 100%; accent-color: #1976d2; cursor: pointer; display: block; }
     .cheapest-fuel-note { font-size: 12px; color: #607080; margin-top: 6px; line-height: 1.45; }
-    /* Resserre le bloc en haut et en bas (garde l'espacement entre les 3 lignes). */
+    /* Resserre le bloc en haut (garde l'espacement entre les lignes). */
     .carburant-row { padding-top: 8px; }
-    .passagers-row { padding-bottom: 8px; }
     /* Séparation un peu plus marquée entre le bloc Carburant/Conso et Départ/Destination */
     /* Plus d'air autour du trait pour bien détacher les deux blocs */
     .param-icon {
@@ -269,7 +263,7 @@
     #consoVal.conso-val-input[readonly] { cursor: default; }
 
     /* Desktop : flèches +/- de part et d'autre de la valeur, au lieu de la règle */
-    .conso-arrow, .pass-arrow {
+    .conso-arrow {
       width: 32px; height: 32px;
       flex-shrink: 0;
       border: 2.5px solid #e2971a;
@@ -284,13 +278,8 @@
       display: flex; align-items: center; justify-content: center;
       transition: background 0.15s, transform 0.1s;
     }
-    .conso-arrow:hover, .pass-arrow:hover { background: #fff1d6; }
-    .conso-arrow:active, .pass-arrow:active { transform: scale(0.9); }
-
-    /* Nombre de passagers : compteur +/-, aligné avec les boutons +/- de la
-       consommation juste au-dessus (même largeur de ligne, même position). */
-    .passagers-line { display: flex; align-items: center; justify-content: space-between; width: 170px; margin: 0 auto; }
-    .passagers-value { font-size: 18px; font-weight: 600; color: #455060; min-width: 1.5ch; text-align: center; }
+    .conso-arrow:hover { background: #fff1d6; }
+    .conso-arrow:active { transform: scale(0.9); }
 
     /* Règle / roulette de consommation (glisser horizontal, souris + doigt) */
     .conso-roulette {
@@ -394,9 +383,8 @@
       .conso-line .conso-roulette { display: block; }
       .conso-arrow { display: none; }
       .conso-value { width: 92px; }
-      /* L'alignement conso/passagers ne concerne que l'ordi (pas de règle sur mobile). */
+      /* L'alignement de la conso ne concerne que l'ordi (pas de règle sur mobile). */
       .conso-line { justify-content: center; width: auto; margin: 0; }
-      .passagers-line { justify-content: center; width: auto; margin: 0; gap: 12px; }
       /* Resserre les lignes de résultats (trop de blanc vertical sur petit écran). */
       .res-row { padding: 6px 0; }
     }
@@ -879,43 +867,7 @@
       box-shadow: 0 3px 10px rgba(13,71,161,0.35);
     }
 
-    /* Coût par personne (partage de frais) : sous-ligne discrète sous le
-       montant. En flux normal (plus besoin de positionnement absolu
-       maintenant que la ligne n'est plus une cellule de tableau). */
     #r-cout { text-align: right; }
-    .per-person-note {
-      margin-top: 2px;
-      line-height: 1.25;
-      font-size: 9.5px;
-      font-weight: 600;
-      color: #607080;
-      opacity: 0.85;
-    }
-
-    /* Message rotatif quand on clique sur + alors qu'on est déjà au maximum de
-       passagers (même style que l'info-bulle des flèches d'inversion). */
-    .passagers-line { position: relative; }
-    .pass-max-msg {
-      position: absolute;
-      bottom: calc(100% + 8px);
-      left: 50%;
-      transform: translateX(-50%) translateY(4px);
-      background: #1a2433;
-      color: #fff;
-      font-size: 11px;
-      font-weight: 600;
-      line-height: 1.4;
-      padding: 7px 11px;
-      border-radius: 8px;
-      width: max-content;
-      max-width: 230px;
-      text-align: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.15s ease, transform 0.15s ease;
-      z-index: 40;
-    }
-    .pass-max-msg.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
     /* Bordure animée "chasing shine" + halo pulsé, pour mettre en valeur
        la station la moins chère. Dégrade proprement (bordure verte fixe)
@@ -1177,35 +1129,20 @@
       </div>
     </div>
 
-    <!-- Réservoir + niveau au départ (optionnels) : servent à conseiller la
-         station la moins chère au bon moment du trajet (onglet "Sur le
-         trajet"), quand la jauge passera entre ~20 % et ~10 % restants. -->
+    <!-- Réservoir + niveau au départ : servent à conseiller la station la
+         moins chère au bon moment du trajet (onglet "Sur le trajet"), quand
+         la jauge passera entre ~20 % et ~10 % restants. Bornes du curseur :
+         ~25 L (petites citadines) à ~120 L (gros SUV / pick-up). -->
     <div class="param-row reservoir-row">
-      <div class="param-label">Réservoir <span class="param-optional">optionnel</span></div>
       <div class="param-input">
-        <div class="reservoir-line">
-          <input type="number" id="reservoirCapacite" min="10" max="200" step="1" placeholder="ex : 55" inputmode="decimal" aria-label="Contenance du réservoir en litres">
-          <span class="reservoir-unit">litres</span>
-        </div>
-        <div class="reservoir-hint">Renseignez-le (avec le niveau ci-dessous) pour qu'on vous conseille où faire le plein au meilleur prix sur votre trajet.</div>
+        <div class="niveau-label">Contenance du réservoir : <strong id="reservoirCapaciteVal">50 L</strong></div>
+        <input type="range" id="reservoirCapacite" class="niveau-slider" min="25" max="120" step="5" value="50" aria-label="Contenance du réservoir en litres">
       </div>
     </div>
     <div class="param-row niveau-row">
       <div class="param-input">
         <div class="niveau-label">Niveau de carburant au départ : <strong id="niveauDepartVal">100 %</strong></div>
         <input type="range" id="niveauDepart" class="niveau-slider" min="5" max="100" step="5" value="100" aria-label="Niveau de carburant au départ, en pourcentage">
-      </div>
-    </div>
-
-    <div class="param-row passagers-row">
-      <div class="param-label">Passagers</div>
-      <div class="param-input">
-        <input type="hidden" id="passagers" value="1">
-        <div class="passagers-line">
-          <button type="button" class="pass-arrow" id="passMinus" aria-label="Moins de passagers">−</button>
-          <div class="passagers-value"><span id="passagersVal">1</span></div>
-          <button type="button" class="pass-arrow" id="passPlus" aria-label="Plus de passagers">+</button>
-        </div>
       </div>
     </div>
     </div>
@@ -1801,13 +1738,16 @@ function consoInit() {
 }
 consoInit();
 
-// Réservoir / niveau au départ : libellé du curseur en direct, et
+// Réservoir / niveau au départ : libellés des curseurs en direct, et
 // rafraîchissement de la recommandation "Sur le trajet" quand ces
 // paramètres changent après un calcul.
 (function initReservoir() {
   const cap = document.getElementById('reservoirCapacite');
   const niv = document.getElementById('niveauDepart');
   if (!cap || !niv) return;
+  cap.addEventListener('input', () => {
+    document.getElementById('reservoirCapaciteVal').textContent = cap.value + ' L';
+  });
   niv.addEventListener('input', () => {
     document.getElementById('niveauDepartVal').textContent = niv.value + ' %';
   });
@@ -1815,81 +1755,6 @@ consoInit();
   niv.addEventListener('change', refresh);
   cap.addEventListener('change', refresh);
 })();
-
-// --- Nombre de passagers (partage de frais, 0 à 9) ---
-const PASS_MIN = 0, PASS_MAX = 9;
-function passagersValeur() {
-  const v = parseInt(document.getElementById('passagers').value, 10);
-  return isNaN(v) ? 1 : v;
-}
-function passagersSet(v) {
-  v = Math.min(PASS_MAX, Math.max(PASS_MIN, Math.round(v)));
-  document.getElementById('passagers').value = v;
-  const disp = document.getElementById('passagersVal');
-  if (disp) disp.textContent = v;
-  resetResultat();
-}
-// Messages rotatifs quand on clique sur + alors qu'on est déjà au maximum.
-const PASS_MAX_MESSAGES = [
-  "Alors, plus de 9 en voiture ça va être compliqué…",
-  "Pour un conducteur de métro bien sûr y'a pas de sujets",
-  "Mais en voiture, y'a pas moyen",
-];
-let passMaxMsgIndex = 0;
-let passMaxMsgTimer = null;
-function showPassMaxMessage() {
-  const plusBtn = document.getElementById('passPlus');
-  if (!plusBtn || !plusBtn.parentElement) return;
-  let bubble = document.getElementById('passMaxMsg');
-  if (!bubble) {
-    bubble = document.createElement('div');
-    bubble.id = 'passMaxMsg';
-    bubble.className = 'pass-max-msg';
-    plusBtn.parentElement.appendChild(bubble);
-  }
-  bubble.textContent = PASS_MAX_MESSAGES[passMaxMsgIndex % PASS_MAX_MESSAGES.length];
-  passMaxMsgIndex++;
-  bubble.classList.add('show');
-  clearTimeout(passMaxMsgTimer);
-  passMaxMsgTimer = setTimeout(() => bubble.classList.remove('show'), 4000);
-}
-// Message quand on clique sur - alors qu'on est déjà à 0.
-const PASS_MIN_MESSAGE = "Ta voiture voyage seule ?";
-let passMinMsgTimer = null;
-function showPassMinMessage() {
-  const minusBtn = document.getElementById('passMinus');
-  if (!minusBtn || !minusBtn.parentElement) return;
-  let bubble = document.getElementById('passMinMsg');
-  if (!bubble) {
-    bubble = document.createElement('div');
-    bubble.id = 'passMinMsg';
-    bubble.className = 'pass-max-msg';
-    minusBtn.parentElement.appendChild(bubble);
-  }
-  bubble.textContent = PASS_MIN_MESSAGE;
-  bubble.classList.add('show');
-  clearTimeout(passMinMsgTimer);
-  passMinMsgTimer = setTimeout(() => bubble.classList.remove('show'), 2600);
-}
-function hidePassMinMessage() {
-  clearTimeout(passMinMsgTimer);
-  const bubble = document.getElementById('passMinMsg');
-  if (bubble) bubble.classList.remove('show');
-}
-function passagersInit() {
-  const minusBtn = document.getElementById('passMinus');
-  const plusBtn = document.getElementById('passPlus');
-  holdRepeat(minusBtn, () => {
-    if (passagersValeur() === PASS_MIN + 1) showPassMinMessage();
-    passagersSet(passagersValeur() - 1);
-  });
-  holdRepeat(plusBtn, () => {
-    if (passagersValeur() >= PASS_MAX) { showPassMaxMessage(); return; }
-    hidePassMinMessage();
-    passagersSet(passagersValeur() + 1);
-  });
-}
-passagersInit();
 
 async function fetchPrix(field) {
   const url = `https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records?select=avg(${field})%20as%20prix&limit=1&where=${field}%20is%20not%20null`;
@@ -2812,7 +2677,7 @@ function onDragMove(e) {
   // On ne bloque pas le glisser hors du bloc Départ/Étapes/Arrivée (on peut
   // descendre jusqu'en bas de la page), mais on prévient avec un message qui
   // suit le curseur. Bloc = l'encadré visuel (.section), pas toute la carte
-  // Paramètres (qui inclut aussi Carburant/Consommation/Passagers en dessous
+  // Paramètres (qui inclut aussi Carburant/Consommation/Réservoir en dessous
   // et dépasse souvent la hauteur d'écran, ce qui rendrait le seuil inatteignable).
   const card = dragRow.closest('.section');
   if (card) {
@@ -3235,17 +3100,6 @@ function renderResultMode() {
 
   const rCout = document.getElementById('r-cout');
   rCout.textContent = fmtEur(coutTotalAffiche);
-  if (d.passagers === 0) {
-    const note = document.createElement('div');
-    note.className = 'per-person-note';
-    note.textContent = '0 € / pers., la voiture voyage seule 🥲';
-    rCout.appendChild(note);
-  } else if (d.passagers > 1) {
-    const note = document.createElement('div');
-    note.className = 'per-person-note';
-    note.textContent = fmtEur(coutTotalAffiche / d.passagers) + ' / pers.';
-    rCout.appendChild(note);
-  }
 }
 
 async function calculer() {
@@ -3276,7 +3130,6 @@ async function calculer() {
     const distA   = route.distanceKm;
     const litresA = (distA * conso) / 100;
     const coutA   = litresA * prixActuel;
-    const passagers = passagersValeur();
     const unit = document.getElementById('carburant').value === 'electrique' ? 'kWh' : 'L';
     // Péages (best-effort, Vinci puis ViaMichelin) : n'importe quel échec
     // laisse simplement le total au seul carburant. Itinéraire "sans péage" :
@@ -3299,7 +3152,7 @@ async function calculer() {
       distA, dureeSec: route.dureeSec, litresA, coutA,
       coutPeage: peage && typeof peage.cost === 'number' ? peage.cost : null,
       peageDetails: (peage && peage.details) || null,
-      vinciUrl, passagers, unit,
+      vinciUrl, unit,
     };
     renderResultMode();
 
