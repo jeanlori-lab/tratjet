@@ -2068,18 +2068,8 @@ async function rechercherStationMoinsChere() {
       const btnRow = document.createElement('div');
       btnRow.className = 'cheapest-btn-row';
 
-      const link = document.createElement('a');
-      link.className = 'cheapest-link';
-      const origin = encodeURIComponent(depart || `${lat},${lon}`);
-      const destination = encodeURIComponent(arrivee || `${station.lat},${station.lon}`);
-      link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}&waypoints=${station.lat},${station.lon}`;
-      link.target = '_blank';
-      link.textContent = electrique ? '📍 Ajouter cette borne à mon trajet' : '📍 Ajouter cette station à mon trajet';
-      btnRow.appendChild(link);
-
-      // Même lien "Itinéraire vers cette station" que l'onglet dédié
-      // (depuis la position de départ jusqu'à la station, sans la
-      // destination du trajet en plus).
+      // Un seul lien, centré : l'itinéraire direct vers la station (depuis
+      // la position de départ, sans la destination du trajet en plus).
       const linkDirect = document.createElement('a');
       linkDirect.className = 'cheapest-link';
       linkDirect.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${lat},${lon}&destination=${station.lat},${station.lon}`;
