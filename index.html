@@ -101,7 +101,14 @@
     .niveau-label { font-size: 12px; font-weight: 600; color: #607080; margin-bottom: 4px; }
     .niveau-label-depart { margin-top: 10px; }
     .reservoir-hint { font-size: 11px; color: #90a4ae; line-height: 1.4; margin-bottom: 8px; }
-    .reservoir-hint strong { color: #455060; text-transform: uppercase; letter-spacing: 0.03em; }
+    /* Seul titre du bloc : forcé sur UNE ligne (taille fluide, jamais de
+       retour à la ligne, même sur petit écran). */
+    .optim-title {
+      font-weight: 700; color: #455060; text-transform: uppercase; letter-spacing: 0.03em;
+      font-size: clamp(9px, 3vw, 11.5px);
+      white-space: nowrap;
+      margin-bottom: 4px;
+    }
     .niveau-label strong { color: #1976d2; }
     .niveau-slider { width: 100%; accent-color: #1976d2; cursor: pointer; display: block; }
     /* Interrupteur "optimisation des pleins" : les curseurs sont toujours
@@ -1175,10 +1182,10 @@
          est décoché (défaut), ils sont estompés et l'onglet "Sur le trajet"
          garde son comportement classique. -->
     <div class="param-row reservoir-row" id="reservoirBloc">
-      <div class="param-label">Plein malin</div>
       <div class="param-input">
+        <div class="optim-title">Optionnel : optimisation des pleins</div>
         <div class="optim-switch-row">
-          <div class="reservoir-hint"><strong>Optionnel : optimisation des pleins.</strong> On vous trouve la station la moins chère sur votre trajet, à l'endroit où il vous restera 10 à 20 % de carburant.</div>
+          <div class="reservoir-hint">On vous trouve la station la moins chère sur votre trajet, à l'endroit où il vous restera 10 à 20 % de carburant.</div>
           <button type="button" class="optim-toggle" id="optimToggle" role="switch" aria-checked="false" aria-label="Activer l'optimisation des pleins" onclick="setOptimPlein(!optimPleinActive)"></button>
         </div>
         <div id="reservoirPanel" class="reservoir-inactive">
