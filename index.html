@@ -96,7 +96,20 @@
     .point-row.shift-for-handles { margin-left: 8px; }
     /* Séparations plus marquées entre Carburant / Consommation / Passagers : plus
        d'espace vertical et un trait un peu plus visible et plus long. */
-    .carburant-row, .conso-row, .passagers-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
+    .carburant-row, .conso-row, .passagers-row, .reservoir-row, .niveau-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
+    /* Réservoir + niveau : deux lignes visuellement soudées (pas de trait entre
+       les deux), le curseur de niveau prend toute la largeur du bloc. */
+    .reservoir-row { border-bottom: none; padding-bottom: 6px; }
+    .niveau-row { padding-top: 0; }
+    .param-optional { display: block; font-size: 10px; font-weight: 600; color: #90a4ae; text-transform: uppercase; letter-spacing: 0.04em; }
+    .reservoir-line { display: flex; align-items: center; gap: 8px; }
+    .reservoir-line input { width: 90px; text-align: center; }
+    .reservoir-unit { font-size: 12px; font-weight: 600; color: #607080; }
+    .reservoir-hint { font-size: 11px; color: #90a4ae; margin-top: 5px; line-height: 1.35; }
+    .niveau-label { font-size: 12px; font-weight: 600; color: #607080; margin-bottom: 4px; }
+    .niveau-label strong { color: #1976d2; }
+    .niveau-slider { width: 100%; accent-color: #1976d2; cursor: pointer; display: block; }
+    .cheapest-fuel-note { font-size: 12px; color: #607080; margin-top: 6px; line-height: 1.45; }
     /* Resserre le bloc en haut et en bas (garde l'espacement entre les 3 lignes). */
     .carburant-row { padding-top: 8px; }
     .passagers-row { padding-bottom: 8px; }
@@ -1164,6 +1177,26 @@
       </div>
     </div>
 
+    <!-- Réservoir + niveau au départ (optionnels) : servent à conseiller la
+         station la moins chère au bon moment du trajet (onglet "Sur le
+         trajet"), quand la jauge passera entre ~20 % et ~10 % restants. -->
+    <div class="param-row reservoir-row">
+      <div class="param-label">Réservoir <span class="param-optional">optionnel</span></div>
+      <div class="param-input">
+        <div class="reservoir-line">
+          <input type="number" id="reservoirCapacite" min="10" max="200" step="1" placeholder="ex : 55" inputmode="decimal" aria-label="Contenance du réservoir en litres">
+          <span class="reservoir-unit">litres</span>
+        </div>
+        <div class="reservoir-hint">Renseignez-le (avec le niveau ci-dessous) pour qu'on vous conseille où faire le plein au meilleur prix sur votre trajet.</div>
+      </div>
+    </div>
+    <div class="param-row niveau-row">
+      <div class="param-input">
+        <div class="niveau-label">Niveau de carburant au départ : <strong id="niveauDepartVal">100 %</strong></div>
+        <input type="range" id="niveauDepart" class="niveau-slider" min="5" max="100" step="5" value="100" aria-label="Niveau de carburant au départ, en pourcentage">
+      </div>
+    </div>
+
     <div class="param-row passagers-row">
       <div class="param-label">Passagers</div>
       <div class="param-input">
@@ -1564,6 +1597,10 @@ function majUniteConso() {
   const roulette = document.getElementById('consoRoulette');
   if (roulette) roulette.setAttribute('aria-label', electrique ? 'Consommation électrique au 100 km' : 'Consommation au 100 km');
 
+  // Réservoir en litres + recommandation d'arrêt : sans objet en électrique
+  // (pas de prix comparable entre bornes, capacité en kWh).
+  document.querySelectorAll('.reservoir-row, .niveau-row').forEach(r => { r.style.display = electrique ? 'none' : 'flex'; });
+
   const etaitElectrique = carburantTypePrecedent === 'electrique';
   if (electrique && !etaitElectrique) {
     consoSet(CONSO_ELECTRIQUE_DEFAUT, true);
@@ -1763,6 +1800,21 @@ function consoInit() {
   }
 }
 consoInit();
+
+// Réservoir / niveau au départ : libellé du curseur en direct, et
+// rafraîchissement de la recommandation "Sur le trajet" quand ces
+// paramètres changent après un calcul.
+(function initReservoir() {
+  const cap = document.getElementById('reservoirCapacite');
+  const niv = document.getElementById('niveauDepart');
+  if (!cap || !niv) return;
+  niv.addEventListener('input', () => {
+    document.getElementById('niveauDepartVal').textContent = niv.value + ' %';
+  });
+  const refresh = () => { if (lastStationSurTrajet) rechercherStationSurTrajet(); };
+  niv.addEventListener('change', refresh);
+  cap.addEventListener('change', refresh);
+})();
 
 // --- Nombre de passagers (partage de frais, 0 à 9) ---
 const PASS_MIN = 0, PASS_MAX = 9;
@@ -2175,9 +2227,11 @@ async function rechercherStationMoinsChere() {
 // ~5 min en voiture ≈ 4 km à vol d'oiseau (routes locales à ~50 km/h) : une
 // vraie isochrone par station coûterait un appel routage par candidate.
 const RAYON_TRAJET_KM = 4;
-let lastStationSurTrajet = null; // { polyline, type, depart, arrivee }
+let lastStationSurTrajet = null; // { polyline, type, depart, arrivee, distKm, conso }
 
-async function fetchStationSurTrajet(polyline5, type) {
+// fenetreKm (optionnel) : [minKm, maxKm] le long du trajet — ne considère que
+// les stations proches de ce segment (recommandation d'arrêt selon le réservoir).
+async function fetchStationSurTrajet(polyline5, type, fenetreKm) {
   const field = (type === 'sp95') ? 'e10_prix' : CARB_FIELD[type];
   if (!field || typeof polyline5 !== 'string') return null;
   try {
@@ -2186,20 +2240,36 @@ async function fetchStationSurTrajet(polyline5, type) {
 
     // Échantillonne le tracé (~1 point par km) : assez fin pour mesurer la
     // distance station->route au vol d'oiseau, sans exploser le temps de calcul.
+    // On mémorise aussi la distance cumulée le long de la route à chaque
+    // échantillon, pour situer une station "à X km du départ".
     const kmParDegLat = 110.57;
     const echantillons = [points[0]];
-    let dernier = points[0];
+    const echKm = [0];
+    let cum = 0, dernierEchCum = 0, prev = points[0];
     for (const p of points) {
-      const dLat = (p[0] - dernier[0]) * kmParDegLat;
-      const dLng = (p[1] - dernier[1]) * 111.32 * Math.cos(p[0] * Math.PI / 180);
-      if (dLat * dLat + dLng * dLng >= 1) { echantillons.push(p); dernier = p; }
+      const dLat = (p[0] - prev[0]) * kmParDegLat;
+      const dLng = (p[1] - prev[1]) * 111.32 * Math.cos(p[0] * Math.PI / 180);
+      cum += Math.sqrt(dLat * dLat + dLng * dLng);
+      prev = p;
+      if (cum - dernierEchCum >= 1) { echantillons.push(p); echKm.push(cum); dernierEchCum = cum; }
     }
     echantillons.push(points[points.length - 1]);
+    echKm.push(cum);
 
-    // Toutes les stations dans la boîte englobante du tracé (+ marge), en une
-    // seule recherche paginée, puis filtrage par distance à la route côté client.
+    // Ne garde que les échantillons dans la fenêtre demandée (le cas échéant).
+    let iStart = 0, iEnd = echantillons.length - 1;
+    if (fenetreKm) {
+      while (iStart <= iEnd && echKm[iStart] < fenetreKm[0]) iStart++;
+      while (iEnd >= iStart && echKm[iEnd] > fenetreKm[1]) iEnd--;
+      if (iStart > iEnd) return null;
+    }
+
+    // Toutes les stations dans la boîte englobante du segment considéré
+    // (+ marge), en une seule recherche paginée, puis filtrage par distance
+    // à la route côté client.
     let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
-    for (const [la, ln] of points) {
+    for (let i = iStart; i <= iEnd; i++) {
+      const [la, ln] = echantillons[i];
       if (la < minLat) minLat = la; if (la > maxLat) maxLat = la;
       if (ln < minLng) minLng = ln; if (ln > maxLng) maxLng = ln;
     }
@@ -2223,29 +2293,74 @@ async function fetchStationSurTrajet(polyline5, type) {
       // pas la peine de mesurer leur distance à la route.
       if (best && prix >= best.prix) continue;
       const cosLat = Math.cos(sLat * Math.PI / 180);
-      let d2min = Infinity;
-      for (const [la, ln] of echantillons) {
+      let d2min = Infinity, idxMin = iStart;
+      for (let i = iStart; i <= iEnd; i++) {
+        const [la, ln] = echantillons[i];
         const dLat = (sLat - la) * kmParDegLat;
         const dLng = (sLon - ln) * 111.32 * cosLat;
         const d2 = dLat * dLat + dLng * dLng;
-        if (d2 < d2min) d2min = d2;
+        if (d2 < d2min) { d2min = d2; idxMin = i; }
       }
       const distRoute = Math.sqrt(d2min);
       if (distRoute > RAYON_TRAJET_KM) continue;
-      best = { prix, nom: f.nom || '', ville: f.ville || '', lat: sLat, lon: sLon, distRoute };
+      best = { prix, nom: f.nom || '', ville: f.ville || '', lat: sLat, lon: sLon, distRoute, kmSurTrajet: echKm[idxMin] };
     }
     return best;
   } catch (e) { return null; }
 }
 
+// Réservoir + niveau au départ (optionnels) : null si non renseignés.
+function getReservoirInfo() {
+  const capEl = document.getElementById('reservoirCapacite');
+  if (!capEl) return null;
+  const capacite = parseFloat(capEl.value);
+  if (isNaN(capacite) || capacite <= 0) return null;
+  const niveau = parseInt(document.getElementById('niveauDepart').value, 10);
+  if (isNaN(niveau) || niveau <= 0) return null;
+  return { capacite, niveau };
+}
+
 async function rechercherStationSurTrajet() {
   const note = document.getElementById('cheapestNoteTrajet');
   if (!lastStationSurTrajet) { note.style.display = 'none'; note.dataset.ready = ''; applyStationTabVisibility(); return; }
-  const { polyline, type, depart, arrivee } = lastStationSurTrajet;
+  const { polyline, type, depart, arrivee, distKm, conso } = lastStationSurTrajet;
   const electrique = type === 'electrique';
   note.classList.add('loading');
   // Pas de prix comparable pour l'électrique : pas de recherche, juste un message.
-  const station = electrique ? null : await fetchStationSurTrajet(polyline, type);
+  let station = null, fuelNote = '';
+  if (!electrique) {
+    // Optimisation économique : si réservoir + niveau renseignés, on cible le
+    // segment du trajet où la jauge passera de ~20 % à ~10 % restants, et on
+    // y cherche la station la moins chère.
+    const reservoir = getReservoirInfo();
+    let fenetre = null;
+    if (reservoir && distKm > 0 && conso > 0) {
+      const kmParPct = reservoir.capacite / conso; // km parcourus par % de jauge
+      const d20 = (reservoir.niveau - 20) * kmParPct;
+      const d10 = (reservoir.niveau - 10) * kmParPct;
+      if (d20 >= distKm) {
+        const arriveePct = Math.round(reservoir.niveau - distKm / kmParPct);
+        fuelNote = `⛽ Pas d'arrêt indispensable : vous arriveriez avec ~${arriveePct} % de réservoir. Voici quand même la station la moins chère sur le trajet.`;
+      } else if (d10 <= 0) {
+        fenetre = [0, Math.min(25, distKm)];
+        fuelNote = '⛽ Niveau très bas au départ : arrêt conseillé dès le début du trajet.';
+      } else {
+        fenetre = [Math.max(0, d20), Math.min(d10, distKm)];
+        fuelNote = '⛽ Arrêt calculé selon votre réservoir : à cet endroit du trajet, votre jauge sera entre ~20 % et ~10 %.';
+      }
+    }
+    station = await fetchStationSurTrajet(polyline, type, fenetre);
+    if (!station && fenetre && fenetre[0] > 0) {
+      // Rien dans la fenêtre idéale : on élargit plus tôt sur le trajet
+      // (jauge encore au-dessus de 20 %), jamais plus tard (risque de panne).
+      station = await fetchStationSurTrajet(polyline, type, [0, fenetre[0]]);
+      if (station) fuelNote = '⛽ Aucune station dans la zone idéale (jauge entre 20 % et 10 %) : voici la moins chère un peu plus tôt sur le trajet.';
+    }
+    if (station && reservoir && conso > 0 && reservoir.capacite > 0 && isFinite(station.kmSurTrajet)) {
+      const pctStation = Math.round(reservoir.niveau - station.kmSurTrajet * conso / reservoir.capacite);
+      fuelNote += ` Jauge estimée à l'arrêt : ~${Math.max(0, pctStation)} %.`;
+    }
+  }
   note.classList.remove('loading');
   note.textContent = '';
   note.dataset.ready = '1';
@@ -2274,6 +2389,13 @@ async function rechercherStationSurTrajet() {
       detail.appendChild(document.createTextNode(' (à ' + station.distRoute.toFixed(1) + ' km de la route)'));
     }
     note.appendChild(detail);
+
+    if (fuelNote) {
+      const fn = document.createElement('div');
+      fn.className = 'cheapest-fuel-note';
+      fn.textContent = fuelNote;
+      note.appendChild(fn);
+    }
 
     note.appendChild(buildStationMap(station.lat, station.lon));
 
@@ -3196,7 +3318,7 @@ async function calculer() {
     // Station la moins chère à proximité du départ (best-effort, ne bloque rien).
     const carburantType = document.getElementById('carburant').value;
     lastStationSearch = { lat: c1[1], lon: c1[0], type: carburantType, rayon: STATION_RAYON_KM, depart, arrivee };
-    lastStationSurTrajet = { polyline: route.polyline, type: carburantType, depart, arrivee };
+    lastStationSurTrajet = { polyline: route.polyline, type: carburantType, depart, arrivee, distKm: distA, conso };
     setStationTab('depart'); // priorité systématique à "Près du départ" à chaque nouveau calcul
     await Promise.all([rechercherStationMoinsChere(), rechercherStationSurTrajet()]);
 
