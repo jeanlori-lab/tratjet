@@ -101,11 +101,12 @@
     .niveau-label { font-size: 12px; font-weight: 600; color: #607080; margin-bottom: 4px; }
     .niveau-label-depart { margin-top: 10px; }
     .reservoir-hint { font-size: 11px; color: #90a4ae; line-height: 1.4; margin-bottom: 8px; }
-    /* Seul titre du bloc : forcé sur UNE ligne (taille fluide, jamais de
-       retour à la ligne, même sur petit écran). */
+    /* Seul titre du bloc : même police que les libellés Carburant /
+       Consommation (.param-label), forcé sur UNE ligne (taille fluide,
+       jamais de retour à la ligne, même sur petit écran). */
     .optim-title {
-      font-weight: 700; color: #455060; text-transform: uppercase; letter-spacing: 0.03em;
-      font-size: clamp(9px, 3vw, 11.5px);
+      font-weight: 600; color: #455060; line-height: 1.2;
+      font-size: clamp(12px, 4vw, 15px);
       white-space: nowrap;
       margin-bottom: 4px;
     }
@@ -410,6 +411,8 @@
       .section { padding: 6px 12px; }
       .param-row { flex-wrap: wrap; row-gap: 7px; }
       .param-label { width: auto; flex: none; font-size: 14px; }
+      /* Aligné sur .param-label mobile, mais rétrécit si besoin pour tenir sur une ligne. */
+      .optim-title { font-size: clamp(12px, 4vw, 14px); }
       .param-input { flex: 1 0 100%; }
       /* Étapes : pas de ligne de libellé (numéro en placeholder), encadré + ✕ sur une ligne */
       .is-stop .param-label { display: none; }
