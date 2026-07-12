@@ -96,7 +96,7 @@
     .point-row.shift-for-handles { margin-left: 8px; }
     /* Séparations plus marquées entre Carburant / Consommation / Réservoir : plus
        d'espace vertical et un trait un peu plus visible et plus long. */
-    .carburant-row, .conso-row, .reservoir-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
+    .veh-row, .carburant-row, .conso-row, .reservoir-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
     .reservoir-row { padding-bottom: 8px; }
     .niveau-label { font-size: 12px; font-weight: 600; color: #607080; margin-bottom: 4px; }
     .niveau-label-depart { margin-top: 10px; }
@@ -152,7 +152,7 @@
     }
     .eco-line strong { font-weight: 900; }
     /* Resserre le bloc en haut (garde l'espacement entre les lignes). */
-    .carburant-row { padding-top: 8px; }
+    .veh-row { padding-top: 8px; }
     /* Séparation un peu plus marquée entre le bloc Carburant/Conso et Départ/Destination */
     /* Plus d'air autour du trait pour bien détacher les deux blocs */
     .param-icon {
@@ -484,6 +484,36 @@
     .link-btn:hover { text-decoration: underline; }
     /* Le "+" d'Ajouter une étape, un peu plus visible que le texte. */
     .plus-etape { font-size: 15px; vertical-align: -1px; }
+
+    /* Puces "véhicules enregistrés" et "trajets favoris" (localStorage) :
+       cliquer applique le profil, le ✕ le supprime. */
+    .saved-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .saved-chips:empty { display: none; }
+    .saved-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #e8f4ff; color: #1976d2; border: none; border-radius: 14px;
+      padding: 5px 10px; font-size: 11.5px; font-weight: 600;
+      cursor: pointer; font-family: inherit; max-width: 100%;
+    }
+    .saved-chip:hover { background: #bbdefb; }
+    .saved-chip .chip-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .saved-chip-x { color: #90a4ae; font-weight: 700; padding: 0 2px; flex-shrink: 0; }
+    .saved-chip-x:hover { color: #e53935; }
+    .saved-chip-add {
+      background: #f5f9ff; border: 1.5px dashed #9dc2ee; padding: 3.5px 10px;
+    }
+    .saved-chip-add:hover { background: #e8f2ff; }
+    .save-form { display: none; align-items: center; gap: 6px; margin-top: 8px; }
+    .save-form.open { display: flex; }
+    .save-form input { flex: 1; min-width: 0; }
+    .save-form-btn {
+      flex-shrink: 0; width: 34px; height: 34px; border-radius: 10px; border: none;
+      font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .save-form-ok { background: #2e7d32; color: #fff; }
+    .save-form-cancel { background: #eceff1; color: #607080; }
+    .trajet-chips-wrap { padding: 2px 0 6px; }
     /* Case "Éviter les péages" : juste au-dessus du bouton Calculer. */
     .avoid-tolls {
       display: flex;
@@ -1135,9 +1165,12 @@
         <button type="button" class="swap-btn" id="swapBtn" onclick="swapItinerary()" aria-label="Inverser départ et arrivée">⇅</button>
       </div>
 
-      <div class="itinerary-controls">
+      <div class="itinerary-controls" style="gap:14px;">
         <button type="button" class="link-btn" onclick="addPoint()"><span class="plus-etape">+</span> Ajouter une étape</button>
+        <button type="button" class="link-btn" onclick="enregistrerTrajet()">☆ Enregistrer ce trajet</button>
       </div>
+      <!-- Trajets favoris (localStorage) : une puce = un itinéraire complet. -->
+      <div class="trajet-chips-wrap"><div class="saved-chips" id="trajetChips"></div></div>
     </div>
 
     <!-- Bloc Carburant / Consommation. Repliable : une fois les réglages
@@ -1145,6 +1178,19 @@
          résumé "⛽ SP95 · 7,5 L/100 km · 👥 2" pour laisser l'écran au
          trajet et au résultat. -->
     <div class="section section-carburant">
+    <!-- Véhicules enregistrés (localStorage) : une puce = un profil
+         carburant + conso + réservoir qu'on applique d'un tap. -->
+    <div class="param-row veh-row">
+      <div class="param-label">Mes véhicules</div>
+      <div class="param-input">
+        <div class="saved-chips" id="vehChips"></div>
+        <div class="save-form" id="vehSaveForm">
+          <input type="text" id="vehNom" placeholder="Nom du véhicule (ex : Clio)" maxlength="30" autocomplete="off">
+          <button type="button" class="save-form-btn save-form-ok" onclick="confirmerVehicule()" aria-label="Enregistrer le véhicule">✓</button>
+          <button type="button" class="save-form-btn save-form-cancel" onclick="toggleVehForm(false)" aria-label="Annuler">✕</button>
+        </div>
+      </div>
+    </div>
     <div class="param-row carburant-row">
       <div class="param-label">Carburant</div>
       <div class="param-input">
@@ -1416,6 +1462,132 @@ async function searchPlaces(q, limit) {
     .filter(f => f.label);
   return [...ban, ...photon];
 }
+
+// --- Véhicules enregistrés et trajets favoris : profils mémorisés dans le
+// navigateur (localStorage), appliqués d'un tap via des puces. Première
+// brique des "comptes" : ces données pourront être synchronisées plus tard. ---
+const VEHICULES_KEY = 'tratjetVehicules'; // [{ nom, type, conso, capacite }]
+const TRAJETS_KEY = 'tratjetTrajets';     // [{ nom, points: [départ, étapes…, arrivée] }]
+function loadStore(key) {
+  try { const v = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(v) ? v : []; }
+  catch (e) { return []; }
+}
+function saveStore(key, arr) {
+  try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
+}
+
+function makeSavedChip(icone, texte, titre, onApply, onDelete) {
+  const chip = document.createElement('button');
+  chip.type = 'button';
+  chip.className = 'saved-chip';
+  chip.title = titre;
+  const txt = document.createElement('span');
+  txt.className = 'chip-txt';
+  txt.textContent = icone + ' ' + texte;
+  chip.appendChild(txt);
+  const x = document.createElement('span');
+  x.className = 'saved-chip-x';
+  x.textContent = '✕';
+  x.title = 'Supprimer';
+  x.addEventListener('click', e => { e.stopPropagation(); onDelete(); });
+  chip.appendChild(x);
+  chip.addEventListener('click', onApply);
+  return chip;
+}
+
+// -- Véhicules --
+const CARB_LABELS_VEH = { sp95: 'SP95', gazole: 'Gazole', sp98: 'SP98', gplc: 'GPL', e85: 'E85', electrique: 'Électrique' };
+function renderVehChips() {
+  const wrap = document.getElementById('vehChips');
+  if (!wrap) return;
+  wrap.textContent = '';
+  const vehs = loadStore(VEHICULES_KEY);
+  vehs.forEach((v, i) => {
+    const titre = `${CARB_LABELS_VEH[v.type] || v.type} · ${v.conso} ${v.type === 'electrique' ? 'kWh' : 'L'}/100 km` + (v.capacite && v.type !== 'electrique' ? ` · réservoir ${v.capacite} L` : '');
+    wrap.appendChild(makeSavedChip('🚗', v.nom, titre,
+      () => appliquerVehicule(v),
+      () => { const arr = loadStore(VEHICULES_KEY); arr.splice(i, 1); saveStore(VEHICULES_KEY, arr); renderVehChips(); }));
+  });
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'saved-chip saved-chip-add';
+  add.textContent = '＋ Enregistrer ce véhicule';
+  add.title = 'Mémorise le carburant, la consommation et le réservoir actuels';
+  add.addEventListener('click', () => toggleVehForm(true));
+  wrap.appendChild(add);
+}
+function toggleVehForm(open) {
+  document.getElementById('vehSaveForm').classList.toggle('open', open);
+  if (open) document.getElementById('vehNom').focus();
+  else document.getElementById('vehNom').value = '';
+}
+function confirmerVehicule() {
+  const nom = document.getElementById('vehNom').value.trim();
+  if (!nom) { document.getElementById('vehNom').focus(); return; }
+  const veh = {
+    nom,
+    type: document.getElementById('carburant').value,
+    conso: consoValeur(),
+    capacite: parseFloat(document.getElementById('reservoirCapacite').value) || null,
+  };
+  const arr = loadStore(VEHICULES_KEY).filter(v => v.nom.trim().toLowerCase() !== nom.toLowerCase());
+  arr.push(veh);
+  saveStore(VEHICULES_KEY, arr);
+  toggleVehForm(false);
+  renderVehChips();
+}
+function appliquerVehicule(v) {
+  const btn = document.querySelector(`#carbChoices .carb-choice[data-value="${v.type}"]`);
+  if (btn) setCarburant(v.type, btn);
+  // Après setCarburant : majUniteConso peut avoir remis une conso par défaut.
+  if (isFinite(v.conso)) consoSet(v.conso, true);
+  if (v.capacite && v.type !== 'electrique') {
+    const cap = document.getElementById('reservoirCapacite');
+    cap.value = v.capacite;
+    document.getElementById('reservoirCapaciteVal').textContent = Math.round(v.capacite) + ' L';
+  }
+  resetResultat();
+}
+
+// -- Trajets favoris --
+function renderTrajetChips() {
+  const wrap = document.getElementById('trajetChips');
+  if (!wrap) return;
+  wrap.textContent = '';
+  loadStore(TRAJETS_KEY).forEach((t, i) => {
+    const titre = t.points.join(' → ');
+    wrap.appendChild(makeSavedChip('⭐', t.nom, titre,
+      () => appliquerTrajet(t),
+      () => { const arr = loadStore(TRAJETS_KEY); arr.splice(i, 1); saveStore(TRAJETS_KEY, arr); renderTrajetChips(); }));
+  });
+}
+function enregistrerTrajet() {
+  const points = getPoints().filter(p => p.length > 0);
+  if (points.length < 2) { showError('⚠️ Remplissez au moins le départ et la destination avant d\'enregistrer le trajet.'); return; }
+  hideError();
+  const premier = points[0].split(',')[0].trim();
+  const dernier = points[points.length - 1].split(',')[0].trim();
+  const nom = premier + ' → ' + dernier;
+  const cle = points.join('|').toLowerCase();
+  const arr = loadStore(TRAJETS_KEY).filter(t => t.points.join('|').toLowerCase() !== cle);
+  arr.push({ nom, points });
+  saveStore(TRAJETS_KEY, arr);
+  renderTrajetChips();
+}
+function appliquerTrajet(t) {
+  const container = pointsEl();
+  container.textContent = '';
+  t.points.forEach(p => container.appendChild(makePointRow(p)));
+  refreshPoints();
+  resetResultat();
+}
+
+renderVehChips();
+renderTrajetChips();
+// Entrée dans le champ nom = valider (sans déclencher le calcul global).
+document.getElementById('vehNom').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.stopPropagation(); confirmerVehicule(); }
+});
 
 // --- Lieux favoris (départ/destination/étapes) : mémorisés dans le navigateur,
 // proposés en premier dans l'autocomplétion avant même d'avoir tapé un caractère.
