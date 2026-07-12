@@ -2519,10 +2519,10 @@ async function rechercherStationSurTrajet() {
         fuelNote = `⛽ Pas d'arrêt indispensable : vous arriveriez avec ~${arriveePct} % de réservoir. Voici quand même la station la moins chère sur le trajet.`;
       } else if (d10 <= 0) {
         fenetre = [0, Math.min(25, distKm)];
-        fuelNote = '⛽ Niveau très bas au départ : arrêt conseillé dès le début du trajet.';
+        fuelNote = '⚠️ Niveau très bas au départ : arrêt conseillé dès le début du trajet.';
       } else {
         fenetre = [Math.max(0, d20), Math.min(d10, distKm)];
-        fuelNote = '⛽ Arrêt calculé selon votre réservoir : à cet endroit du trajet, votre jauge sera entre ~20 % et ~10 %.';
+        fuelNote = 'Arrêt calculé selon votre réservoir : à cet endroit du trajet, votre jauge sera entre ~20 % et ~10 %.';
       }
     }
     station = await fetchStationSurTrajet(polyline, type, fenetre);
