@@ -1584,7 +1584,7 @@ function renderTrajetChips() {
   wrap.textContent = '';
   loadStore(TRAJETS_KEY).forEach((t, i) => {
     const titre = t.points.join(' → ');
-    wrap.appendChild(makeSavedChip(t.nom, titre,
+    wrap.appendChild(makeSavedChip('', t.nom, titre,
       () => appliquerTrajet(t),
       () => { const arr = loadStore(TRAJETS_KEY); arr.splice(i, 1); saveStore(TRAJETS_KEY, arr); renderTrajetChips(); }));
   });
