@@ -96,10 +96,8 @@
     .point-row.shift-for-handles { margin-left: 8px; }
     /* Séparations plus marquées entre Carburant / Consommation / Réservoir : plus
        d'espace vertical et un trait un peu plus visible et plus long. */
-    .carburant-row, .conso-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
-    /* Sous-bloc réservoir + niveau, dans la ligne Consommation : mini trait de
-       séparation sous la roulette, puis explication et les deux curseurs. */
-    .reservoir-sep { border-top: 1px solid #e3e9ef; margin: 12px 0 10px; }
+    .carburant-row, .conso-row, .reservoir-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
+    .reservoir-row { padding-bottom: 8px; }
     .niveau-label { font-size: 12px; font-weight: 600; color: #607080; margin-bottom: 4px; }
     .niveau-label-depart { margin-top: 10px; }
     .reservoir-hint { font-size: 11px; color: #90a4ae; line-height: 1.4; margin-bottom: 8px; }
@@ -1154,7 +1152,7 @@
     </div>
 
     <div class="param-row conso-row">
-      <div class="param-label" id="consoRowLabel">Consommation et réservoir</div>
+      <div class="param-label">Consommation</div>
       <div class="param-input">
         <input type="hidden" id="conso" value="7.5">
         <div class="conso-line">
@@ -1166,27 +1164,28 @@
           <div class="conso-value"><input type="text" id="consoVal" class="conso-val-input" value="7,5" inputmode="decimal" readonly aria-label="Consommation au 100 km, modifiable"> <span class="roulette-unit" id="consoUnitLabel">L / 100 km</span></div>
           <button type="button" class="conso-arrow" id="consoPlus" aria-label="Augmenter la consommation">+</button>
         </div>
+      </div>
+    </div>
 
-        <!-- Réservoir + niveau au départ : servent à conseiller la station la
-             moins chère au bon moment du trajet (onglet "Sur le trajet"), quand
-             la jauge passera entre ~20 % et ~10 % restants. Bornes du curseur :
-             ~25 L (petites citadines) à ~120 L (gros SUV / pick-up). -->
-        <div id="reservoirBloc">
-          <div class="reservoir-sep"></div>
-          <!-- Curseurs toujours visibles, activés par l'interrupteur : tant
-               qu'il est décoché (défaut), les curseurs sont estompés et
-               l'onglet "Sur le trajet" garde son comportement classique
-               (moins chère sur tout le trajet). -->
-          <div class="optim-switch-row">
-            <div class="reservoir-hint"><strong>Optionnel : optimisation des pleins.</strong> On vous trouve la station la moins chère sur votre trajet, à l'endroit où il vous restera 10 à 20 % de carburant.</div>
-            <button type="button" class="optim-toggle" id="optimToggle" role="switch" aria-checked="false" aria-label="Activer l'optimisation des pleins" onclick="setOptimPlein(!optimPleinActive)"></button>
-          </div>
-          <div id="reservoirPanel" class="reservoir-inactive">
-            <div class="niveau-label">Contenance du réservoir : <strong id="reservoirCapaciteVal">50 L</strong></div>
-            <input type="range" id="reservoirCapacite" class="niveau-slider" min="25" max="120" step="5" value="50" disabled aria-label="Contenance du réservoir en litres">
-            <div class="niveau-label niveau-label-depart">Niveau de carburant au départ : <strong id="niveauDepartVal">100 %</strong></div>
-            <input type="range" id="niveauDepart" class="niveau-slider" min="5" max="100" step="5" value="100" disabled aria-label="Niveau de carburant au départ, en pourcentage">
-          </div>
+    <!-- Réservoir + niveau au départ : servent à conseiller la station la
+         moins chère au bon moment du trajet (onglet "Sur le trajet"), quand
+         la jauge passera entre ~20 % et ~10 % restants. Bornes du curseur :
+         ~25 L (petites citadines) à ~120 L (gros SUV / pick-up).
+         Curseurs toujours visibles, activés par l'interrupteur : tant qu'il
+         est décoché (défaut), ils sont estompés et l'onglet "Sur le trajet"
+         garde son comportement classique. -->
+    <div class="param-row reservoir-row" id="reservoirBloc">
+      <div class="param-label">Plein malin</div>
+      <div class="param-input">
+        <div class="optim-switch-row">
+          <div class="reservoir-hint"><strong>Optionnel : optimisation des pleins.</strong> On vous trouve la station la moins chère sur votre trajet, à l'endroit où il vous restera 10 à 20 % de carburant.</div>
+          <button type="button" class="optim-toggle" id="optimToggle" role="switch" aria-checked="false" aria-label="Activer l'optimisation des pleins" onclick="setOptimPlein(!optimPleinActive)"></button>
+        </div>
+        <div id="reservoirPanel" class="reservoir-inactive">
+          <div class="niveau-label">Contenance du réservoir : <strong id="reservoirCapaciteVal">50 L</strong></div>
+          <input type="range" id="reservoirCapacite" class="niveau-slider" min="25" max="120" step="5" value="50" disabled aria-label="Contenance du réservoir en litres">
+          <div class="niveau-label niveau-label-depart">Niveau de carburant au départ : <strong id="niveauDepartVal">100 %</strong></div>
+          <input type="range" id="niveauDepart" class="niveau-slider" min="5" max="100" step="5" value="100" disabled aria-label="Niveau de carburant au départ, en pourcentage">
         </div>
       </div>
     </div>
@@ -1583,9 +1582,7 @@ function majUniteConso() {
   // Réservoir en litres + recommandation d'arrêt : sans objet en électrique
   // (pas de prix comparable entre bornes, capacité en kWh).
   const reservoirBloc = document.getElementById('reservoirBloc');
-  if (reservoirBloc) reservoirBloc.style.display = electrique ? 'none' : 'block';
-  const consoRowLabel = document.getElementById('consoRowLabel');
-  if (consoRowLabel) consoRowLabel.textContent = electrique ? 'Consommation' : 'Consommation et réservoir';
+  if (reservoirBloc) reservoirBloc.style.display = electrique ? 'none' : 'flex';
 
   const etaitElectrique = carburantTypePrecedent === 'electrique';
   if (electrique && !etaitElectrique) {
