@@ -96,13 +96,14 @@
     .point-row.shift-for-handles { margin-left: 8px; }
     /* Séparations plus marquées entre Carburant / Consommation / Réservoir : plus
        d'espace vertical et un trait un peu plus visible et plus long. */
-    .carburant-row, .conso-row, .reservoir-row, .niveau-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
-    /* Réservoir + niveau : deux lignes visuellement soudées (pas de trait entre
-       les deux), les curseurs prennent toute la largeur du bloc. */
-    .reservoir-row { border-bottom: none; padding-bottom: 6px; }
-    .niveau-row { padding-top: 0; padding-bottom: 8px; }
+    .carburant-row, .conso-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
+    /* Sous-bloc réservoir + niveau, dans la ligne Consommation : mini trait de
+       séparation sous la roulette, puis explication et les deux curseurs. */
+    .reservoir-sep { border-top: 1px solid #e3e9ef; margin: 12px 0 10px; }
     .niveau-label { font-size: 12px; font-weight: 600; color: #607080; margin-bottom: 4px; }
+    .niveau-label-depart { margin-top: 10px; }
     .reservoir-hint { font-size: 11px; color: #90a4ae; line-height: 1.4; margin-bottom: 8px; }
+    .reservoir-hint strong { color: #455060; text-transform: uppercase; letter-spacing: 0.03em; }
     .niveau-label strong { color: #1976d2; }
     .niveau-slider { width: 100%; accent-color: #1976d2; cursor: pointer; display: block; }
     .cheapest-fuel-note { font-size: 12px; color: #607080; margin-top: 6px; line-height: 1.45; }
@@ -1115,7 +1116,7 @@
     </div>
 
     <div class="param-row conso-row">
-      <div class="param-label">Consommation</div>
+      <div class="param-label" id="consoRowLabel">Consommation et réservoir</div>
       <div class="param-input">
         <input type="hidden" id="conso" value="7.5">
         <div class="conso-line">
@@ -1127,24 +1128,19 @@
           <div class="conso-value"><input type="text" id="consoVal" class="conso-val-input" value="7,5" inputmode="decimal" readonly aria-label="Consommation au 100 km, modifiable"> <span class="roulette-unit" id="consoUnitLabel">L / 100 km</span></div>
           <button type="button" class="conso-arrow" id="consoPlus" aria-label="Augmenter la consommation">+</button>
         </div>
-      </div>
-    </div>
 
-    <!-- Réservoir + niveau au départ : servent à conseiller la station la
-         moins chère au bon moment du trajet (onglet "Sur le trajet"), quand
-         la jauge passera entre ~20 % et ~10 % restants. Bornes du curseur :
-         ~25 L (petites citadines) à ~120 L (gros SUV / pick-up). -->
-    <div class="param-row reservoir-row">
-      <div class="param-input">
-        <div class="niveau-label">Contenance du réservoir : <strong id="reservoirCapaciteVal">50 L</strong></div>
-        <div class="reservoir-hint">Indiquez votre réservoir et votre niveau de départ : on vous trouve la station la moins chère sur votre trajet, à l'endroit où il vous restera environ 10 à 20 % de carburant.</div>
-        <input type="range" id="reservoirCapacite" class="niveau-slider" min="25" max="120" step="5" value="50" aria-label="Contenance du réservoir en litres">
-      </div>
-    </div>
-    <div class="param-row niveau-row">
-      <div class="param-input">
-        <div class="niveau-label">Niveau de carburant au départ : <strong id="niveauDepartVal">100 %</strong></div>
-        <input type="range" id="niveauDepart" class="niveau-slider" min="5" max="100" step="5" value="100" aria-label="Niveau de carburant au départ, en pourcentage">
+        <!-- Réservoir + niveau au départ : servent à conseiller la station la
+             moins chère au bon moment du trajet (onglet "Sur le trajet"), quand
+             la jauge passera entre ~20 % et ~10 % restants. Bornes du curseur :
+             ~25 L (petites citadines) à ~120 L (gros SUV / pick-up). -->
+        <div id="reservoirBloc">
+          <div class="reservoir-sep"></div>
+          <div class="reservoir-hint"><strong>Optionnel :</strong> indiquez votre réservoir et votre niveau de départ, on vous trouve la station la moins chère sur votre trajet, à l'endroit où il vous restera environ 10 à 20 % de carburant.</div>
+          <div class="niveau-label">Contenance du réservoir : <strong id="reservoirCapaciteVal">50 L</strong></div>
+          <input type="range" id="reservoirCapacite" class="niveau-slider" min="25" max="120" step="5" value="50" aria-label="Contenance du réservoir en litres">
+          <div class="niveau-label niveau-label-depart">Niveau de carburant au départ : <strong id="niveauDepartVal">100 %</strong></div>
+          <input type="range" id="niveauDepart" class="niveau-slider" min="5" max="100" step="5" value="100" aria-label="Niveau de carburant au départ, en pourcentage">
+        </div>
       </div>
     </div>
     </div>
@@ -1538,7 +1534,10 @@ function majUniteConso() {
 
   // Réservoir en litres + recommandation d'arrêt : sans objet en électrique
   // (pas de prix comparable entre bornes, capacité en kWh).
-  document.querySelectorAll('.reservoir-row, .niveau-row').forEach(r => { r.style.display = electrique ? 'none' : 'flex'; });
+  const reservoirBloc = document.getElementById('reservoirBloc');
+  if (reservoirBloc) reservoirBloc.style.display = electrique ? 'none' : 'block';
+  const consoRowLabel = document.getElementById('consoRowLabel');
+  if (consoRowLabel) consoRowLabel.textContent = electrique ? 'Consommation' : 'Consommation et réservoir';
 
   const etaitElectrique = carburantTypePrecedent === 'electrique';
   if (electrique && !etaitElectrique) {
