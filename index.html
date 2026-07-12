@@ -102,6 +102,7 @@
     .reservoir-row { border-bottom: none; padding-bottom: 6px; }
     .niveau-row { padding-top: 0; padding-bottom: 8px; }
     .niveau-label { font-size: 12px; font-weight: 600; color: #607080; margin-bottom: 4px; }
+    .reservoir-hint { font-size: 11px; color: #90a4ae; line-height: 1.4; margin-bottom: 8px; }
     .niveau-label strong { color: #1976d2; }
     .niveau-slider { width: 100%; accent-color: #1976d2; cursor: pointer; display: block; }
     .cheapest-fuel-note { font-size: 12px; color: #607080; margin-top: 6px; line-height: 1.45; }
@@ -1136,6 +1137,7 @@
     <div class="param-row reservoir-row">
       <div class="param-input">
         <div class="niveau-label">Contenance du réservoir : <strong id="reservoirCapaciteVal">50 L</strong></div>
+        <div class="reservoir-hint">Indiquez votre réservoir et votre niveau de départ : on vous trouve la station la moins chère sur votre trajet, à l'endroit où il vous restera environ 10 à 20 % de carburant.</div>
         <input type="range" id="reservoirCapacite" class="niveau-slider" min="25" max="120" step="5" value="50" aria-label="Contenance du réservoir en litres">
       </div>
     </div>
