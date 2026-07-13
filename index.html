@@ -3381,7 +3381,6 @@ function renderResultMode() {
   if (evite) {
     const coutEvite = isAR ? evite.cost * 2 : evite.cost;
     peageValEl.appendChild(document.createTextNode('−' + fmtEur(coutEvite)));
-    ecoLine.appendChild(document.createTextNode('🛣️'));
     const txt = document.createElement('span');
     const strong = document.createElement('strong');
     strong.textContent = fmtEur(coutEvite) + ' de péages évités';
