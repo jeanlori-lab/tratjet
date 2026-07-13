@@ -108,14 +108,14 @@
       font-weight: 600; color: #455060; line-height: 1.2;
       font-size: clamp(12px, 4vw, 15px);
       white-space: nowrap;
-      margin-bottom: 4px;
+      flex: 1;
     }
     .niveau-label strong { color: #1976d2; }
     .niveau-slider { width: 100%; accent-color: #1976d2; cursor: pointer; display: block; }
-    /* Interrupteur "optimisation des pleins" : les curseurs sont toujours
-       visibles, mais estompés et inertes tant qu'il est décoché. */
-    .optim-switch-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-    .optim-switch-row .reservoir-hint { flex: 1; margin-bottom: 0; }
+    /* Interrupteur "optimisation des pleins" : centré verticalement avec le
+       titre sur la même ligne ; les curseurs restent toujours visibles, mais
+       estompés et inertes tant qu'il est décoché. */
+    .optim-switch-row { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
     .optim-toggle {
       position: relative; width: 44px; height: 26px; border-radius: 999px;
       background: #cfd8e0; border: none; cursor: pointer; flex-shrink: 0;
@@ -1252,11 +1252,11 @@
          garde son comportement classique. -->
     <div class="param-row reservoir-row" id="reservoirBloc">
       <div class="param-input">
-        <div class="optim-title">Optionnel : optimisation des pleins</div>
         <div class="optim-switch-row">
-          <div class="reservoir-hint">On vous trouve la station la moins chère sur votre trajet, à l'endroit où il vous restera 10 à 20 % de carburant.</div>
+          <div class="optim-title">Optionnel : optimisation des pleins</div>
           <button type="button" class="optim-toggle" id="optimToggle" role="switch" aria-checked="false" aria-label="Activer l'optimisation des pleins" onclick="setOptimPlein(!optimPleinActive)"></button>
         </div>
+        <div class="reservoir-hint">On vous trouve la station la moins chère sur votre trajet, à l'endroit où il vous restera 10 à 20 % de carburant.</div>
         <div id="reservoirPanel" class="reservoir-inactive">
           <div class="niveau-label">Contenance du réservoir : <strong id="reservoirCapaciteVal">50 L</strong></div>
           <input type="range" id="reservoirCapacite" class="niveau-slider" min="25" max="120" step="5" value="50" disabled aria-label="Contenance du réservoir en litres">
