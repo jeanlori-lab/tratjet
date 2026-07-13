@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Tratjet — Charte graphique</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 210mm; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #1a2433;
+    background: #fff;
+    padding: 9mm 10mm;
+    font-size: 8.5pt;
+    line-height: 1.35;
+  }
+  /* En-tête */
+  .head { display: flex; align-items: center; gap: 12px; padding-bottom: 8px; border-bottom: 2px solid #e2971a; margin-bottom: 10px; }
+  .head img { width: 44px; height: 44px; border-radius: 11px; }
+  .head .t1 {
+    font-family: 'Sora', sans-serif; font-size: 21pt; font-weight: 700; letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #0f1729, #29405e); -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .head .t1 .rat { color: #e2971a; -webkit-text-fill-color: #e2971a; font-weight: 800; }
+  .head .t2 { font-size: 8pt; color: #607080; margin-top: 1px; }
+  .head .right { margin-left: auto; text-align: right; font-size: 6.5pt; color: #90a4ae; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cell { border: 1px solid #e6ebf1; border-radius: 8px; padding: 8px 10px; }
+  .cell.full { grid-column: 1 / -1; }
+  h2 { font-size: 7pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #1976d2; margin-bottom: 6px; }
+
+  /* Couleurs */
+  .crow { display: flex; gap: 4px; margin-bottom: 4px; }
+  .c { flex: 1; border-radius: 6px; padding: 5px 6px 4px; color: #fff; }
+  .c .n { font-size: 6.5pt; font-weight: 700; }
+  .c .h { font-size: 6pt; opacity: 0.85; font-family: Consolas, monospace; }
+  .c.light { color: #455060; border: 1px solid #e0e6ee; }
+  .crole { font-size: 6.5pt; color: #90a4ae; margin-bottom: 5px; }
+
+  /* Typo */
+  .trow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 2.5px 0; border-bottom: 1px solid #f0f4f8; }
+  .trow:last-child { border-bottom: none; }
+  .tspec { font-size: 6pt; color: #90a4ae; font-family: Consolas, monospace; white-space: nowrap; }
+
+  /* Composants */
+  .comps { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .x-btn { padding: 7px 14px; background: linear-gradient(135deg, #2196f3, #0d47a1); color: #fff; font-size: 7.5pt; font-weight: 700; border: none; border-radius: 9px; box-shadow: 0 3px 8px rgba(13,71,161,0.28); }
+  .x-carb { padding: 4px 9px; border: 1.2px solid #e2971a; border-radius: 999px; background: #fffaf0; color: #7a5a10; font-size: 6.5pt; font-weight: 700; }
+  .x-carb.on { background: #e2971a; color: #fff; }
+  .x-tab { padding: 4px 11px; font-size: 6.5pt; font-weight: 700; border-radius: 999px; color: #607080; background: #eef2f6; border: none; }
+  .x-tab.on { background: #2e7d32; color: #fff; }
+  .x-maps { display: inline-flex; gap: 3px; font-size: 7pt; font-weight: 600; color: #1976d2; background: #e8f4ff; padding: 4px 10px; border-radius: 12px; }
+  .x-chip { display: inline-flex; gap: 3px; background: #e8f4ff; color: #1976d2; border-radius: 9px; padding: 3px 7px; font-size: 6.5pt; font-weight: 600; }
+  .x-note { background: #f5f8fb; border: 2px solid #2e7d32; border-radius: 9px; padding: 5px 8px; font-size: 6.5pt; }
+  .x-note strong { color: #2e7d32; font-size: 8pt; }
+  .x-eco { background: #e8f5e9; border-radius: 6px; padding: 3px 7px; font-size: 6.5pt; font-weight: 600; color: #2e7d32; }
+  .x-toggle { position: relative; display: inline-block; width: 26px; height: 15px; border-radius: 999px; background: #1976d2; }
+  .x-toggle::after { content: ''; position: absolute; top: 2px; left: 13px; width: 11px; height: 11px; border-radius: 50%; background: #fff; }
+  .x-panel-blue { background: #f4f8fd; border: 1px solid #e2ecf7; border-radius: 8px; padding: 4px 9px; font-size: 6.5pt; color: #455060; }
+  .x-panel-cream { background: #fdf8ec; border: 1px solid #f0e2c2; border-radius: 8px; padding: 4px 9px; font-size: 6.5pt; color: #455060; }
+
+  /* Tables compactes */
+  td { padding: 2px 6px 2px 0; font-size: 7pt; color: #455060; vertical-align: top; }
+  td:first-child { font-weight: 700; color: #1a2433; white-space: nowrap; }
+  code { background: #f2f5f9; border-radius: 3px; padding: 0 3px; font-size: 6.5pt; color: #0d47a1; font-family: Consolas, monospace; }
+
+  /* Do / Don't */
+  .dodont { display: flex; gap: 6px; }
+  .do, .dont { flex: 1; border-radius: 7px; padding: 6px 9px; font-size: 6.8pt; }
+  .do { background: #e8f5e9; color: #1d5b26; }
+  .dont { background: #fdecea; color: #8f2a20; }
+  .do b, .dont b { display: block; font-size: 6pt; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
+  .do div, .dont div { margin: 1.5px 0; }
+
+  .logos { display: flex; gap: 8px; align-items: center; }
+  .logos .lg { text-align: center; font-size: 6pt; color: #90a4ae; }
+  .logos img { height: 30px; object-fit: contain; display: block; margin: 0 auto 2px; }
+  .logos .dark { background: #33404f; border-radius: 6px; padding: 3px 6px; }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <img src="logo trajet rat.png" alt="">
+  <div>
+    <div class="t1">T<span class="rat">rat</span>jet</div>
+    <div class="t2">Charte graphique — l'essentiel en une page</div>
+  </div>
+  <div class="right">v1.0 · juillet 2026<br>Esprit : malin · chaleureux · direct · mobile d'abord<br>Version complète : charte-graphique.html</div>
+</div>
+
+<div class="grid">
+
+  <div class="cell">
+    <h2>Couleurs — une couleur = un rôle</h2>
+    <div class="crole">BLEU → actions, navigation, valeurs</div>
+    <div class="crow">
+      <div class="c" style="background:#1976d2;"><div class="n">Primaire</div><div class="h">#1976d2</div></div>
+      <div class="c" style="background:#0d47a1;"><div class="n">Profond</div><div class="h">#0d47a1</div></div>
+      <div class="c" style="background:#1565c0;"><div class="n">Valeurs</div><div class="h">#1565c0</div></div>
+      <div class="c light" style="background:#e8f4ff;"><div class="n">Pâle</div><div class="h">#e8f4ff</div></div>
+    </div>
+    <div class="crole">ORANGE → marque, carburant, véhicule</div>
+    <div class="crow">
+      <div class="c" style="background:#e2971a;"><div class="n">Tratjet</div><div class="h">#e2971a</div></div>
+      <div class="c" style="background:#c9760a;"><div class="n">Texte</div><div class="h">#c9760a</div></div>
+      <div class="c light" style="background:#fdf8ec;"><div class="n">Crème</div><div class="h">#fdf8ec</div></div>
+    </div>
+    <div class="crole">VERT → stations, économies, validation</div>
+    <div class="crow">
+      <div class="c" style="background:#2e7d32;"><div class="n">Station</div><div class="h">#2e7d32</div></div>
+      <div class="c" style="background:#66bb6a;"><div class="n">Clair</div><div class="h">#66bb6a</div></div>
+      <div class="c light" style="background:#e8f5e9;"><div class="n">Pâle</div><div class="h">#e8f5e9</div></div>
+    </div>
+    <div class="crole">NEUTRES → texte &amp; structure</div>
+    <div class="crow">
+      <div class="c" style="background:#1a2433;"><div class="n">Encre</div><div class="h">#1a2433</div></div>
+      <div class="c" style="background:#455060;"><div class="n">Libellé</div><div class="h">#455060</div></div>
+      <div class="c" style="background:#90a4ae;"><div class="n">Estompé</div><div class="h">#90a4ae</div></div>
+      <div class="c light" style="background:#eef2f6;"><div class="n">Fond</div><div class="h">#eef2f6</div></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <h2>Typographie</h2>
+    <div class="trow"><span style="font-family:'Sora',sans-serif;font-size:13pt;font-weight:700;background:linear-gradient(135deg,#0f1729,#29405e);-webkit-background-clip:text;background-clip:text;color:transparent;">T<span style="color:#e2971a;-webkit-text-fill-color:#e2971a;font-weight:800;">rat</span>jet</span><span class="tspec">Sora 700 · logotype uniquement</span></div>
+    <div class="trow"><span style="font-size:6.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:#98a6b6;">TITRE DE CARTE</span><span class="tspec">SegoeUI 700 · 10.5px · caps</span></div>
+    <div class="trow"><span style="font-size:9pt;font-weight:700;color:#455060;">Titre de section</span><span class="tspec">SegoeUI 700 · 14px · #455060</span></div>
+    <div class="trow"><span style="font-size:8.5pt;">Texte courant</span><span class="tspec">SegoeUI 400 · 13-14px · #1a2433</span></div>
+    <div class="trow"><span style="font-size:7pt;color:#90a4ae;">Explications, mentions (hints)</span><span class="tspec">SegoeUI 600 · 11px · #90a4ae</span></div>
+    <div class="trow"><span style="font-size:15pt;font-weight:900;color:#1565c0;">194,21 €</span><span class="tspec">chiffres-clés · 900 · #1565c0</span></div>
+    <div style="font-size:6.5pt;color:#90a4ae;margin-top:4px;">Format FR : virgule décimale, espace avant €, carburant à 3 décimales (1.789 €/L), ~ devant les estimations.</div>
+
+    <h2 style="margin-top:8px;">Logo &amp; mascotte</h2>
+    <div class="logos">
+      <div class="lg"><img src="logo trajet rat.png" alt="">Icône appli<br>(cartouche bleu)</div>
+      <div class="lg"><span class="dark" style="display:inline-block;"><img src="logo rat seul.png" alt="" style="height:24px;"></span>Détourée : animations<br>(chargement)</div>
+      <div style="font-size:6.5pt;color:#455060;flex:1;">Le « rat » du nom : <b>toujours</b> orange <code>#e2971a</code>. Ne pas déformer ni recolorer la mascotte. Version cartouche = icône/partage seulement.</div>
+    </div>
+  </div>
+
+  <div class="cell full">
+    <h2>Composants</h2>
+    <div class="comps">
+      <button class="x-btn">Calculer le coût du trajet</button>
+      <span class="x-carb on">SP95</span><span class="x-carb">Gazole</span><span class="x-carb">E85</span>
+      <span class="x-tab">Sur le trajet</span><span class="x-tab on">Près du départ</span>
+      <span class="x-maps">🚩 Itinéraire</span>
+      <span class="x-chip">🚗 Mégane ✕</span>
+      <span class="x-toggle"></span>
+      <span class="x-panel-blue">Panneau bleu : itinéraire</span>
+      <span class="x-panel-cream">Panneau crème : carburant</span>
+      <span class="x-note">🐀 <strong>1.789 €/L</strong> à Carrefour, Melun</span>
+      <span class="x-eco">💰 −6,20 € vs prix moyen</span>
+    </div>
+    <div style="font-size:6.5pt;color:#90a4ae;margin-top:5px;">1 seul bouton dégradé bleu par écran · pilules = <code>radius 999px</code> · encadré station : bordure verte 3px + halo pulsé (seule animation continue avec la voiture-rat de chargement) · option désactivée : opacité 0.35 + inerte.</div>
+  </div>
+
+  <div class="cell">
+    <h2>Formes &amp; espacements</h2>
+    <table>
+      <tr><td>Carte</td><td><code>radius 16px</code> · <code>padding 20px</code> · ombre <code>0 4px 16px rgba(15,23,41,.07)</code></td></tr>
+      <tr><td>Panneaux</td><td><code>radius 14px</code>, bordure 1px teintée, sans ombre</td></tr>
+      <tr><td>Champs</td><td><code>radius 10px</code> · bordure <code>1.5px #d5e0ee</code></td></tr>
+      <tr><td>Page</td><td>colonne unique <code>max-width 520px</code>, fond <code>#eef2f6</code></td></tr>
+      <tr><td>Ruptures</td><td><code>480px</code> (mobile) · <code>768px</code> — tester à 320/375/390px</td></tr>
+    </table>
+    <h2 style="margin-top:7px;">Iconographie &amp; ton</h2>
+    <table>
+      <tr><td>🐀 ⛽ 💰 ⚠️ 📍 ⭐ 🚗</td><td>emojis fonctionnels, 1 max par message, jamais décoratifs</td></tr>
+      <tr><td>Voix</td><td>vouvoiement, phrases courtes ; « on » = l'appli qui travaille pour vous</td></tr>
+      <tr><td>Optionnel</td><td>préfixe « <b>Optionnel :</b> » en gras dans le titre de la fonctionnalité</td></tr>
+    </table>
+  </div>
+
+  <div class="cell">
+    <h2>À faire / à éviter</h2>
+    <div class="dodont">
+      <div class="do"><b>✓ À faire</b>
+        <div>Une couleur = un rôle, sans mélange</div>
+        <div>Copier un composant existant de la même famille</div>
+        <div>Montants gros et gras, libellés discrets</div>
+        <div>Respecter <code>prefers-reduced-motion</code></div>
+      </div>
+      <div class="dont"><b>✗ À éviter</b>
+        <div>Nouvelle couleur / police hors charte</div>
+        <div>Deux boutons dégradé bleu par écran</div>
+        <div>Orange <code>#e2971a</code> en texte sur blanc → utiliser <code>#c9760a</code></div>
+        <div>Coins carrés, ombres dures, emojis en rafale</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
