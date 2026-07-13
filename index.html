@@ -1344,8 +1344,8 @@
 </div>
     <div class="station-section-title" id="stationSectionTitle" style="display:none;">Où faire le plein</div>
     <div class="station-tabs" id="stationTabs" style="display:none;">
-      <button type="button" class="station-tab-btn active" data-tab="depart" onclick="setStationTab('depart')">Près du départ</button>
       <button type="button" class="station-tab-btn" data-tab="trajet" onclick="setStationTab('trajet')">Sur le trajet</button>
+      <button type="button" class="station-tab-btn active" data-tab="depart" onclick="setStationTab('depart')">Près du départ</button>
     </div>
     <div class="cheapest-note" id="cheapestNote" style="display:none;"></div>
     <div class="cheapest-note" id="cheapestNoteTrajet" style="display:none;"></div>
@@ -2509,7 +2509,7 @@ async function rechercherStationSurTrajet() {
     // segment du trajet où la jauge passera de ~20 % à ~10 % restants, et on
     // y cherche la station la moins chère.
     const reservoir = getReservoirInfo();
-    let fenetre = null;
+    let fenetre = null, calcule = false;
     if (reservoir && distKm > 0 && conso > 0) {
       const kmParPct = reservoir.capacite / conso; // km parcourus par % de jauge
       const d20 = (reservoir.niveau - 20) * kmParPct;
@@ -2522,21 +2522,28 @@ async function rechercherStationSurTrajet() {
         fuelNote = '⚠️ Niveau très bas au départ : arrêt conseillé dès le début du trajet.';
       } else {
         fenetre = [Math.max(0, d20), Math.min(d10, distKm)];
-        fuelNote = 'Arrêt calculé selon votre réservoir : à cet endroit du trajet, votre jauge sera entre ~20 % et ~10 %.';
+        calcule = true; // le libellé exact (avec le % réel) est posé après la recherche
       }
     }
     station = await fetchStationSurTrajet(polyline, type, fenetre);
+    let horsZoneIdeale = false;
     if (!station && fenetre && fenetre[0] > 0) {
       // Rien dans la fenêtre idéale : on élargit plus tôt sur le trajet
       // (jauge encore au-dessus de 20 %), jamais plus tard (risque de panne).
       station = await fetchStationSurTrajet(polyline, type, [0, fenetre[0]]);
-      if (station) fuelNote = '⛽ Aucune station dans la zone idéale (jauge entre 20 % et 10 %) : voici la moins chère un peu plus tôt sur le trajet.';
+      horsZoneIdeale = !!station;
     }
     if (station && reservoir && conso > 0 && reservoir.capacite > 0 && isFinite(station.kmSurTrajet)) {
-      const pctStation = Math.round(reservoir.niveau - station.kmSurTrajet * conso / reservoir.capacite);
-      fuelNote += ` Jauge estimée à l'arrêt : ~${Math.max(0, pctStation)} %.`;
+      const pctStation = Math.max(0, Math.round(reservoir.niveau - station.kmSurTrajet * conso / reservoir.capacite));
+      if (calcule) {
+        fuelNote = horsZoneIdeale
+          ? `⛽ Aucune station dans la zone idéale : arrêt un peu plus tôt sur le trajet, votre jauge sera de ~${pctStation} %.`
+          : `Arrêt calculé selon votre réservoir : à cet endroit du trajet, votre jauge sera de ~${pctStation} %.`;
+      } else {
+        fuelNote += ` Jauge estimée à l'arrêt : ~${pctStation} %.`;
+      }
       // Plein réel à cet arrêt : de la jauge estimée jusqu'au plein.
-      litresPlein = reservoir.capacite * (1 - Math.max(0, pctStation) / 100);
+      litresPlein = reservoir.capacite * (1 - pctStation / 100);
     } else if (station && lastResultData && isFinite(lastResultData.litresA)) {
       // Sans optimisation : plein estimé sur les litres du trajet.
       litresPlein = lastResultData.litresA;
