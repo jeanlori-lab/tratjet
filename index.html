@@ -1344,8 +1344,8 @@
 </div>
     <div class="station-section-title" id="stationSectionTitle" style="display:none;">Où faire le plein</div>
     <div class="station-tabs" id="stationTabs" style="display:none;">
-      <button type="button" class="station-tab-btn" data-tab="trajet" onclick="setStationTab('trajet')">Sur le trajet</button>
-      <button type="button" class="station-tab-btn active" data-tab="depart" onclick="setStationTab('depart')">Près du départ</button>
+      <button type="button" class="station-tab-btn active" data-tab="trajet" onclick="setStationTab('trajet')">Sur le trajet</button>
+      <button type="button" class="station-tab-btn" data-tab="depart" onclick="setStationTab('depart')">Près du départ</button>
     </div>
     <div class="cheapest-note" id="cheapestNote" style="display:none;"></div>
     <div class="cheapest-note" id="cheapestNoteTrajet" style="display:none;"></div>
@@ -2283,9 +2283,9 @@ function buildEcoBadge(prixStation, litres) {
 // seulement au relâchement (évite un fetch à chaque pixel glissé).
 let lastStationSearch = null; // { lat, lon, type, rayon, depart, arrivee }
 
-// Onglets "Près du départ" / "Sur le trajet" (résultat de trajet) : priorité
-// systématique à "Près du départ" à chaque nouveau calcul.
-let currentStationTab = 'depart';
+// Onglets "Sur le trajet" / "Près du départ" (résultat de trajet) : priorité
+// systématique à "Sur le trajet" à chaque nouveau calcul.
+let currentStationTab = 'trajet';
 function setStationTab(tab) {
   currentStationTab = tab;
   document.querySelectorAll('.station-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -3544,7 +3544,9 @@ async function calculer() {
     const carburantType = document.getElementById('carburant').value;
     lastStationSearch = { lat: c1[1], lon: c1[0], type: carburantType, rayon: STATION_RAYON_KM, depart, arrivee };
     lastStationSurTrajet = { polyline: route.polyline, type: carburantType, depart, arrivee, distKm: distA, conso };
-    setStationTab('depart'); // priorité systématique à "Près du départ" à chaque nouveau calcul
+    // Priorité à "Sur le trajet" à chaque nouveau calcul — sauf en électrique,
+    // où cet onglet n'a pas de résultat (pas de prix comparable entre bornes).
+    setStationTab(carburantType === 'electrique' ? 'depart' : 'trajet');
     await Promise.all([rechercherStationMoinsChere(), rechercherStationSurTrajet()]);
 
     document.getElementById('sectionResultats').style.display = 'block';
