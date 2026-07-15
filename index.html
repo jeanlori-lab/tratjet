@@ -525,11 +525,26 @@
       transition: background 0.15s;
     }
     .veh-save-btn:hover { background: #fff8ec; }
+    /* Signe "+" dessiné en CSS pur (deux barres superposées) plutôt qu'un
+       glyphe de police : le rendu d'un "+" texte n'est pas centré dans sa
+       boîte de caractère de façon identique sur toutes les plateformes
+       (décalage visible vers le haut sur certains systèmes), un tracé
+       géométrique garantit un centrage identique partout. */
     .veh-save-plus {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 18px; height: 18px; border-radius: 50%; background: #e2971a; color: #fff;
-      font-size: 13px; font-weight: 800; line-height: 1; flex-shrink: 0;
+      position: relative;
+      display: inline-block;
+      width: 18px; height: 18px; border-radius: 50%; background: #e2971a;
+      flex-shrink: 0;
     }
+    .veh-save-plus::before, .veh-save-plus::after {
+      content: '';
+      position: absolute; top: 50%; left: 50%;
+      background: #fff;
+      transform: translate(-50%, -50%);
+      border-radius: 1px;
+    }
+    .veh-save-plus::before { width: 8px; height: 1.6px; }
+    .veh-save-plus::after { width: 1.6px; height: 8px; }
     .save-form { display: none; align-items: center; gap: 6px; margin: 12px 0 8px; }
     .save-form.open { display: flex; }
     .save-form input { flex: 1; min-width: 0; }
@@ -1364,7 +1379,7 @@
          réservoir, jamais le niveau au départ) sous un nom : il apparaît
          ensuite en puce dans "Mes véhicules" en haut du bloc. -->
     <button type="button" class="veh-save-btn" id="vehSaveBtn" onclick="toggleVehForm(true)">
-      <span class="veh-save-plus">+</span> Enregistrer ce véhicule
+      <span class="veh-save-plus"></span> Enregistrer ce véhicule
     </button>
     <div class="save-form" id="vehSaveForm">
       <input type="text" id="vehNom" placeholder="Nom du véhicule (ex : Clio)" maxlength="30" autocomplete="off">
@@ -3743,7 +3758,14 @@ function formatDuree(sec) {
   return h > 0 ? `${h}h${String(m).padStart(2,'0')}` : `${m} min`;
 }
 
-function fmtKm(n)  { return Math.round(n).toLocaleString('fr-FR') + ' km'; }
+// Sous 20 km, une décimale (ex. "8,3 km") : l'arrondi à l'entier serait trop
+// grossier pour un petit trajet local.
+function fmtKm(n) {
+  return (n < 20
+    ? n.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+    : Math.round(n).toLocaleString('fr-FR')
+  ) + ' km';
+}
 function fmtEur(n) { return n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €'; }
 function fmtL(n, unit)   { return n.toLocaleString('fr-FR', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' ' + (unit || 'L'); }
 
