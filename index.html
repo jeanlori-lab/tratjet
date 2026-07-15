@@ -950,6 +950,31 @@
       box-shadow: 0 2px 6px rgba(46,125,50,0.3);
     }
 
+    /* Sélecteur "Arrêt 1 / 2 / 3…" quand un trajet nécessite plusieurs
+       pleins (onglet "Sur le trajet", optimisation activée). */
+    .arret-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .arret-tab-btn {
+      padding: 5px 12px;
+      font-size: 11.5px;
+      font-weight: 700;
+      border-radius: 999px;
+      cursor: pointer;
+      color: #607080;
+      background: #eef2f6;
+      border: none;
+      font-family: inherit;
+      transition: background 0.15s, color 0.15s;
+    }
+    .arret-tab-btn.active {
+      background: #2e7d32;
+      color: #fff;
+    }
+
     /* Bascule principale Coût carburant / Station la moins chère, en haut de
        page. Classes dédiées (pas .ar-toggle-btn) pour ne pas être affectées
        par le toggle Aller simple/Aller-retour, qui recible tous les
@@ -2448,9 +2473,18 @@ async function rechercherStationMoinsChere() {
   if (station) {
     cheapestNote.appendChild(buildStationDetail(station, type, lat, lon, false));
 
-    // Économie estimée sur un plein couvrant le trajet, vs prix moyen national.
+    // Économie estimée sur un plein ici, vs prix moyen national. Cette
+    // station est proche du départ : un plein tout de suite ferait un
+    // top-up depuis le niveau au départ (jamais plus que la contenance du
+    // réservoir), ou une taille de réservoir plausible si non renseignée —
+    // jamais les litres de tout le trajet, qui peuvent largement dépasser
+    // la contenance réelle sur un long trajet.
     if (!electrique && lastResultData && isFinite(lastResultData.litresA)) {
-      const badge = buildEcoBadge(station.prix, lastResultData.litresA);
+      const reservoirDepart = getReservoirInfo();
+      const litresPlein = reservoirDepart
+        ? reservoirDepart.capacite * (1 - reservoirDepart.niveau / 100)
+        : Math.min(lastResultData.litresA, LITRES_PLEIN_MAX_DEFAUT);
+      const badge = buildEcoBadge(station.prix, litresPlein);
       if (badge) cheapestNote.appendChild(badge);
     }
 
@@ -2615,6 +2649,125 @@ function getReservoirInfo() {
   return { capacite, niveau };
 }
 
+// Plein maximal réaliste pour le badge économie quand la capacité du
+// réservoir n'est pas connue (optimisation non activée) : un plein ne peut
+// jamais dépasser un réservoir de voiture courant, donc on plafonne à une
+// valeur haute plausible plutôt que d'afficher les litres de tout le trajet
+// (qui peuvent largement dépasser la contenance réelle sur un long trajet).
+const LITRES_PLEIN_MAX_DEFAUT = 60;
+
+// Calcule les arrêts nécessaires sur tout le trajet selon le réservoir : à
+// chaque étape, on cible le segment où la jauge passera de ~20 % à ~10 %
+// restants, on y cherche la station la moins chère, puis on suppose un plein
+// complet à cet arrêt avant de continuer. Sans limite de nombre — un trajet
+// très long peut demander plusieurs arrêts.
+async function planArretsSurTrajet(polyline, type, distKm, conso, reservoir) {
+  const arrets = [];
+  const kmParPct = reservoir.capacite / conso; // km parcourus par % de jauge
+  let currentKm = 0, currentNiveau = reservoir.niveau;
+  for (let i = 0; i < 40; i++) { // garde-fou : jamais un nombre d'arrêts déraisonnable
+    const remaining = distKm - currentKm;
+    if (remaining <= 0) break;
+    const d20 = (currentNiveau - 20) * kmParPct;
+    const d10 = (currentNiveau - 10) * kmParPct;
+    if (d20 >= remaining) break; // le reste du trajet est faisable sans arrêt de plus
+
+    const urgent = d10 <= 0;
+    const fenetre = urgent
+      ? [currentKm, Math.min(currentKm + 25, distKm)]
+      : [currentKm + Math.max(0, d20), currentKm + Math.min(d10, remaining)];
+
+    let st = await fetchStationSurTrajet(polyline, type, fenetre);
+    let horsZone = false;
+    if (!st && fenetre[0] > currentKm) {
+      // Rien dans la fenêtre idéale : on élargit plus tôt sur ce segment
+      // (jauge encore au-dessus de 20 %), jamais plus tard (risque de panne).
+      st = await fetchStationSurTrajet(polyline, type, [currentKm, fenetre[0]]);
+      horsZone = !!st;
+    }
+    if (!st) break; // aucune station trouvée sur ce segment : on s'arrête là (résultat partiel)
+
+    const pctArrivee = Math.max(0, Math.round(currentNiveau - (st.kmSurTrajet - currentKm) / kmParPct));
+    arrets.push({ station: st, pctArrivee, horsZone, urgent, litresPlein: reservoir.capacite * (1 - pctArrivee / 100) });
+    currentKm = st.kmSurTrajet;
+    currentNiveau = 100; // on suppose un plein complet à chaque arrêt
+  }
+  return arrets;
+}
+
+// Affiche un ou plusieurs arrêts dans l'encadré : un sélecteur "Arrêt 1/2/3…"
+// seulement s'il y en a plusieurs, et le détail de l'arrêt sélectionné en
+// dessous (station, jauge estimée, économie, carte, lien Maps).
+function renderArrets(note, arrets, type, depart, arrivee) {
+  const contentWrap = document.createElement('div');
+  contentWrap.className = 'arret-content';
+
+  function renderContent(idx) {
+    contentWrap.textContent = '';
+    const a = arrets[idx];
+
+    const detail = buildStationDetail(a.station, type, null, null, false);
+    if (isFinite(a.station.distRoute)) {
+      detail.appendChild(document.createTextNode(' (à ' + a.station.distRoute.toFixed(1) + ' km de la route)'));
+    }
+    contentWrap.appendChild(detail);
+
+    const fn = document.createElement('div');
+    fn.className = 'cheapest-fuel-note';
+    if (a.customNote) {
+      fn.textContent = a.customNote;
+    } else if (a.urgent) {
+      fn.textContent = idx === 0
+        ? '⚠️ Niveau très bas au départ : arrêt conseillé dès le début du trajet.'
+        : '⚠️ Niveau très bas à cette étape : arrêt conseillé au plus vite.';
+    } else if (a.horsZone) {
+      fn.textContent = `⛽ Aucune station dans la zone idéale pour cet arrêt : un peu plus tôt sur le trajet, votre jauge sera de ~${a.pctArrivee} %.`;
+    } else if (idx === 0) {
+      fn.textContent = `Arrêt calculé selon votre réservoir : à cet endroit du trajet, votre jauge sera de ~${a.pctArrivee} %.`;
+    } else {
+      fn.textContent = `Jauge estimée à cet arrêt : ~${a.pctArrivee} %.`;
+    }
+    contentWrap.appendChild(fn);
+
+    const badge = buildEcoBadge(a.station.prix, a.litresPlein);
+    if (badge) contentWrap.appendChild(badge);
+
+    contentWrap.appendChild(buildStationMap(a.station.lat, a.station.lon));
+
+    const btnRow = document.createElement('div');
+    btnRow.className = 'cheapest-btn-row';
+    const link = document.createElement('a');
+    link.className = 'cheapest-link';
+    link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${encodeURIComponent(depart)}&destination=${encodeURIComponent(arrivee)}&waypoints=${a.station.lat},${a.station.lon}`;
+    link.target = '_blank';
+    link.textContent = '📍 Ajouter cette station à mon trajet';
+    btnRow.appendChild(link);
+    contentWrap.appendChild(btnRow);
+
+    refreshStationMaps();
+  }
+
+  if (arrets.length > 1) {
+    const tabsWrap = document.createElement('div');
+    tabsWrap.className = 'arret-tabs';
+    arrets.forEach((a, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'arret-tab-btn' + (i === 0 ? ' active' : '');
+      btn.textContent = 'Arrêt ' + (i + 1);
+      btn.addEventListener('click', () => {
+        tabsWrap.querySelectorAll('.arret-tab-btn').forEach((b, j) => b.classList.toggle('active', j === i));
+        renderContent(i);
+      });
+      tabsWrap.appendChild(btn);
+    });
+    note.appendChild(tabsWrap);
+  }
+
+  note.appendChild(contentWrap);
+  renderContent(0);
+}
+
 async function rechercherStationSurTrajet() {
   const note = document.getElementById('cheapestNoteTrajet');
   if (!lastStationSurTrajet) { note.style.display = 'none'; note.dataset.ready = ''; applyStationTabVisibility(); return; }
@@ -2622,50 +2775,39 @@ async function rechercherStationSurTrajet() {
   const electrique = type === 'electrique';
   note.classList.add('loading');
   // Pas de prix comparable pour l'électrique : pas de recherche, juste un message.
-  let station = null, fuelNote = '', litresPlein = null;
+  let station = null, litresPlein = null, arrets = null;
   if (!electrique) {
-    // Optimisation économique : si réservoir + niveau renseignés, on cible le
-    // segment du trajet où la jauge passera de ~20 % à ~10 % restants, et on
-    // y cherche la station la moins chère.
     const reservoir = getReservoirInfo();
-    let fenetre = null, calcule = false;
     if (reservoir && distKm > 0 && conso > 0) {
-      const kmParPct = reservoir.capacite / conso; // km parcourus par % de jauge
-      const d20 = (reservoir.niveau - 20) * kmParPct;
-      const d10 = (reservoir.niveau - 10) * kmParPct;
-      if (d20 >= distKm) {
-        const arriveePct = Math.round(reservoir.niveau - distKm / kmParPct);
-        fuelNote = `⛽ Pas d'arrêt indispensable : vous arriveriez avec ~${arriveePct} % de réservoir. Voici quand même la station la moins chère sur le trajet.`;
-      } else if (d10 <= 0) {
-        fenetre = [0, Math.min(25, distKm)];
-        fuelNote = '⚠️ Niveau très bas au départ : arrêt conseillé dès le début du trajet.';
+      // Optimisation économique : un ou plusieurs arrêts calculés selon le
+      // réservoir, chacun ciblant le segment où la jauge passera de ~20 % à
+      // ~10 % restants.
+      const plan = await planArretsSurTrajet(polyline, type, distKm, conso, reservoir);
+      if (plan.length > 0) {
+        arrets = plan;
       } else {
-        fenetre = [Math.max(0, d20), Math.min(d10, distKm)];
-        calcule = true; // le libellé exact (avec le % réel) est posé après la recherche
+        // Trajet faisable sans arrêt : on montre quand même la moins chère
+        // sur tout le trajet, avec un plein plausible (top-up depuis le
+        // niveau au départ, jamais plus que la contenance du réservoir).
+        const kmParPct = reservoir.capacite / conso;
+        const arriveePct = Math.max(0, Math.round(reservoir.niveau - distKm / kmParPct));
+        station = await fetchStationSurTrajet(polyline, type, null);
+        if (station) {
+          litresPlein = reservoir.capacite * (1 - reservoir.niveau / 100);
+          arrets = [{
+            station, pctArrivee: null, urgent: false, horsZone: false, litresPlein,
+            customNote: `⛽ Pas d'arrêt indispensable : vous arriveriez avec ~${arriveePct} % de réservoir. Voici quand même la station la moins chère sur le trajet.`,
+          }];
+        }
       }
-    }
-    station = await fetchStationSurTrajet(polyline, type, fenetre);
-    let horsZoneIdeale = false;
-    if (!station && fenetre && fenetre[0] > 0) {
-      // Rien dans la fenêtre idéale : on élargit plus tôt sur le trajet
-      // (jauge encore au-dessus de 20 %), jamais plus tard (risque de panne).
-      station = await fetchStationSurTrajet(polyline, type, [0, fenetre[0]]);
-      horsZoneIdeale = !!station;
-    }
-    if (station && reservoir && conso > 0 && reservoir.capacite > 0 && isFinite(station.kmSurTrajet)) {
-      const pctStation = Math.max(0, Math.round(reservoir.niveau - station.kmSurTrajet * conso / reservoir.capacite));
-      if (calcule) {
-        fuelNote = horsZoneIdeale
-          ? `⛽ Aucune station dans la zone idéale : arrêt un peu plus tôt sur le trajet, votre jauge sera de ~${pctStation} %.`
-          : `Arrêt calculé selon votre réservoir : à cet endroit du trajet, votre jauge sera de ~${pctStation} %.`;
-      } else {
-        fuelNote += ` Jauge estimée à l'arrêt : ~${pctStation} %.`;
+    } else {
+      // Réservoir non renseigné : comportement classique, station la moins
+      // chère sur tout le trajet. Plein plafonné à une taille de réservoir
+      // plausible (inconnue ici), jamais les litres de tout le trajet.
+      station = await fetchStationSurTrajet(polyline, type, null);
+      if (station && lastResultData && isFinite(lastResultData.litresA)) {
+        litresPlein = Math.min(lastResultData.litresA, LITRES_PLEIN_MAX_DEFAUT);
       }
-      // Plein réel à cet arrêt : de la jauge estimée jusqu'au plein.
-      litresPlein = reservoir.capacite * (1 - pctStation / 100);
-    } else if (station && lastResultData && isFinite(lastResultData.litresA)) {
-      // Sans optimisation : plein estimé sur les litres du trajet.
-      litresPlein = lastResultData.litresA;
     }
   }
   note.classList.remove('loading');
@@ -2690,19 +2832,14 @@ async function rechercherStationSurTrajet() {
     empty.className = 'cheapest-empty';
     empty.textContent = 'Non disponible pour l\'électrique (pas de prix comparable entre bornes).';
     note.appendChild(empty);
+  } else if (arrets && arrets.length) {
+    renderArrets(note, arrets, type, depart, arrivee);
   } else if (station) {
     const detail = buildStationDetail(station, type, null, null, false);
     if (isFinite(station.distRoute)) {
       detail.appendChild(document.createTextNode(' (à ' + station.distRoute.toFixed(1) + ' km de la route)'));
     }
     note.appendChild(detail);
-
-    if (fuelNote) {
-      const fn = document.createElement('div');
-      fn.className = 'cheapest-fuel-note';
-      fn.textContent = fuelNote;
-      note.appendChild(fn);
-    }
 
     // Économie de ce plein par rapport au prix moyen national.
     const badge = buildEcoBadge(station.prix, litresPlein);
