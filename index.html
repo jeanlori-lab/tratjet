@@ -1510,10 +1510,34 @@ function banDept(properties) {
   return parts[0] || null;
 }
 
+// Photon indexe aussi les points d'intérêt d'OSM (gares, restaurants, salles
+// de sport, hôtels, commerces, entreprises…) : on les identifie par leur clé
+// OSM pour les proposer aussi en France — où la BAN ne connaît que les
+// adresses et les communes.
+const POI_OSM_KEYS = new Set([
+  'amenity', 'shop', 'tourism', 'leisure', 'railway', 'aeroway', 'office',
+  'sport', 'healthcare', 'historic', 'man_made', 'craft', 'natural',
+  'military', 'public_transport',
+]);
+function isPhotonPOI(p) {
+  return !!(p && p.name && POI_OSM_KEYS.has(p.osm_key));
+}
+// Libellé court d'un POI ("Gare de Brest, Brest") : assez précis pour être
+// re-géocodé tel quel (le champ ne stocke que du texte), sans traîner
+// région/pays qui alourdissent la liste.
+function poiLabel(p) {
+  const ville = p.city || p.district || p.state;
+  const parts = [p.name];
+  if (ville && ville !== p.name) parts.push(ville);
+  if (p.countrycode && p.countrycode !== 'FR' && p.country) parts.push(p.country);
+  return parts.join(', ');
+}
+
 // Recherche de lieux : API Adresse officielle (BAN, data.gouv.fr) en priorité
 // pour la France — exhaustive et bien priorisée sur les adresses françaises
 // (jusqu'au numéro de rue), gratuite et sans clé — complétée par Photon
-// (Komoot) pour le reste de l'Europe, que BAN ne couvre pas.
+// (Komoot) pour les points d'intérêt (gares, restaurants, salles de sport,
+// entreprises… que la BAN ne connaît pas) et pour le reste de l'Europe.
 async function searchPlaces(q, limit) {
   const [banRes, photonRes] = await Promise.all([
     fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=${limit}&autocomplete=1`)
@@ -1526,9 +1550,10 @@ async function searchPlaces(q, limit) {
   // une rue précise : on écarte les rues/numéros homonymes d'ailleurs en
   // France (ex. taper "dijon" ne doit pas remonter "Rue de Dijon" à Nice),
   // sauf si ça ne laisse plus aucun résultat (repli sur la liste complète).
+  let lieuxTrouves = false;
   if (!/\d/.test(q)) {
     const lieux = banFeatures.filter(f => f.properties.type === 'municipality' || f.properties.type === 'locality');
-    if (lieux.length) banFeatures = lieux;
+    if (lieux.length) { banFeatures = lieux; lieuxTrouves = true; }
   }
   const ban = banFeatures.map(f => {
     const dept = banDept(f.properties);
@@ -1540,7 +1565,21 @@ async function searchPlaces(q, limit) {
       city: f.properties.city || f.properties.name,
     };
   });
-  const photon = (photonRes.features || [])
+  const photonFeatures = photonRes.features || [];
+  // Points d'intérêt français (gares, restaurants, salles de sport,
+  // entreprises…) : la BAN ne les connaît pas, Photon si.
+  const poisFR = photonFeatures
+    .filter(f => f.properties.countrycode === 'FR' && isPhotonPOI(f.properties))
+    .slice(0, 5)
+    .map(f => ({
+      label: poiLabel(f.properties),
+      displayLabel: poiLabel(f.properties),
+      lat: f.geometry.coordinates[1],
+      lng: f.geometry.coordinates[0],
+      city: f.properties.city || f.properties.name,
+    }))
+    .filter(f => f.label);
+  const photonEurope = photonFeatures
     .filter(f => isEuropePhoton(f) && f.properties.countrycode !== 'FR')
     .map(f => ({
       label: photonLabel(f.properties),
@@ -1550,7 +1589,14 @@ async function searchPlaces(q, limit) {
       city: f.properties.city || f.properties.name,
     }))
     .filter(f => f.label);
-  return [...ban, ...photon];
+  // Ordre : les communes d'abord quand la saisie ressemble à une ville ;
+  // sinon (pas de commune correspondante et pas de numéro de rue), la saisie
+  // ressemble à un nom de lieu ("gare de brest", "basic fit dijon") : les
+  // POI passent devant les adresses approximatives de la BAN.
+  const poiEnTete = !lieuxTrouves && !/\d/.test(q);
+  return poiEnTete
+    ? [...poisFR, ...ban, ...photonEurope]
+    : [...ban, ...poisFR, ...photonEurope];
 }
 
 // --- Véhicules enregistrés et trajets favoris : profils mémorisés dans le
@@ -3342,7 +3388,12 @@ async function geocode(lieu) {
   if (gps) return gps;
   const results = await searchPlaces(lieu, 5);
   if (!results.length) throw new Error('Adresse introuvable en Europe : "' + lieu + '"');
-  const f = results[0];
+  // Un libellé choisi dans les suggestions (POI, adresse…) doit être géocodé
+  // sur LUI-MÊME : la correspondance exacte prime sur le premier résultat,
+  // qui peut être une adresse approximative d'une autre source.
+  const cle = lieu.trim().toLowerCase();
+  const exact = results.find(r => (r.label || '').trim().toLowerCase() === cle);
+  const f = exact || results[0];
   return [f.lng, f.lat];
 }
 
