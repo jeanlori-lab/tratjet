@@ -1056,6 +1056,22 @@
       height: 225px;
       border: none;
     }
+    /* Bouton "ma position" en bas à droite des cartes : la géoloc n'est
+       demandée qu'au clic. z-index au-dessus des couches Leaflet (~1000). */
+    .map-locate-btn {
+      position: absolute; right: 10px; bottom: 10px; z-index: 1100;
+      width: 34px; height: 34px; border-radius: 50%;
+      background: #fff; border: none; cursor: pointer;
+      color: #607080;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.3);
+      transition: color 0.15s;
+    }
+    .map-locate-btn:hover { color: #455060; }
+    .map-locate-btn.active { color: #1976d2; }
+    .map-locate-btn.denied { color: #c0c8d0; }
+    .map-locate-btn.loading { animation: locate-pulse 0.9s ease-in-out infinite; }
+    @keyframes locate-pulse { 50% { opacity: 0.4; } }
     .cheapest-map-attrib {
       font-size: 10px;
       color: #90a4ae;
@@ -2169,19 +2185,39 @@ function buildStationMap(lat, lon) {
     // Encadré construit avant d'être affiché : recalcul de taille dès que possible.
     requestAnimationFrame(() => { try { map.invalidateSize(); } catch (e) {} });
 
-    getUserPosition().then(pos => {
-      if (!pos) return;
-      // Halo de précision + boule bleue façon Maps.
-      if (isFinite(pos.accuracy) && pos.accuracy > 0 && pos.accuracy < 5000) {
-        L.circle([pos.lat, pos.lon], { radius: pos.accuracy, color: '#1976d2', weight: 1, opacity: 0.3, fillColor: '#1976d2', fillOpacity: 0.08, interactive: false }).addTo(map);
-      }
-      L.circleMarker([pos.lat, pos.lon], { radius: 7, color: '#fff', weight: 2.5, fillColor: '#1976d2', fillOpacity: 1 }).addTo(map);
-      // Si l'utilisateur est proche de la station (< ~30 km), cadre les deux ;
-      // sinon on reste centré sur la station (la boule est hors champ).
-      if (distKm(lat, lon, pos.lat, pos.lon) < 30) {
-        map.fitBounds([[lat, lon], [pos.lat, pos.lon]], { padding: [34, 34], maxZoom: 15 });
-      }
+    // Bouton "ma position" en bas à droite : la géolocalisation n'est
+    // demandée QUE si l'utilisateur clique (jamais automatiquement).
+    const locBtn = document.createElement('button');
+    locBtn.type = 'button';
+    locBtn.className = 'map-locate-btn';
+    locBtn.title = 'Afficher ma position';
+    locBtn.setAttribute('aria-label', 'Afficher ma position sur la carte');
+    locBtn.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm8.94 3A8.99 8.99 0 0 0 13 3.06V1h-2v2.06A8.99 8.99 0 0 0 3.06 11H1v2h2.06A8.99 8.99 0 0 0 11 20.94V23h2v-2.06A8.99 8.99 0 0 0 20.94 13H23v-2h-2.06ZM12 19a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg>';
+    let posLayers = null;
+    locBtn.addEventListener('click', () => {
+      locBtn.classList.add('loading');
+      getUserPosition().then(pos => {
+        locBtn.classList.remove('loading');
+        if (!pos) { locBtn.classList.add('denied'); locBtn.title = 'Position indisponible (autorisation refusée ?)'; return; }
+        locBtn.classList.add('active');
+        // Halo de précision + boule bleue façon Maps (une seule fois).
+        if (!posLayers) {
+          posLayers = L.layerGroup().addTo(map);
+          if (isFinite(pos.accuracy) && pos.accuracy > 0 && pos.accuracy < 5000) {
+            L.circle([pos.lat, pos.lon], { radius: pos.accuracy, color: '#1976d2', weight: 1, opacity: 0.3, fillColor: '#1976d2', fillOpacity: 0.08, interactive: false }).addTo(posLayers);
+          }
+          L.circleMarker([pos.lat, pos.lon], { radius: 7, color: '#fff', weight: 2.5, fillColor: '#1976d2', fillOpacity: 1 }).addTo(posLayers);
+        }
+        // Proche de la station (< ~30 km) : cadre les deux points ; sinon
+        // centre sur la position (re-clic = re-centrage).
+        if (distKm(lat, lon, pos.lat, pos.lon) < 30) {
+          map.fitBounds([[lat, lon], [pos.lat, pos.lon]], { padding: [34, 34], maxZoom: 15 });
+        } else {
+          map.setView([pos.lat, pos.lon], 13);
+        }
+      });
     });
+    wrap.appendChild(locBtn);
   } else {
     // Repli sans Leaflet : l'iframe OpenStreetMap d'origine (sans position).
     const delta = 0.01;
