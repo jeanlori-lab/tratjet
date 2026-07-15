@@ -3744,10 +3744,14 @@ function renderRouteOptions() {
       const peageTxt = typeof o.coutPeage === 'number' ? ' · péages ' + fmtEur(o.coutPeage * f) : '';
       infos.textContent = formatDuree(o.dureeSec * f) + ' · ' + fmtKm(o.distA * f) + peageTxt;
     } else {
+      // Écart toujours affiché (même quand l'alternative est en fait plus
+      // courte/rapide) : sans ça, une économie plus grande que le prix des
+      // péages semblait incohérente alors qu'elle s'explique aussi par un
+      // trajet plus court.
       const dT = (o.dureeSec - ref.dureeSec) * f;
       const dK = (o.distA - ref.distA) * f;
-      const tTxt = formatDuree(o.dureeSec * f) + (dT >= 60 ? ' (+' + formatDuree(dT) + ')' : '');
-      const kTxt = fmtKm(o.distA * f) + (dK >= 1 ? ' (+' + Math.round(dK) + ')' : '');
+      const tTxt = formatDuree(o.dureeSec * f) + (Math.abs(dT) >= 60 ? ` (${dT >= 0 ? '+' : '−'}${formatDuree(Math.abs(dT))})` : '');
+      const kTxt = fmtKm(o.distA * f) + (Math.abs(dK) >= 1 ? ` (${dK >= 0 ? '+' : '−'}${Math.round(Math.abs(dK))})` : '');
       infos.textContent = tTxt + ' · ' + kTxt;
     }
     mid.appendChild(infos);
