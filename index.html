@@ -15,6 +15,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+  <!-- Leaflet : cartes des stations avec marqueur + position de l'utilisateur
+       (boule bleue). Si le CDN ne charge pas, buildStationMap() retombe sur
+       l'ancienne iframe OpenStreetMap (sans la position). -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -2110,20 +2115,83 @@ function distKm(lat1, lon1, lat2, lon2) {
 
 // Mini-carte intégrée (Google Maps, sans clé API) montrant l'emplacement
 // exact de la station trouvée.
+// Position de l'utilisateur (pour la boule bleue sur les cartes) : demandée
+// une fois puis mise en cache 60 s ; null si refusée/indisponible (la carte
+// s'affiche alors simplement sans la position).
+let userPositionCache = null; // { coords: {lat, lon, accuracy}, time }
+function getUserPosition() {
+  if (!navigator.geolocation) return Promise.resolve(null);
+  if (userPositionCache && Date.now() - userPositionCache.time < 60000) {
+    return Promise.resolve(userPositionCache.coords);
+  }
+  return new Promise(resolve => {
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const coords = { lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy };
+        userPositionCache = { coords, time: Date.now() };
+        resolve(coords);
+      },
+      () => resolve(null),
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+    );
+  });
+}
+
+// Cartes Leaflet créées dans des encadrés parfois masqués (onglets) : leur
+// taille doit être recalculée quand elles deviennent visibles.
+const stationLeafletMaps = [];
+function refreshStationMaps() {
+  stationLeafletMaps.forEach(m => { try { m.invalidateSize(); } catch (e) {} });
+}
+
 function buildStationMap(lat, lon) {
-  const delta = 0.01;
-  const bbox = [lon - delta, lat - delta, lon + delta, lat + delta].join(',');
   const wrap = document.createElement('div');
   wrap.className = 'cheapest-map-wrap';
-  const iframe = document.createElement('iframe');
-  iframe.className = 'cheapest-map';
-  iframe.loading = 'lazy';
-  iframe.src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lon}`;
-  wrap.appendChild(iframe);
 
   const attrib = document.createElement('div');
   attrib.className = 'cheapest-map-attrib';
   attrib.innerHTML = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a>';
+
+  if (typeof L !== 'undefined') {
+    // Carte Leaflet : marqueur station + boule bleue de position.
+    const div = document.createElement('div');
+    div.className = 'cheapest-map';
+    wrap.appendChild(div);
+
+    const map = L.map(div, { attributionControl: false, scrollWheelZoom: false });
+    map.setView([lat, lon], 14);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+    L.marker([lat, lon]).addTo(map);
+    stationLeafletMaps.push(map);
+    // Les encadrés sont reconstruits à chaque recherche : on détruit les
+    // vieilles cartes pour ne pas accumuler d'instances en mémoire.
+    while (stationLeafletMaps.length > 6) { try { stationLeafletMaps.shift().remove(); } catch (e) {} }
+    // Encadré construit avant d'être affiché : recalcul de taille dès que possible.
+    requestAnimationFrame(() => { try { map.invalidateSize(); } catch (e) {} });
+
+    getUserPosition().then(pos => {
+      if (!pos) return;
+      // Halo de précision + boule bleue façon Maps.
+      if (isFinite(pos.accuracy) && pos.accuracy > 0 && pos.accuracy < 5000) {
+        L.circle([pos.lat, pos.lon], { radius: pos.accuracy, color: '#1976d2', weight: 1, opacity: 0.3, fillColor: '#1976d2', fillOpacity: 0.08, interactive: false }).addTo(map);
+      }
+      L.circleMarker([pos.lat, pos.lon], { radius: 7, color: '#fff', weight: 2.5, fillColor: '#1976d2', fillOpacity: 1 }).addTo(map);
+      // Si l'utilisateur est proche de la station (< ~30 km), cadre les deux ;
+      // sinon on reste centré sur la station (la boule est hors champ).
+      if (distKm(lat, lon, pos.lat, pos.lon) < 30) {
+        map.fitBounds([[lat, lon], [pos.lat, pos.lon]], { padding: [34, 34], maxZoom: 15 });
+      }
+    });
+  } else {
+    // Repli sans Leaflet : l'iframe OpenStreetMap d'origine (sans position).
+    const delta = 0.01;
+    const bbox = [lon - delta, lat - delta, lon + delta, lat + delta].join(',');
+    const iframe = document.createElement('iframe');
+    iframe.className = 'cheapest-map';
+    iframe.loading = 'lazy';
+    iframe.src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lon}`;
+    wrap.appendChild(iframe);
+  }
 
   const frag = document.createDocumentFragment();
   frag.appendChild(wrap);
@@ -2312,6 +2380,9 @@ function applyStationTabVisibility() {
     document.getElementById('stationTabs').style.display = 'flex';
     document.getElementById('stationSectionTitle').style.display = 'block';
   }
+  // Les cartes Leaflet construites dans un onglet masqué ont une taille
+  // nulle : recalcul dès que l'onglet devient visible.
+  requestAnimationFrame(refreshStationMaps);
 }
 
 async function rechercherStationMoinsChere() {
