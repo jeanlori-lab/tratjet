@@ -1513,7 +1513,7 @@ function banDept(properties) {
 // Photon indexe aussi les points d'intérêt d'OSM (gares, restaurants, salles
 // de sport, hôtels, commerces, entreprises…) : on les identifie par leur clé
 // OSM pour les proposer aussi en France — où la BAN ne connaît que les
-// adresses et les communes — avec une icône selon la catégorie.
+// adresses et les communes.
 const POI_OSM_KEYS = new Set([
   'amenity', 'shop', 'tourism', 'leisure', 'railway', 'aeroway', 'office',
   'sport', 'healthcare', 'historic', 'man_made', 'craft', 'natural',
@@ -1521,27 +1521,6 @@ const POI_OSM_KEYS = new Set([
 ]);
 function isPhotonPOI(p) {
   return !!(p && p.name && POI_OSM_KEYS.has(p.osm_key));
-}
-function poiIcon(p) {
-  const k = p.osm_key, v = p.osm_value || '';
-  if (k === 'railway' || k === 'public_transport') return '🚉';
-  if (k === 'aeroway') return '✈️';
-  if (k === 'amenity') {
-    if (['restaurant', 'fast_food', 'food_court'].includes(v)) return '🍽️';
-    if (['cafe', 'bar', 'pub'].includes(v)) return '☕';
-    if (v === 'fuel') return '⛽';
-    if (['hospital', 'clinic', 'pharmacy', 'doctors'].includes(v)) return '🏥';
-    if (['school', 'university', 'college'].includes(v)) return '🎓';
-    if (['cinema', 'theatre'].includes(v)) return '🎬';
-    return '📍';
-  }
-  if (k === 'shop') return '🛒';
-  if (k === 'leisure' || k === 'sport') return ['fitness_centre', 'sports_centre', 'fitness_station'].includes(v) ? '🏋️' : '🎯';
-  if (k === 'tourism') return ['hotel', 'guest_house', 'hostel', 'motel'].includes(v) ? '🏨' : '🏛️';
-  if (k === 'office') return '🏢';
-  if (k === 'historic') return '🏛️';
-  if (k === 'natural') return '⛰️';
-  return '📍';
 }
 // Libellé court d'un POI ("Gare de Brest, Brest") : assez précis pour être
 // re-géocodé tel quel (le champ ne stocke que du texte), sans traîner
@@ -1594,7 +1573,7 @@ async function searchPlaces(q, limit) {
     .slice(0, 5)
     .map(f => ({
       label: poiLabel(f.properties),
-      displayLabel: poiIcon(f.properties) + ' ' + poiLabel(f.properties),
+      displayLabel: poiLabel(f.properties),
       lat: f.geometry.coordinates[1],
       lng: f.geometry.coordinates[0],
       city: f.properties.city || f.properties.name,
@@ -1604,7 +1583,7 @@ async function searchPlaces(q, limit) {
     .filter(f => isEuropePhoton(f) && f.properties.countrycode !== 'FR')
     .map(f => ({
       label: photonLabel(f.properties),
-      displayLabel: (isPhotonPOI(f.properties) ? poiIcon(f.properties) + ' ' : '') + photonLabel(f.properties),
+      displayLabel: photonLabel(f.properties),
       lat: f.geometry.coordinates[1],
       lng: f.geometry.coordinates[0],
       city: f.properties.city || f.properties.name,
