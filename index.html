@@ -536,9 +536,10 @@
     .save-form-ok { background: #2e7d32; color: #fff; }
     .save-form-cancel { background: #eceff1; color: #607080; }
     .trajet-chips-wrap { padding: 2px 0 6px; }
-    /* Comparateur des 3 itinéraires (rapide / mixte / zéro péage), en tête
-       des résultats : une ligne par option, la sélection change tout le
-       détail en dessous (coûts, litres, stations, liens Maps). */
+    /* Comparateur des itinéraires (péages / sans péages), en tête des
+       résultats, affiché seulement quand pertinent : une ligne par option,
+       la sélection change tout le détail en dessous (coûts, litres,
+       stations, liens Maps). */
     .route-options { display: none; flex-direction: column; gap: 7px; margin-bottom: 14px; }
     .route-row {
       display: flex; align-items: center; gap: 10px;
@@ -3351,8 +3352,7 @@ async function getRoute(coords, apiKey, avoid) {
   // radiuses: -1 = rayon illimité pour raccrocher chaque point à la route la
   // plus proche. Sans ça, ORS échoue (404) si le point géocodé est à plus de
   // ~350 m d'une route carrossable (centre piéton, village, montagne…).
-  // avoid : false (rapide), 'tollways' (zéro péage) ou 'highways' (mixte :
-  // évite les autoroutes mais accepte les péages ponctuels).
+  // avoid : false (rapide) ou 'tollways' (zéro péage).
   const body = { coordinates: coords, geometry: true, radiuses: coords.map(() => -1) };
   if (avoid) body.options = { avoid_features: [avoid === true ? 'tollways' : avoid] };
   const r = await fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
@@ -3687,17 +3687,16 @@ function renderResultMode() {
   rCout.textContent = fmtEur(coutTotalAffiche);
 }
 
-// --- Comparateur des 3 itinéraires : rapide (tout péage), mixte (sans
-// autoroutes, péages ponctuels acceptés) et zéro péage. Les trois sont
-// calculés à chaque clic sur Calculer ; sélectionner une fiche bascule tout
-// le détail en dessous (coûts, litres, stations sur le trajet, lien Maps). ---
-let routeOptionsData = null;    // { rapide: {...}, mixte?: {...}, zero?: {...} }
+// --- Comparateur des itinéraires : rapide (tout péage) et zéro péage,
+// affiché seulement quand pertinent (le zéro péage fait vraiment économiser).
+// Sélectionner une fiche bascule tout le détail en dessous (coûts, litres,
+// stations sur le trajet, lien Maps). ---
+let routeOptionsData = null;    // { rapide: {...}, zero?: {...} }
 let selectedRouteOption = 'rapide';
 
 const ROUTE_OPTION_META = {
-  rapide: { ico: '🛣️', nom: 'Rapide, tout péage', avoid: null },
-  mixte:  { ico: '⚖️', nom: 'Mixte',              avoid: 'highways' },
-  zero:   { ico: '🆓', nom: 'Zéro péage',          avoid: 'tolls' },
+  rapide: { ico: '🛣️', nom: 'Péages',      avoid: null },
+  zero:   { ico: '🆓', nom: 'Sans péages', avoid: 'tolls' },
 };
 
 function renderRouteOptions() {
@@ -3715,7 +3714,7 @@ function renderRouteOptions() {
   const ref = opts.rapide;
   const refTotal = ref.coutA + (ref.coutPeage || 0);
 
-  for (const key of ['rapide', 'mixte', 'zero']) {
+  for (const key of ['rapide', 'zero']) {
     const o = opts[key];
     if (!o) continue;
     const meta = ROUTE_OPTION_META[key];
@@ -3833,12 +3832,11 @@ async function calculer() {
     const coords = await Promise.all(lieux.map(l => geocode(l)));
     const c1 = coords[0], c2 = coords[coords.length - 1];
 
-    // Les 3 itinéraires en parallèle. Seul le rapide est indispensable :
-    // les deux variantes sont best-effort (null si introuvables).
-    const [routeRapide, routeZero, routeMixte] = await Promise.all([
+    // Les 2 itinéraires en parallèle. Seul le rapide est indispensable : le
+    // zéro péage est best-effort (null si introuvable).
+    const [routeRapide, routeZero] = await Promise.all([
       getRoute(coords, apiKey, false),
       getRoute(coords, apiKey, 'tollways').catch(() => null),
-      getRoute(coords, apiKey, 'highways').catch(() => null),
     ]);
 
     const unit = document.getElementById('carburant').value === 'electrique' ? 'kWh' : 'L';
@@ -3848,15 +3846,8 @@ async function calculer() {
       return { polyline: route.polyline, distA, dureeSec: route.dureeSec, litresA, coutA: litresA * prixActuel, coutPeage: null, peageDetails: null, unit };
     };
 
-    // Péages du rapide (best-effort, Vinci puis ViaMichelin) ; ceux du mixte
-    // uniquement via Vinci (basé sur le tracé — le repli ViaMichelin et le
-    // cache ne connaissent que départ/arrivée et renverraient le prix du
-    // trajet rapide).
+    // Péages du rapide (best-effort, Vinci puis ViaMichelin).
     const peage = await getTolls(routeRapide, c1, c2, depart, arrivee);
-    let peageMixte = null;
-    if (routeMixte) {
-      try { peageMixte = await getTollsVinci(routeMixte); } catch (e) { peageMixte = null; }
-    }
 
     const rapide = mkOption(routeRapide);
     rapide.coutPeage = peage && typeof peage.cost === 'number' ? peage.cost : null;
@@ -3878,34 +3869,18 @@ async function calculer() {
     if (waypoints) mapsBase += `&waypoints=${waypoints}`;
     rapide.mapsUrl = mapsBase;
 
-    // Assemblage + tri des options pertinentes. Comparaisons honnêtes
-    // impossibles si le prix des péages du rapide est inconnu : dans ce cas
-    // on n'affiche que le trajet rapide (comportement d'avant).
+    // Assemblage. Comparaison honnête impossible si le prix des péages du
+    // rapide est inconnu : dans ce cas on n'affiche que le trajet rapide
+    // (comportement d'avant). Le zéro péage n'est gardé que s'il fait
+    // vraiment gagner de l'argent, et si son tracé diffère réellement.
     const options = { rapide };
     const totalRapide = rapide.coutA + (rapide.coutPeage || 0);
     const memeTrace = (a, b) => Math.abs(a.distanceKm - b.distanceKm) < 1 && Math.abs(a.dureeSec - b.dureeSec) < 90;
-    if (typeof rapide.coutPeage === 'number' && rapide.coutPeage > 0) {
-      if (routeZero && !memeTrace(routeZero, routeRapide)) {
-        const zero = mkOption(routeZero);
-        zero.coutPeage = 0;
-        zero.mapsUrl = mapsBase + '&avoid=tolls';
-        // Ne garder le zéro péage que s'il fait vraiment gagner de l'argent.
-        if (zero.coutA < totalRapide - 0.5) options.zero = zero;
-      }
-      if (routeMixte && peageMixte && typeof peageMixte.cost === 'number' && peageMixte.cost > 0
-          && !memeTrace(routeMixte, routeRapide) && (!routeZero || !memeTrace(routeMixte, routeZero))) {
-        const mixte = mkOption(routeMixte);
-        mixte.coutPeage = peageMixte.cost;
-        mixte.peageDetails = peageMixte.details || null;
-        mixte.mapsUrl = mapsBase + '&avoid=highways';
-        const totalMixte = mixte.coutA + mixte.coutPeage;
-        // "Vraiment intermédiaire" : moins cher que le rapide, plus cher que
-        // le zéro péage (s'il existe).
-        const totalZero = options.zero ? options.zero.coutA : null;
-        if (totalMixte < totalRapide - 0.5 && (totalZero === null || totalMixte > totalZero + 0.5)) {
-          options.mixte = mixte;
-        }
-      }
+    if (typeof rapide.coutPeage === 'number' && rapide.coutPeage > 0 && routeZero && !memeTrace(routeZero, routeRapide)) {
+      const zero = mkOption(routeZero);
+      zero.coutPeage = 0;
+      zero.mapsUrl = mapsBase + '&avoid=tolls';
+      if (zero.coutA < totalRapide - 0.5) options.zero = zero;
     }
 
     routeOptionsData = options;
