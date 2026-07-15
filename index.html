@@ -23,6 +23,12 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* Réserve toujours la place de la barre de défilement verticale (sur
+       ordinateur) : sans ça, la bascule Coût du trajet / Station la moins
+       chère change la hauteur de page, la barre apparaît/disparaît, et tout
+       le contenu centré se décale horizontalement à chaque changement d'onglet. */
+    html { scrollbar-gutter: stable; }
+
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
       background: #eef2f6;
@@ -519,11 +525,26 @@
       transition: background 0.15s;
     }
     .veh-save-btn:hover { background: #fff8ec; }
+    /* Signe "+" dessiné en CSS pur (deux barres superposées) plutôt qu'un
+       glyphe de police : le rendu d'un "+" texte n'est pas centré dans sa
+       boîte de caractère de façon identique sur toutes les plateformes
+       (décalage visible vers le haut sur certains systèmes), un tracé
+       géométrique garantit un centrage identique partout. */
     .veh-save-plus {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 18px; height: 18px; border-radius: 50%; background: #e2971a; color: #fff;
-      font-size: 13px; font-weight: 800; line-height: 1; flex-shrink: 0;
+      position: relative;
+      display: inline-block;
+      width: 18px; height: 18px; border-radius: 50%; background: #e2971a;
+      flex-shrink: 0;
     }
+    .veh-save-plus::before, .veh-save-plus::after {
+      content: '';
+      position: absolute; top: 50%; left: 50%;
+      background: #fff;
+      transform: translate(-50%, -50%);
+      border-radius: 1px;
+    }
+    .veh-save-plus::before { width: 8px; height: 1.6px; }
+    .veh-save-plus::after { width: 1.6px; height: 8px; }
     .save-form { display: none; align-items: center; gap: 6px; margin: 12px 0 8px; }
     .save-form.open { display: flex; }
     .save-form input { flex: 1; min-width: 0; }
@@ -649,6 +670,32 @@
     .fav-star:hover { color: #f0c419; }
     .fav-star.active { color: #ffc107; }
     .fav-star:active { transform: translateY(-50%) scale(0.85); }
+
+    /* Bouton "Ma position actuelle" : discret, dans le champ Départ
+       uniquement, à gauche de l'étoile favori. */
+    .point-row.has-geoloc .autocomplete-wrap .point-input { padding-right: 58px; }
+    .geoloc-btn {
+      position: absolute;
+      right: 30px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 24px; height: 24px;
+      padding: 0;
+      border: none;
+      background: none;
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+      color: #c3cdd6;
+      z-index: 3;
+      display: none;
+      transition: color 0.15s, transform 0.1s;
+    }
+    .point-row.has-geoloc .geoloc-btn { display: block; }
+    .geoloc-btn:hover { color: #1976d2; }
+    .geoloc-btn:active { transform: translateY(-50%) scale(0.85); }
+    .geoloc-btn.loading { animation: geoloc-pulse 0.9s ease-in-out infinite; }
+    @keyframes geoloc-pulse { 50% { opacity: 0.35; } }
 
     /* Petit texte d'info qui apparaît brièvement quand on enregistre un favori. */
     .fav-hint {
@@ -1332,7 +1379,7 @@
          réservoir, jamais le niveau au départ) sous un nom : il apparaît
          ensuite en puce dans "Mes véhicules" en haut du bloc. -->
     <button type="button" class="veh-save-btn" id="vehSaveBtn" onclick="toggleVehForm(true)">
-      <span class="veh-save-plus">+</span> Enregistrer ce véhicule
+      <span class="veh-save-plus"></span> Enregistrer ce véhicule
     </button>
     <div class="save-form" id="vehSaveForm">
       <input type="text" id="vehNom" placeholder="Nom du véhicule (ex : Clio)" maxlength="30" autocomplete="off">
@@ -2493,6 +2540,11 @@ function buildEcoBadge(prixStation, litres) {
 // du calcul du trajet : le curseur de rayon ne relance que cet encadré, et
 // seulement au relâchement (évite un fetch à chaque pixel glissé).
 let lastStationSearch = null; // { lat, lon, type, rayon, depart, arrivee }
+// Distance du trajet actuellement sélectionné (aller simple, un seul sens) :
+// sous 5 km, la section "Où faire le plein" n'a pas de sens (on ne s'arrête
+// pas faire le plein pour un trajet de quartier) et reste entièrement masquée.
+const TRAJET_MIN_KM_STATIONS = 5;
+let lastTripDistanceKm = null;
 
 // Onglets "Sur le trajet" / "Près du départ" (résultat de trajet) : priorité
 // systématique à "Sur le trajet" à chaque nouveau calcul.
@@ -2505,6 +2557,15 @@ function setStationTab(tab) {
 function applyStationTabVisibility() {
   const noteDepart = document.getElementById('cheapestNote');
   const noteTrajet = document.getElementById('cheapestNoteTrajet');
+  // Trajet trop court : la section entière reste masquée, quel que soit
+  // l'état des recherches (best-effort, lancées ou non en arrière-plan).
+  if (typeof lastTripDistanceKm === 'number' && lastTripDistanceKm < TRAJET_MIN_KM_STATIONS) {
+    document.getElementById('stationSectionTitle').style.display = 'none';
+    document.getElementById('stationTabs').style.display = 'none';
+    noteDepart.style.display = 'none';
+    noteTrajet.style.display = 'none';
+    return;
+  }
   if (noteDepart.dataset.ready === '1') noteDepart.style.display = currentStationTab === 'depart' ? 'block' : 'none';
   if (noteTrajet.dataset.ready === '1') noteTrajet.style.display = currentStationTab === 'trajet' ? 'block' : 'none';
   if (noteDepart.dataset.ready === '1' || noteTrajet.dataset.ready === '1') {
@@ -3195,6 +3256,7 @@ function makePointRow(value) {
       '<input type="text" class="point-input" autocomplete="off" oninput="onPointInput(this)">' +
       '<div class="autocomplete-list"></div>' +
     '</div>' +
+    '<button type="button" class="geoloc-btn" title="Utiliser ma position actuelle">◎</button>' +
     '<button type="button" class="fav-star" title="Enregistrer en favori">☆</button></div>' +
     '<button type="button" class="stop-remove" onclick="removePoint(this)" title="Supprimer cette étape">✕</button>';
   const input = row.querySelector('.point-input');
@@ -3202,9 +3264,31 @@ function makePointRow(value) {
   row.querySelector('.drag-handle').addEventListener('pointerdown', startDrag);
   const star = row.querySelector('.fav-star');
   star.addEventListener('click', () => toggleFavPlace(input.value, star));
+  row.querySelector('.geoloc-btn').addEventListener('click', e => utiliserPositionDepart(e.currentTarget, input));
   input.addEventListener('focus', () => showFavoritesIfEmpty(input));
   syncStarForInput(input);
   return row;
+}
+
+// Géolocalise l'appareil et met les coordonnées dans le champ Départ (le
+// géocodeur générique reconnaît déjà un texte "lat, lng", voir parseGPS) :
+// pas de nouvel état global, ni de dépendance à une API de reverse-geocoding.
+function utiliserPositionDepart(btn, input) {
+  if (!navigator.geolocation) { showError('⚠️ Géolocalisation non disponible sur cet appareil.'); return; }
+  btn.classList.add('loading');
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      btn.classList.remove('loading');
+      input.value = pos.coords.latitude.toFixed(5) + ', ' + pos.coords.longitude.toFixed(5);
+      resetResultat();
+      syncStarForInput(input);
+    },
+    () => {
+      btn.classList.remove('loading');
+      showError('⚠️ Impossible de récupérer votre position (autorisation refusée ou indisponible).');
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
 }
 
 // Met à jour icône / libellé / placeholder / bouton supprimer selon la position.
@@ -3221,17 +3305,20 @@ function refreshPoints() {
       label.textContent = 'Départ';
       input.placeholder = 'Adresse de départ'; rm.style.display = 'none';
       row.classList.remove('is-stop');
+      row.classList.add('has-geoloc');
       row.classList.toggle('shift-for-handles', showHandles);
     } else if (i === rows.length - 1) {
       label.textContent = 'Arrivée';
       input.placeholder = 'Lieu de vacances'; rm.style.display = 'none';
       row.classList.remove('is-stop');
+      row.classList.remove('has-geoloc');
       row.classList.toggle('shift-for-handles', showHandles);
     } else {
       // Étape : le numéro passe en placeholder dans l'encadré, ✕ à droite.
       label.textContent = '';
       input.placeholder = 'Étape ' + i; rm.style.display = '';
       row.classList.add('is-stop');
+      row.classList.remove('has-geoloc');
       row.classList.toggle('shift-for-handles', showHandles);
     }
   });
@@ -3671,7 +3758,14 @@ function formatDuree(sec) {
   return h > 0 ? `${h}h${String(m).padStart(2,'0')}` : `${m} min`;
 }
 
-function fmtKm(n)  { return Math.round(n).toLocaleString('fr-FR') + ' km'; }
+// Sous 20 km, une décimale (ex. "8,3 km") : l'arrondi à l'entier serait trop
+// grossier pour un petit trajet local.
+function fmtKm(n) {
+  return (n < 20
+    ? n.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+    : Math.round(n).toLocaleString('fr-FR')
+  ) + ' km';
+}
 function fmtEur(n) { return n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €'; }
 function fmtL(n, unit)   { return n.toLocaleString('fr-FR', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' ' + (unit || 'L'); }
 
@@ -3875,6 +3969,8 @@ function selectRouteOption(key) {
 function applySelectedRoute() {
   const o = routeOptionsData && routeOptionsData[selectedRouteOption];
   if (!o) return;
+  lastTripDistanceKm = o.distA;
+  applyStationTabVisibility();
   lastResultData = {
     distA: o.distA, dureeSec: o.dureeSec, litresA: o.litresA, coutA: o.coutA,
     coutPeage: o.coutPeage, peageDetails: o.peageDetails,
@@ -3927,16 +4023,27 @@ async function calculer() {
       return { polyline: route.polyline, distA, dureeSec: route.dureeSec, litresA, coutA: litresA * prixActuel, coutPeage: null, peageDetails: null, unit };
     };
 
+    // Si le trajet le plus rapide et le trajet "zéro péage" sont en fait le
+    // même tracé (même distance, même durée), c'est qu'aucune autoroute à
+    // péage n'est empruntée : le prix est 0 €, un fait établi par le
+    // routage lui-même — pas la peine d'interroger Vinci/ViaMichelin, et
+    // surtout pas la peine de proposer un lien de secours qui n'a pas lieu
+    // d'être (cas fréquent des petits trajets locaux).
+    const memeTrace = (a, b) => Math.abs(a.distanceKm - b.distanceKm) < 1 && Math.abs(a.dureeSec - b.dureeSec) < 90;
+    const aucunPeageAttendu = !!routeZero && memeTrace(routeZero, routeRapide);
+
     // Péages du rapide (best-effort, Vinci puis ViaMichelin).
-    const peage = await getTolls(routeRapide, c1, c2, depart, arrivee);
+    const peage = aucunPeageAttendu ? { cost: 0, details: null } : await getTolls(routeRapide, c1, c2, depart, arrivee);
 
     const rapide = mkOption(routeRapide);
     rapide.coutPeage = peage && typeof peage.cost === 'number' ? peage.cost : null;
     rapide.peageDetails = (peage && peage.details) || null;
 
-    // Lien Vinci de secours (pastille péages) : seulement pour l'itinéraire
-    // rapide d'un trajet direct départ→arrivée (Vinci ne gère pas les étapes).
-    if (lieux.length <= 2) {
+    // Lien Vinci de secours (pastille péages) : seulement quand le prix des
+    // péages n'a pas pu être déterminé (jamais quand on sait déjà qu'il est
+    // nul), et pour l'itinéraire rapide d'un trajet direct départ→arrivée
+    // (Vinci ne gère pas les étapes).
+    if (typeof rapide.coutPeage !== 'number' && lieux.length <= 2) {
       const startObj = JSON.stringify({place: depart, lat: c1[1], lng: c1[0]});
       const endObj = JSON.stringify({place: arrivee, lat: c2[1], lng: c2[0]});
       rapide.vinciUrl = `https://www.vinci-autoroutes.com/fr/mon-trajet/?area=service&filter-status=0&start=${encodeURIComponent(startObj)}&end=${encodeURIComponent(endObj)}`;
@@ -3956,7 +4063,6 @@ async function calculer() {
     // vraiment gagner de l'argent, et si son tracé diffère réellement.
     const options = { rapide };
     const totalRapide = rapide.coutA + (rapide.coutPeage || 0);
-    const memeTrace = (a, b) => Math.abs(a.distanceKm - b.distanceKm) < 1 && Math.abs(a.dureeSec - b.dureeSec) < 90;
     if (typeof rapide.coutPeage === 'number' && rapide.coutPeage > 0 && routeZero && !memeTrace(routeZero, routeRapide)) {
       const zero = mkOption(routeZero);
       zero.coutPeage = 0;
