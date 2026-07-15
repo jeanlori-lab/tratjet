@@ -531,18 +531,33 @@
     .save-form-ok { background: #2e7d32; color: #fff; }
     .save-form-cancel { background: #eceff1; color: #607080; }
     .trajet-chips-wrap { padding: 2px 0 6px; }
-    /* Case "Éviter les péages" : juste au-dessus du bouton Calculer. */
-    .avoid-tolls {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 0 2px 10px;
-      font-size: 13px;
-      font-weight: 600;
-      color: #455060;
-      cursor: pointer;
+    /* Comparateur des 3 itinéraires (rapide / mixte / zéro péage), en tête
+       des résultats : une ligne par option, la sélection change tout le
+       détail en dessous (coûts, litres, stations, liens Maps). */
+    .route-options { display: none; flex-direction: column; gap: 7px; margin-bottom: 14px; }
+    .route-row {
+      display: flex; align-items: center; gap: 10px;
+      border: 1.5px solid #e3eaf3; border-radius: 13px; padding: 9px 12px;
+      cursor: pointer; background: #fff; font-family: inherit; text-align: left;
+      transition: border-color 0.15s, background 0.15s;
+      width: 100%;
     }
-    .avoid-tolls input { width: 17px; height: 17px; accent-color: #1976d2; cursor: pointer; }
+    .route-row.sel { border-color: #1976d2; border-width: 2px; padding: 8.5px 11.5px; background: #f4f9ff; box-shadow: 0 4px 12px rgba(25,118,210,0.14); }
+    .route-row .route-ico { font-size: 17px; flex-shrink: 0; }
+    .route-row .route-mid { flex: 1; min-width: 0; }
+    .route-row .route-nom { font-size: 12px; font-weight: 800; color: #455060; }
+    .route-row.sel .route-nom { color: #1565c0; }
+    .route-row .route-infos { font-size: 10.5px; color: #90a4ae; font-weight: 600; margin-top: 1px; }
+    .route-row .route-right { text-align: right; flex-shrink: 0; }
+    .route-row .route-prix { font-size: 16px; font-weight: 900; color: #1a2433; }
+    .route-row.sel .route-prix { color: #1565c0; }
+    .route-row .route-delta { font-size: 9.5px; font-weight: 700; }
+    .route-row .route-delta.eco { color: #2e7d32; }
+    .route-row .route-delta.plus { color: #c77700; }
+    .route-row .route-delta.ref { color: #90a4ae; font-weight: 600; }
+    .route-row .route-radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #cfd8e0; flex-shrink: 0; }
+    .route-row.sel .route-radio { border-color: #1976d2; background: radial-gradient(circle, #1976d2 45%, transparent 52%); }
+    .route-options-hint { font-size: 11px; color: #90a4ae; margin: -6px 0 12px; }
     .points-wrap { position: relative; }
 
     /* Flèches d'inversion : à droite, chevauchent le coin des encadrés, discrètes */
@@ -1280,11 +1295,6 @@
     </div>
   </div>
 
-  <label class="avoid-tolls" for="avoidTolls">
-    <input type="checkbox" id="avoidTolls" onchange="resetResultat()">
-    <span>Éviter les péages</span>
-  </label>
-
   <div class="btn-wrap" id="calcBtnWrap">
     <img src="logo rat seul.png" alt="" class="btn-car">
     <button class="btn" id="calcBtn" onclick="calculer()">Calculer le coût du trajet</button>
@@ -1295,6 +1305,9 @@
   <!-- Résultats -->
   <div class="card resultats" id="sectionResultats" style="margin-top:14px;">
     <div class="card-title">Résultats</div>
+    <!-- Comparateur des 3 itinéraires (rempli par renderRouteOptions) -->
+    <div class="route-options" id="routeOptions"></div>
+    <div class="route-options-hint" id="routeOptionsHint" style="display:none;">Touchez un itinéraire pour voir son détail ci-dessous (coûts, stations sur le trajet…)</div>
     <div class="ar-toggle">
       <button type="button" class="ar-toggle-btn active" data-mode="simple" onclick="setResultMode('simple')">Aller simple</button>
       <button type="button" class="ar-toggle-btn" data-mode="ar" onclick="setResultMode('ar')">Aller-retour</button>
@@ -1317,7 +1330,6 @@
         <span class="res-label">Coût total</span>
         <span class="res-value res-value-big" id="r-cout">—</span>
       </div>
-      <div class="eco-line" id="ecoPeageLine" style="display:none;"></div>
       <div class="res-row">
         <span class="res-label" id="r-litres-label">Litres consommés</span>
         <span class="res-value res-value-big" id="r-litres">—</span>
@@ -3090,15 +3102,15 @@ async function geocode(lieu) {
   return [f.lng, f.lat];
 }
 
-async function getRoute(coords, apiKey, avoidTolls) {
+async function getRoute(coords, apiKey, avoid) {
   // coords : tableau de points [lng, lat] (départ, étapes…, destination).
   // radiuses: -1 = rayon illimité pour raccrocher chaque point à la route la
   // plus proche. Sans ça, ORS échoue (404) si le point géocodé est à plus de
   // ~350 m d'une route carrossable (centre piéton, village, montagne…).
-  // avoidTolls : demande à ORS un itinéraire sans autoroutes à péage
-  // (avoid_features: tollways).
+  // avoid : false (rapide), 'tollways' (zéro péage) ou 'highways' (mixte :
+  // évite les autoroutes mais accepte les péages ponctuels).
   const body = { coordinates: coords, geometry: true, radiuses: coords.map(() => -1) };
-  if (avoidTolls) body.options = { avoid_features: ['tollways'] };
+  if (avoid) body.options = { avoid_features: [avoid === true ? 'tollways' : avoid] };
   const r = await fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
     method: 'POST',
     headers: { 'Authorization': apiKey, 'Content-Type': 'application/json' },
@@ -3107,8 +3119,8 @@ async function getRoute(coords, apiKey, avoidTolls) {
   if (!r.ok) {
     let msg = 'Erreur itinéraire (code ' + r.status + ')';
     if (r.status === 403) msg = 'Clé API invalide ou quota dépassé';
-    if (r.status === 404) msg = avoidTolls
-      ? 'Aucun itinéraire sans péage trouvé pour ce trajet.'
+    if (r.status === 404) msg = avoid
+      ? 'Aucun itinéraire alternatif trouvé pour ce trajet.'
       : 'Itinéraire introuvable, essayez de préciser l\'adresse';
     if (r.status === 400) msg = 'Itinéraire introuvable, essayez de préciser l\'adresse';
     throw new Error(msg);
@@ -3358,6 +3370,7 @@ function setResultMode(mode) {
 function renderResultMode() {
   const d = lastResultData;
   const isAR = resultMode === 'ar';
+  renderRouteOptions(); // fiches comparatives des 3 itinéraires (suit le mode AR)
   document.getElementById('r-dist').textContent   = fmtKm(isAR ? d.distA * 2 : d.distA);
   document.getElementById('r-duree').textContent  = formatDuree(isAR ? d.dureeSec * 2 : d.dureeSec);
   document.getElementById('r-litres').textContent = fmtL(isAR ? d.litresA * 2 : d.litresA, d.unit);
@@ -3377,33 +3390,7 @@ function renderResultMode() {
   peageChip.classList.toggle('unavailable', !peageConnu);
   peageValEl.textContent = '';
 
-  // Mode "éviter les péages" avec comparaison disponible : la pastille montre
-  // le montant évité en vert, et une ligne détaille le compromis temps/distance.
-  const ecoLine = document.getElementById('ecoPeageLine');
-  const evite = d.peageEvite;
-  peageChip.classList.toggle('cost-chip-eco', !!evite);
-  document.getElementById('r-peage-label').textContent = evite ? 'Péages évités' : 'Péages';
-  ecoLine.style.display = evite ? 'flex' : 'none';
-  ecoLine.textContent = '';
-  if (evite) {
-    const coutEvite = isAR ? evite.cost * 2 : evite.cost;
-    peageValEl.appendChild(document.createTextNode('−' + fmtEur(coutEvite)));
-    const txt = document.createElement('span');
-    const strong = document.createElement('strong');
-    strong.textContent = fmtEur(coutEvite) + ' de péages évités';
-    txt.appendChild(strong);
-    const detourSec = isAR ? evite.detourSec * 2 : evite.detourSec;
-    const detourKm = isAR ? evite.detourKm * 2 : evite.detourKm;
-    if (detourSec >= 60 || detourKm >= 1) {
-      const morceaux = [];
-      if (detourSec >= 60) morceaux.push('+' + formatDuree(detourSec));
-      if (detourKm >= 1) morceaux.push('+' + fmtKm(detourKm));
-      txt.appendChild(document.createTextNode(' pour ' + morceaux.join(' et ') + ' par rapport à l\'itinéraire avec péages.'));
-    } else {
-      txt.appendChild(document.createTextNode(', quasiment sans détour.'));
-    }
-    ecoLine.appendChild(txt);
-  } else if (peageConnu) {
+  if (peageConnu) {
     peageValEl.appendChild(document.createTextNode(fmtEur(coutPeageAffiche)));
     // Bouton "Détail" : déplie la pastille pour montrer le coût par tronçon.
     if (Array.isArray(d.peageDetails) && d.peageDetails.length) {
@@ -3456,6 +3443,130 @@ function renderResultMode() {
   rCout.textContent = fmtEur(coutTotalAffiche);
 }
 
+// --- Comparateur des 3 itinéraires : rapide (tout péage), mixte (sans
+// autoroutes, péages ponctuels acceptés) et zéro péage. Les trois sont
+// calculés à chaque clic sur Calculer ; sélectionner une fiche bascule tout
+// le détail en dessous (coûts, litres, stations sur le trajet, lien Maps). ---
+let routeOptionsData = null;    // { rapide: {...}, mixte?: {...}, zero?: {...} }
+let selectedRouteOption = 'rapide';
+
+const ROUTE_OPTION_META = {
+  rapide: { ico: '🛣️', nom: 'Rapide, tout péage', avoid: null },
+  mixte:  { ico: '⚖️', nom: 'Mixte',              avoid: 'highways' },
+  zero:   { ico: '🆓', nom: 'Zéro péage',          avoid: 'tolls' },
+};
+
+function renderRouteOptions() {
+  const wrap = document.getElementById('routeOptions');
+  const hint = document.getElementById('routeOptionsHint');
+  if (!wrap) return;
+  wrap.textContent = '';
+  const opts = routeOptionsData;
+  const nbOptions = opts ? Object.keys(opts).length : 0;
+  wrap.style.display = nbOptions >= 2 ? 'flex' : 'none';
+  hint.style.display = nbOptions >= 2 ? 'block' : 'none';
+  if (nbOptions < 2) return;
+
+  const f = resultMode === 'ar' ? 2 : 1;
+  const ref = opts.rapide;
+  const refTotal = ref.coutA + (ref.coutPeage || 0);
+
+  for (const key of ['rapide', 'mixte', 'zero']) {
+    const o = opts[key];
+    if (!o) continue;
+    const meta = ROUTE_OPTION_META[key];
+    const total = o.coutA + (o.coutPeage || 0);
+
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'route-row' + (key === selectedRouteOption ? ' sel' : '');
+    row.addEventListener('click', () => selectRouteOption(key));
+
+    const ico = document.createElement('span');
+    ico.className = 'route-ico';
+    ico.textContent = meta.ico;
+    row.appendChild(ico);
+
+    const mid = document.createElement('span');
+    mid.className = 'route-mid';
+    const nom = document.createElement('span');
+    nom.className = 'route-nom';
+    nom.textContent = meta.nom;
+    nom.style.display = 'block';
+    mid.appendChild(nom);
+    const infos = document.createElement('span');
+    infos.className = 'route-infos';
+    infos.style.display = 'block';
+    if (key === 'rapide') {
+      const peageTxt = typeof o.coutPeage === 'number' ? ' · péages ' + fmtEur(o.coutPeage * f) : '';
+      infos.textContent = formatDuree(o.dureeSec * f) + ' · ' + fmtKm(o.distA * f) + peageTxt;
+    } else {
+      const dT = (o.dureeSec - ref.dureeSec) * f;
+      const dK = (o.distA - ref.distA) * f;
+      const tTxt = formatDuree(o.dureeSec * f) + (dT >= 60 ? ' (+' + formatDuree(dT) + ')' : '');
+      const kTxt = fmtKm(o.distA * f) + (dK >= 1 ? ' (+' + Math.round(dK) + ')' : '');
+      infos.textContent = tTxt + ' · ' + kTxt;
+    }
+    mid.appendChild(infos);
+    row.appendChild(mid);
+
+    const right = document.createElement('span');
+    right.className = 'route-right';
+    const prix = document.createElement('span');
+    prix.className = 'route-prix';
+    prix.style.display = 'block';
+    prix.textContent = fmtEur(total * f);
+    right.appendChild(prix);
+    const delta = document.createElement('span');
+    delta.style.display = 'block';
+    if (key === 'rapide') {
+      delta.className = 'route-delta ref';
+      delta.textContent = 'le plus rapide';
+    } else {
+      const dE = (total - refTotal) * f;
+      if (dE <= -0.5) { delta.className = 'route-delta eco'; delta.textContent = '−' + fmtEur(-dE); }
+      else if (dE >= 0.5) { delta.className = 'route-delta plus'; delta.textContent = '+' + fmtEur(dE); }
+      else { delta.className = 'route-delta ref'; delta.textContent = 'même prix'; }
+    }
+    right.appendChild(delta);
+    row.appendChild(right);
+
+    const radio = document.createElement('span');
+    radio.className = 'route-radio';
+    row.appendChild(radio);
+
+    wrap.appendChild(row);
+  }
+}
+
+function selectRouteOption(key) {
+  if (!routeOptionsData || !routeOptionsData[key] || key === selectedRouteOption) return;
+  selectedRouteOption = key;
+  applySelectedRoute();
+}
+
+// Bascule tout l'affichage sur l'itinéraire sélectionné : résultats, lien
+// Maps (avec l'option d'évitement correspondante) et recherche de station
+// sur le trajet (recalculée sur le bon tracé).
+function applySelectedRoute() {
+  const o = routeOptionsData && routeOptionsData[selectedRouteOption];
+  if (!o) return;
+  lastResultData = {
+    distA: o.distA, dureeSec: o.dureeSec, litresA: o.litresA, coutA: o.coutA,
+    coutPeage: o.coutPeage, peageDetails: o.peageDetails,
+    vinciUrl: o.vinciUrl || null, unit: o.unit,
+  };
+  renderResultMode();
+
+  if (o.mapsUrl) document.getElementById('mapsLink').href = o.mapsUrl;
+
+  if (lastStationSurTrajet) {
+    lastStationSurTrajet.polyline = o.polyline;
+    lastStationSurTrajet.distKm = o.distA;
+    rechercherStationSurTrajet(); // best-effort, asynchrone
+  }
+}
+
 async function calculer() {
   hideError();
   const apiKey  = document.getElementById('apiKey').value.trim();
@@ -3473,69 +3584,89 @@ async function calculer() {
   setLoading(true);
   document.getElementById('sectionResultats').style.display = 'none';
 
-  const avoidTolls = document.getElementById('avoidTolls').checked;
-
   try {
     // Géocode tous les points dans l'ordre : départ, étapes…, destination.
     const coords = await Promise.all(lieux.map(l => geocode(l)));
     const c1 = coords[0], c2 = coords[coords.length - 1];
-    const route = await getRoute(coords, apiKey, avoidTolls);
-    // ORS renvoie déjà la distance/durée totale cumulée sur tous les tronçons.
-    const distA   = route.distanceKm;
-    const litresA = (distA * conso) / 100;
-    const coutA   = litresA * prixActuel;
-    const unit = document.getElementById('carburant').value === 'electrique' ? 'kWh' : 'L';
-    // Péages (best-effort, Vinci puis ViaMichelin) : n'importe quel échec
-    // laisse simplement le total au seul carburant. Itinéraire "sans péage" :
-    // par construction 0 €, on n'interroge pas les API.
-    const peage = avoidTolls ? { cost: 0, details: null } : await getTolls(route, c1, c2, depart, arrivee);
 
-    // Mode "éviter les péages" : calcule aussi (best-effort) l'itinéraire
-    // AVEC péages pour afficher le gain réel — combien de péages évités,
-    // pour quel détour en temps et en distance.
-    let peageEvite = null;
-    if (avoidTolls) {
-      try {
-        const routePeage = await getRoute(coords, apiKey, false);
-        const p = await getTolls(routePeage, c1, c2, depart, arrivee);
-        if (p && typeof p.cost === 'number' && p.cost > 0) {
-          peageEvite = {
-            cost: p.cost,
-            detourSec: route.dureeSec - routePeage.dureeSec,
-            detourKm: distA - routePeage.distanceKm,
-          };
-        }
-      } catch (e) { /* comparaison indisponible : on n'affiche rien de plus */ }
+    // Les 3 itinéraires en parallèle. Seul le rapide est indispensable :
+    // les deux variantes sont best-effort (null si introuvables).
+    const [routeRapide, routeZero, routeMixte] = await Promise.all([
+      getRoute(coords, apiKey, false),
+      getRoute(coords, apiKey, 'tollways').catch(() => null),
+      getRoute(coords, apiKey, 'highways').catch(() => null),
+    ]);
+
+    const unit = document.getElementById('carburant').value === 'electrique' ? 'kWh' : 'L';
+    const mkOption = (route) => {
+      const distA = route.distanceKm;
+      const litresA = (distA * conso) / 100;
+      return { polyline: route.polyline, distA, dureeSec: route.dureeSec, litresA, coutA: litresA * prixActuel, coutPeage: null, peageDetails: null, unit };
+    };
+
+    // Péages du rapide (best-effort, Vinci puis ViaMichelin) ; ceux du mixte
+    // uniquement via Vinci (basé sur le tracé — le repli ViaMichelin et le
+    // cache ne connaissent que départ/arrivée et renverraient le prix du
+    // trajet rapide).
+    const peage = await getTolls(routeRapide, c1, c2, depart, arrivee);
+    let peageMixte = null;
+    if (routeMixte) {
+      try { peageMixte = await getTollsVinci(routeMixte); } catch (e) { peageMixte = null; }
     }
 
-    // Lien Vinci calculé avant l'affichage des résultats : la pastille
-    // péages s'en sert comme lien de secours quand le calcul est indisponible.
-    // Le calculateur de péages Vinci ne gère qu'un trajet direct départ→arrivée :
-    // pas de lien dès qu'il y a au moins une étape intermédiaire. Inutile en
-    // mode sans péage.
-    let vinciUrl = null;
-    if (!avoidTolls && lieux.length <= 2) {
+    const rapide = mkOption(routeRapide);
+    rapide.coutPeage = peage && typeof peage.cost === 'number' ? peage.cost : null;
+    rapide.peageDetails = (peage && peage.details) || null;
+
+    // Lien Vinci de secours (pastille péages) : seulement pour l'itinéraire
+    // rapide d'un trajet direct départ→arrivée (Vinci ne gère pas les étapes).
+    if (lieux.length <= 2) {
       const startObj = JSON.stringify({place: depart, lat: c1[1], lng: c1[0]});
       const endObj = JSON.stringify({place: arrivee, lat: c2[1], lng: c2[0]});
-      vinciUrl = `https://www.vinci-autoroutes.com/fr/mon-trajet/?area=service&filter-status=0&start=${encodeURIComponent(startObj)}&end=${encodeURIComponent(endObj)}`;
+      rapide.vinciUrl = `https://www.vinci-autoroutes.com/fr/mon-trajet/?area=service&filter-status=0&start=${encodeURIComponent(startObj)}&end=${encodeURIComponent(endObj)}`;
     }
 
-    lastResultData = {
-      distA, dureeSec: route.dureeSec, litresA, coutA,
-      coutPeage: peage && typeof peage.cost === 'number' ? peage.cost : null,
-      peageDetails: (peage && peage.details) || null,
-      vinciUrl, unit, peageEvite,
-    };
-    renderResultMode();
-
-    // Itinéraire Maps : force le mode voiture (travelmode=driving) + étapes.
+    // Liens Maps par option (avec l'évitement correspondant).
     const origin = encodeURIComponent(lieux[0]);
     const destination = encodeURIComponent(lieux[lieux.length - 1]);
     const waypoints = lieux.slice(1, -1).map(l => encodeURIComponent(l)).join('|');
-    let mapsUrl = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}`;
-    if (waypoints) mapsUrl += `&waypoints=${waypoints}`;
-    if (avoidTolls) mapsUrl += `&avoid=tolls`;
-    document.getElementById('mapsLink').href = mapsUrl;
+    let mapsBase = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}`;
+    if (waypoints) mapsBase += `&waypoints=${waypoints}`;
+    rapide.mapsUrl = mapsBase;
+
+    // Assemblage + tri des options pertinentes. Comparaisons honnêtes
+    // impossibles si le prix des péages du rapide est inconnu : dans ce cas
+    // on n'affiche que le trajet rapide (comportement d'avant).
+    const options = { rapide };
+    const totalRapide = rapide.coutA + (rapide.coutPeage || 0);
+    const memeTrace = (a, b) => Math.abs(a.distanceKm - b.distanceKm) < 1 && Math.abs(a.dureeSec - b.dureeSec) < 90;
+    if (typeof rapide.coutPeage === 'number' && rapide.coutPeage > 0) {
+      if (routeZero && !memeTrace(routeZero, routeRapide)) {
+        const zero = mkOption(routeZero);
+        zero.coutPeage = 0;
+        zero.mapsUrl = mapsBase + '&avoid=tolls';
+        // Ne garder le zéro péage que s'il fait vraiment gagner de l'argent.
+        if (zero.coutA < totalRapide - 0.5) options.zero = zero;
+      }
+      if (routeMixte && peageMixte && typeof peageMixte.cost === 'number' && peageMixte.cost > 0
+          && !memeTrace(routeMixte, routeRapide) && (!routeZero || !memeTrace(routeMixte, routeZero))) {
+        const mixte = mkOption(routeMixte);
+        mixte.coutPeage = peageMixte.cost;
+        mixte.peageDetails = peageMixte.details || null;
+        mixte.mapsUrl = mapsBase + '&avoid=highways';
+        const totalMixte = mixte.coutA + mixte.coutPeage;
+        // "Vraiment intermédiaire" : moins cher que le rapide, plus cher que
+        // le zéro péage (s'il existe).
+        const totalZero = options.zero ? options.zero.coutA : null;
+        if (totalMixte < totalRapide - 0.5 && (totalZero === null || totalMixte > totalZero + 0.5)) {
+          options.mixte = mixte;
+        }
+      }
+    }
+
+    routeOptionsData = options;
+    selectedRouteOption = 'rapide';
+
     // Waze navigue toujours depuis la position GPS actuelle de l'appareil (il
     // n'accepte pas de point de départ personnalisé) : seule la destination compte.
     document.getElementById('wazeLink').href = `https://waze.com/ul?ll=${c2[1]},${c2[0]}&navigate=yes`;
@@ -3543,11 +3674,16 @@ async function calculer() {
     // Station la moins chère à proximité du départ (best-effort, ne bloque rien).
     const carburantType = document.getElementById('carburant').value;
     lastStationSearch = { lat: c1[1], lon: c1[0], type: carburantType, rayon: STATION_RAYON_KM, depart, arrivee };
-    lastStationSurTrajet = { polyline: route.polyline, type: carburantType, depart, arrivee, distKm: distA, conso };
+    lastStationSurTrajet = { polyline: rapide.polyline, type: carburantType, depart, arrivee, distKm: rapide.distA, conso };
+
+    // Affiche l'itinéraire sélectionné (rapide par défaut) : résultats,
+    // fiches comparatives, lien Maps, et lance la recherche de stations.
+    applySelectedRoute();
+
     // Priorité à "Sur le trajet" à chaque nouveau calcul — sauf en électrique,
     // où cet onglet n'a pas de résultat (pas de prix comparable entre bornes).
     setStationTab(carburantType === 'electrique' ? 'depart' : 'trajet');
-    await Promise.all([rechercherStationMoinsChere(), rechercherStationSurTrajet()]);
+    await rechercherStationMoinsChere();
 
     document.getElementById('sectionResultats').style.display = 'block';
     document.getElementById('sectionResultats').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
