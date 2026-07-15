@@ -133,8 +133,7 @@
     }
     .optim-toggle.on { background: #1976d2; }
     .optim-toggle.on::after { left: 21px; }
-    .reservoir-inactive { opacity: 0.35; pointer-events: none; }
-    #reservoirPanel { transition: opacity 0.2s; }
+    .reservoir-inactive { display: none; }
     .cheapest-fuel-note { font-size: 12px; color: #607080; margin-top: 6px; line-height: 1.45; }
     /* Badge "économie" sous la station recommandée : ce qu'on gagne en y
        faisant le plein par rapport au prix moyen national. */
@@ -1246,7 +1245,7 @@
 
       <div class="itinerary-controls" style="gap:14px;">
         <button type="button" class="link-btn" onclick="addPoint()"><span class="plus-etape">+</span> Ajouter une étape</button>
-        <button type="button" class="link-btn" onclick="enregistrerTrajet()">☆ Enregistrer ce trajet</button>
+        <button type="button" class="link-btn" style="margin-left:auto;" onclick="enregistrerTrajet()">☆ Enregistrer ce trajet</button>
       </div>
       <!-- Trajets favoris (localStorage) : une puce = un itinéraire complet.
            Le champ de nom s'ouvre prérempli ("Départ → Arrivée"), modifiable. -->
@@ -1309,9 +1308,9 @@
          moins chère au bon moment du trajet (onglet "Sur le trajet"), quand
          la jauge passera entre ~20 % et ~10 % restants. Bornes du curseur :
          ~25 L (petites citadines) à ~120 L (gros SUV / pick-up).
-         Curseurs toujours visibles, activés par l'interrupteur : tant qu'il
-         est décoché (défaut), ils sont estompés et l'onglet "Sur le trajet"
-         garde son comportement classique. -->
+         Curseurs repliés tant que l'interrupteur est décoché (défaut) — seul
+         le texte d'explication reste visible ; l'onglet "Sur le trajet"
+         garde alors son comportement classique. -->
     <div class="param-row reservoir-row" id="reservoirBloc">
       <div class="param-input">
         <div class="optim-switch-row">
