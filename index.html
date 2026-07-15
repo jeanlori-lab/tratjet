@@ -1547,15 +1547,16 @@ function photonLabel(p) {
   return parts.filter(Boolean).join(', ');
 }
 
-// Extrait le numéro du département depuis le "context" BAN, ex. "21,
-// Côte-d'Or, Bourgogne-Franche-Comté" -> "21". Sert à désambiguïser les
-// homonymes (plusieurs communes portent le même nom dans des départements
-// différents), affiché seulement dans la liste — jamais injecté dans la
-// valeur du champ (qui doit rester une adresse géocodable telle quelle).
-function banDept(properties) {
+// Extrait département et région depuis le "context" BAN, ex. "21,
+// Côte-d'Or, Bourgogne-Franche-Comté" -> { dept: "Côte-d'Or", region:
+// "Bourgogne-Franche-Comté" }. Sert à désambiguïser les homonymes (plusieurs
+// communes portent le même nom dans des départements différents), affiché
+// seulement dans la liste — jamais injecté dans la valeur du champ (qui doit
+// rester une adresse géocodable telle quelle).
+function banContexte(properties) {
   if (!properties || !properties.context) return null;
   const parts = properties.context.split(',').map(s => s.trim());
-  return parts[0] || null;
+  return { dept: parts[1] || null, region: parts[2] || null };
 }
 
 // Photon indexe aussi les points d'intérêt d'OSM (gares, restaurants, salles
@@ -1627,10 +1628,21 @@ async function searchPlaces(q, limit) {
     if (lieux.length) { banFeatures = lieux; lieuxTrouves = true; }
   }
   const ban = banFeatures.map(f => {
-    const dept = banDept(f.properties);
+    const ctx = banContexte(f.properties);
+    // "Ville, Département, Région" pour les communes/lieux (le libellé n'est
+    // alors que le nom de la ville) ; pour une adresse précise, le libellé
+    // BAN contient déjà la ville — on se contente d'un rappel de département
+    // entre parenthèses pour ne pas surcharger la liste.
+    const estLieu = f.properties.type === 'municipality' || f.properties.type === 'locality';
+    let displayLabel = f.properties.label;
+    if (estLieu && ctx && (ctx.dept || ctx.region)) {
+      displayLabel = [f.properties.label, ctx.dept, ctx.region].filter(Boolean).join(', ');
+    } else if (!estLieu && ctx && ctx.dept) {
+      displayLabel = `${f.properties.label} (${ctx.dept})`;
+    }
     return {
       label: f.properties.label,
-      displayLabel: dept ? `${f.properties.label} (${dept})` : f.properties.label,
+      displayLabel,
       lat: f.geometry.coordinates[1],
       lng: f.geometry.coordinates[0],
       city: f.properties.city || f.properties.name,
