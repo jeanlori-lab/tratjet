@@ -1634,9 +1634,13 @@ async function searchPlaces(q, limit) {
     // BAN contient déjà la ville — on se contente d'un rappel de département
     // entre parenthèses pour ne pas surcharger la liste.
     const estLieu = f.properties.type === 'municipality' || f.properties.type === 'locality';
+    // Paris (et les rares communes dont le nom du département est identique,
+    // ex. "Paris" département "Paris") : le département serait redondant
+    // avec la ville, on ne garde que la région.
+    const deptRedondant = ctx && ctx.dept && ctx.dept.trim().toLowerCase() === f.properties.label.trim().toLowerCase();
     let displayLabel = f.properties.label;
     if (estLieu && ctx && (ctx.dept || ctx.region)) {
-      displayLabel = [f.properties.label, ctx.dept, ctx.region].filter(Boolean).join(', ');
+      displayLabel = [f.properties.label, deptRedondant ? null : ctx.dept, ctx.region].filter(Boolean).join(', ');
     } else if (!estLieu && ctx && ctx.dept) {
       displayLabel = `${f.properties.label} (${ctx.dept})`;
     }
