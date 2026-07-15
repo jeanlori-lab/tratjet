@@ -3768,12 +3768,14 @@ function renderRouteOptions() {
       delta.className = 'route-delta ref';
       delta.textContent = 'le plus rapide';
     } else {
-      // "Sans péages" : l'écart annoncé est le prix des péages évités (celui
-      // affiché sur la fiche "Péages"), pas la différence de coût total —
-      // qui peut aussi inclure un léger écart de carburant lié à un tracé un
-      // peu plus court ou plus long, et rendrait le nombre incompréhensible.
-      delta.className = 'route-delta eco';
-      delta.textContent = '−' + fmtEur((ref.coutPeage || 0) * f);
+      // Différence entre les deux totaux (péages + essence) : l'écart de
+      // km/temps affiché juste au-dessus explique déjà pourquoi ce nombre
+      // peut différer légèrement du seul prix des péages.
+      const refTotal = ref.coutA + (ref.coutPeage || 0);
+      const dE = (total - refTotal) * f;
+      if (dE <= -0.5) { delta.className = 'route-delta eco'; delta.textContent = '−' + fmtEur(-dE); }
+      else if (dE >= 0.5) { delta.className = 'route-delta plus'; delta.textContent = '+' + fmtEur(dE); }
+      else { delta.className = 'route-delta ref'; delta.textContent = 'même prix'; }
     }
     right.appendChild(delta);
     row.appendChild(right);
