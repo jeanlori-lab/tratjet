@@ -535,6 +535,7 @@
     .save-form-ok { background: #2e7d32; color: #fff; }
     .save-form-cancel { background: #eceff1; color: #607080; }
     .trajet-chips-wrap { padding: 2px 0 6px; }
+    .trajet-chips-wrap:has(.saved-chips:empty) { display: none; }
     /* Comparateur des itinéraires (péages / sans péages), en tête des
        résultats, affiché seulement quand pertinent : une ligne par option,
        la sélection change tout le détail en dessous (coûts, litres,
@@ -1522,13 +1523,36 @@ const POI_OSM_KEYS = new Set([
 function isPhotonPOI(p) {
   return !!(p && p.name && POI_OSM_KEYS.has(p.osm_key));
 }
-// Libellé court d'un POI ("Gare de Brest, Brest") : assez précis pour être
+// En France, les gares et aéroports sont souvent nommés dans OSM par leur
+// seule commune ("Auray", "Nantes Atlantique") : sans préfixe, "Auray" est
+// indiscernable de la ville elle-même dans la liste. On ajoute "Gare de"
+// / "Aéroport de" quand le nom ne le précise pas déjà, avec la contraction
+// d'article correcte (Gare d'Auray, du Mans, des Sables-d'Olonne…).
+function avecArticle(mot, nom) {
+  if (/^le\s+/i.test(nom)) return mot + ' du ' + nom.replace(/^le\s+/i, '');
+  if (/^les\s+/i.test(nom)) return mot + ' des ' + nom.replace(/^les\s+/i, '');
+  if (/^[aeiouyàâäéèêëîïôöùûü]/i.test(nom) || /^h/i.test(nom)) return mot + " d'" + nom;
+  return mot + ' de ' + nom;
+}
+function poiNomAffiche(p) {
+  const nom = p.name;
+  const lower = nom.toLowerCase();
+  if (p.osm_key === 'railway' && !lower.includes('gare') && !lower.includes('station') && !lower.includes('halte')) {
+    return avecArticle('Gare', nom);
+  }
+  if (p.osm_key === 'aeroway' && !lower.includes('aéroport') && !lower.includes('aeroport')) {
+    return avecArticle('Aéroport', nom);
+  }
+  return nom;
+}
+// Libellé court d'un POI ("Gare d'Auray, Auray") : assez précis pour être
 // re-géocodé tel quel (le champ ne stocke que du texte), sans traîner
 // région/pays qui alourdissent la liste.
 function poiLabel(p) {
+  const nomAffiche = poiNomAffiche(p);
   const ville = p.city || p.district || p.state;
-  const parts = [p.name];
-  if (ville && ville !== p.name) parts.push(ville);
+  const parts = [nomAffiche];
+  if (ville && ville !== p.name && !nomAffiche.toLowerCase().includes(ville.toLowerCase())) parts.push(ville);
   if (p.countrycode && p.countrycode !== 'FR' && p.country) parts.push(p.country);
   return parts.join(', ');
 }
