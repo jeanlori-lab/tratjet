@@ -613,7 +613,6 @@
       text-transform: uppercase; border-radius: 999px; padding: 4px 9px;
     }
     .leg-badge.ok { background: #e8f5e9; color: #2e7d32; }
-    .leg-badge.bof { background: #fff3e0; color: #b26a00; }
     .leg-advice-note { font-size: 10.5px; color: #90a4ae; margin-top: 7px; line-height: 1.4; }
     .points-wrap { position: relative; }
 
@@ -4043,7 +4042,7 @@ function applySelectedRoute() {
 // évité moins le surcoût de carburant du détour) par heure de détour.
 // Lancé en arrière-plan après l'affichage des résultats, best-effort :
 // un tronçon indéterminable est simplement ignoré. ---
-const SEUIL_RENTABLE_EUR_PAR_H = 15;
+const SEUIL_RENTABLE_EUR_PAR_H = 18;
 let legAdviceRunId = 0; // invalide l'analyse en cours si un nouveau calcul démarre
 
 async function analyserTronconsSansPeage(coords, lieux, apiKey, conso) {
@@ -4077,11 +4076,13 @@ async function analyserTronconsSansPeage(coords, lieux, apiKey, conso) {
       if (economie <= 0.5) continue;
       const detourSec = Math.max(0, zero.dureeSec - rapide.dureeSec);
       const eurParH = detourSec >= 60 ? economie / (detourSec / 3600) : Infinity;
+      // Seuls les tronçons vraiment rentables sont proposés : pas la peine
+      // d'encombrer les résultats avec des évitements qu'on déconseille.
+      if (eurParH < SEUIL_RENTABLE_EUR_PAR_H) continue;
       rows.push({
         de: (lieux[i] || '').split(',')[0].trim(),
         a: (lieux[i + 1] || '').split(',')[0].trim(),
         economie, detourSec,
-        rentable: eurParH >= SEUIL_RENTABLE_EUR_PAR_H,
       });
     } catch (e) { /* tronçon indéterminable : ignoré */ }
   }
@@ -4108,8 +4109,8 @@ async function analyserTronconsSansPeage(coords, lieux, apiKey, conso) {
     mid.appendChild(detail);
     row.appendChild(mid);
     const badge = document.createElement('span');
-    badge.className = 'leg-badge ' + (r.rentable ? 'ok' : 'bof');
-    badge.textContent = r.rentable ? '👍 Rentable' : 'Peu rentable';
+    badge.className = 'leg-badge ok';
+    badge.textContent = '👍 Rentable';
     row.appendChild(badge);
     bloc.appendChild(row);
   });
