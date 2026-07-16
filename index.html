@@ -1796,7 +1796,10 @@ function saveStore(key, arr) {
 // (url/anonKey vides), tout ceci est inerte et le bouton compte est masqué.
 // La clé "anon" est publique par conception (la sécurité vient des règles
 // RLS côté Supabase : chaque utilisateur ne lit/écrit que sa ligne). ---
-window.TRATJET_SUPABASE = window.TRATJET_SUPABASE || { url: '', anonKey: '' };
+window.TRATJET_SUPABASE = window.TRATJET_SUPABASE || {
+  url: 'https://zkbelsyuwvvnzehwtday.supabase.co',
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InprYmVsc3l1d3Z2bnplaHd0ZGF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNjI0NzUsImV4cCI6MjA5OTczODQ3NX0.8vMN4bI8GfHvQ6toZYKgWnjbP4SQlupWnRYnQFx7sJQ',
+};
 let sbClient = null;
 let sbUser = null;
 let syncTimer = null;
