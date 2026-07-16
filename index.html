@@ -7,11 +7,11 @@
   <title>Tratjet</title>
   <!-- Aperçu de partage (og/Twitter) : logo Tratjet (URL absolue obligatoire). -->
   <meta property="og:title" content="Tratjet">
-  <meta property="og:description" content="Entrez les paramètres de votre trajet, on s'occupe des calculs : coût du carburant, litres consommés et prix des péages.">
+  <meta property="og:description" content="Entrez votre trajet, on s'occupe des calculs : carburant, péages, comparaison avec l'itinéraire sans péages — et la station la moins chère sur votre route.">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://jeanlori-lab.github.io/copilote.budget2/logo%20trajet%20rat.png">
+  <meta property="og:image" content="https://jeanlori-lab.github.io/tratjet/logo%20trajet%20rat.png">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:image" content="https://jeanlori-lab.github.io/copilote.budget2/logo%20trajet%20rat.png">
+  <meta name="twitter:image" content="https://jeanlori-lab.github.io/tratjet/logo%20trajet%20rat.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
@@ -21,8 +21,8 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <!-- Supabase : comptes (lien magique) + synchronisation des véhicules et
-       trajets favoris. Sans effet tant que TRATJET_SUPABASE n'est pas
-       renseigné plus bas (le bouton compte reste masqué). -->
+       trajets favoris. Configuration dans TRATJET_SUPABASE plus bas ; si le
+       CDN ne charge pas, le bouton compte reste simplement masqué. -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin=""></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1329,7 +1329,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Tratjet">
   <meta name="theme-color" content="#1565c0">
-  <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIlRyYXRqZXQiLAogICJzaG9ydF9uYW1lIjogIlRyYXRqZXQiLAogICJkZXNjcmlwdGlvbiI6ICJDb8O7dCBjYXJidXJhbnQgZXQgc3RhdGlvbiBsYSBtb2lucyBjaMOocmUgcG91ciB1biB0cmFqZXQiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI2VlZjJmNiIsCiAgInRoZW1lX2NvbG9yIjogIiMxNTY1YzAiLAogICJvcmllbnRhdGlvbiI6ICJwb3J0cmFpdCIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImRhdGE6aW1hZ2Uvc3ZnK3htbDtiYXNlNjQsUEhOMlp5QjJhV1YzUW05NFBTSXdJREFnTlRFeUlEVXhNaUlnZUcxc2JuTTlJbWgwZEhBNkx5OTNkM2N1ZHpNdWIzSm5Mekl3TURBdmMzWm5JaUIzYVdSMGFEMGlOVEV5SWlCb1pXbG5hSFE5SWpVeE1pSStDaUFnUEdSbFpuTStDaUFnSUNBOGJHbHVaV0Z5UjNKaFpHbGxiblFnYVdROUltSm5JaUI0TVQwaU1DSWdlVEU5SWpBaUlIZ3lQU0l4SWlCNU1qMGlNU0krQ2lBZ0lDQWdJRHh6ZEc5d0lHOW1abk5sZEQwaU1DSWdjM1J2Y0MxamIyeHZjajBpSXpJeE9UWm1NeUl2UGdvZ0lDQWdJQ0E4YzNSdmNDQnZabVp6WlhROUlqRWlJSE4wYjNBdFkyOXNiM0k5SWlNd1pEUTNZVEVpTHo0S0lDQWdJRHd2YkdsdVpXRnlSM0poWkdsbGJuUStDaUFnUEM5a1pXWnpQZ29nSUR4eVpXTjBJSGRwWkhSb1BTSTFNVElpSUdobGFXZG9kRDBpTlRFeUlpQnllRDBpTVRFMUlpQm1hV3hzUFNKMWNtd29JMkpuS1NJdlBnb0tJQ0E4WnlCMGNtRnVjMlp2Y20wOUluUnlZVzV6YkdGMFpTZ3lOVFlzTWpjd0tTSStDaUFnSUNBOGNHRjBhQ0JrUFNKTklDMHhORFlzTkRRZ1F5QXRNVGMyTERVeUlDMHhPVFlzTkRJZ0xUSXdNQ3d4TmlCRElDMHlNRElzTFRJZ0xURTVOQ3d0TVRRZ0xURTRNQ3d0TVRZaUNpQWdJQ0FnSUNBZ0lDQm1hV3hzUFNKdWIyNWxJaUJ6ZEhKdmEyVTlJaU5tWm1abVptWWlJSE4wY205clpTMTNhV1IwYUQwaU1URWlJSE4wY205clpTMXNhVzVsWTJGd1BTSnliM1Z1WkNJdlBnb0tJQ0FnSUR4d1lYUm9JR1E5SWswZ0xURTFNQ3cyTUFvZ0lDQWdJQ0FnSUNBZ0lDQWdReUF0TVRVeUxDMDJJQzB4TVRBc0xUVXlJQzAyTUN3dE56QUtJQ0FnSUNBZ0lDQWdJQ0FnSUVNZ0xUSXdMQzA0TkNBeU5pd3RPRFFnTmpZc0xUWTJDaUFnSUNBZ0lDQWdJQ0FnSUNCRElEazJMQzAxTWlBeE1UZ3NMVE13SURFMU1Dd3RNalFLSUNBZ0lDQWdJQ0FnSUNBZ0lFTWdNVGMyTEMweE9DQXhPVEFzTFRJZ01UZzRMREU0Q2lBZ0lDQWdJQ0FnSUNBZ0lDQkRJREU0Tml3ME1DQXhOamdzTlRZZ01UVXdMRFl3Q2lBZ0lDQWdJQ0FnSUNBZ0lDQk1JREUxTUN3Mk5Bb2dJQ0FnSUNBZ0lDQWdJQ0FnVENBdE1UVXdMRFkwSUZvaUNpQWdJQ0FnSUNBZ0lDQm1hV3hzUFNJalptWm1abVptSWk4K0Nnb2dJQ0FnUEdOcGNtTnNaU0JqZUQwaUxUTTRJaUJqZVQwaUxUYzJJaUJ5UFNJeU5pSWdabWxzYkQwaUkyWm1abVptWmlJdlBnb2dJQ0FnUEdOcGNtTnNaU0JqZUQwaUxUTTRJaUJqZVQwaUxUYzJJaUJ5UFNJeE1pSWdabWxzYkQwaUl6QmtORGRoTVNJdlBnb0tJQ0FnSUR4d1lYUm9JR1E5SWswZ0xUWXNMVFU0SUVNZ01qQXNMVGN3SURVd0xDMDNNQ0EzTUN3dE5UWWdReUEzT0N3dE5UQWdPRElzTFRRd0lEZ3dMQzB6TUNCTUlDMDBMQzB6TUNCYUlpQm1hV3hzUFNJak1HUTBOMkV4SWlCdmNHRmphWFI1UFNJd0xqZzFJaTgrQ2dvZ0lDQWdQR05wY21Oc1pTQmplRDBpTVRNd0lpQmplVDBpTFRZaUlISTlJakV3SWlCbWFXeHNQU0lqTUdRME4yRXhJaTgrQ2dvZ0lDQWdQSEJoZEdnZ1pEMGlUU0F4TlRBc0xUSTBJRU1nTVRjeUxDMHlNQ0F4T1RBc0xUUWdNVGc0TERFNElpQm1hV3hzUFNKdWIyNWxJaUJ6ZEhKdmEyVTlJaU5tWm1JM01ETWlJSE4wY205clpTMTNhV1IwYUQwaU1UQWlJSE4wY205clpTMXNhVzVsWTJGd1BTSnliM1Z1WkNJdlBnb0tJQ0FnSUR4d1lYUm9JR1E5SWswZ01UZzBMRFFnVENBeU1UUXNMVElpSUhOMGNtOXJaVDBpSTJabVlqY3dNeUlnYzNSeWIydGxMWGRwWkhSb1BTSTJJaUJ6ZEhKdmEyVXRiR2x1WldOaGNEMGljbTkxYm1RaUx6NEtJQ0FnSUR4d1lYUm9JR1E5SWswZ01UZzJMREUwSUV3Z01qRTJMREUwSWlCemRISnZhMlU5SWlObVptSTNNRE1pSUhOMGNtOXJaUzEzYVdSMGFEMGlOaUlnYzNSeWIydGxMV3hwYm1WallYQTlJbkp2ZFc1a0lpOCtDaUFnSUNBOGNHRjBhQ0JrUFNKTklERTROQ3d5TkNCTUlESXhNaXd6TWlJZ2MzUnliMnRsUFNJalptWmlOekF6SWlCemRISnZhMlV0ZDJsa2RHZzlJallpSUhOMGNtOXJaUzFzYVc1bFkyRndQU0p5YjNWdVpDSXZQZ29LSUNBZ0lEeGphWEpqYkdVZ1kzZzlJaTA1TWlJZ1kzazlJalkwSWlCeVBTSXpOQ0lnWm1sc2JEMGlJMlptWWpjd015SXZQZ29nSUNBZ1BHTnBjbU5zWlNCamVEMGlPVElpSUdONVBTSTJOQ0lnY2owaU16UWlJR1pwYkd3OUlpTm1abUkzTURNaUx6NEtJQ0FnSUR4amFYSmpiR1VnWTNnOUlpMDVNaUlnWTNrOUlqWTBJaUJ5UFNJeE5DSWdabWxzYkQwaUl6QmtORGRoTVNJdlBnb2dJQ0FnUEdOcGNtTnNaU0JqZUQwaU9USWlJR041UFNJMk5DSWdjajBpTVRRaUlHWnBiR3c5SWlNd1pEUTNZVEVpTHo0S0lDQThMMmMrQ2p3dmMzWm5QZ289IiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9zdmcreG1sIiwKICAgICAgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIgogICAgfQogIF0KfQ==">
+  <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIlRyYXRqZXQiLAogICJzaG9ydF9uYW1lIjogIlRyYXRqZXQiLAogICJkZXNjcmlwdGlvbiI6ICJDb8O7dCBjYXJidXJhbnQsIHDDqWFnZXMgZXQgc3RhdGlvbiBsYSBtb2lucyBjaMOocmUgcG91ciB2b3MgdHJhamV0cyIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjZWVmMmY2IiwKICAidGhlbWVfY29sb3IiOiAiIzE1NjVjMCIsCiAgIm9yaWVudGF0aW9uIjogInBvcnRyYWl0IiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sO2Jhc2U2NCxQSE4yWnlCMmFXVjNRbTk0UFNJd0lEQWdOVEV5SURVeE1pSWdlRzFzYm5NOUltaDBkSEE2THk5M2QzY3Vkek11YjNKbkx6SXdNREF2YzNabklpQjNhV1IwYUQwaU5URXlJaUJvWldsbmFIUTlJalV4TWlJK0NpQWdQR1JsWm5NK0NpQWdJQ0E4YkdsdVpXRnlSM0poWkdsbGJuUWdhV1E5SW1KbklpQjRNVDBpTUNJZ2VURTlJakFpSUhneVBTSXhJaUI1TWowaU1TSStDaUFnSUNBZ0lEeHpkRzl3SUc5bVpuTmxkRDBpTUNJZ2MzUnZjQzFqYjJ4dmNqMGlJekl4T1RabU15SXZQZ29nSUNBZ0lDQThjM1J2Y0NCdlptWnpaWFE5SWpFaUlITjBiM0F0WTI5c2IzSTlJaU13WkRRM1lURWlMejRLSUNBZ0lEd3ZiR2x1WldGeVIzSmhaR2xsYm5RK0NpQWdQQzlrWldaelBnb2dJRHh5WldOMElIZHBaSFJvUFNJMU1USWlJR2hsYVdkb2REMGlOVEV5SWlCeWVEMGlNVEUxSWlCbWFXeHNQU0oxY213b0kySm5LU0l2UGdvS0lDQThaeUIwY21GdWMyWnZjbTA5SW5SeVlXNXpiR0YwWlNneU5UWXNNamN3S1NJK0NpQWdJQ0E4Y0dGMGFDQmtQU0pOSUMweE5EWXNORFFnUXlBdE1UYzJMRFV5SUMweE9UWXNORElnTFRJd01Dd3hOaUJESUMweU1ESXNMVElnTFRFNU5Dd3RNVFFnTFRFNE1Dd3RNVFlpQ2lBZ0lDQWdJQ0FnSUNCbWFXeHNQU0p1YjI1bElpQnpkSEp2YTJVOUlpTm1abVptWm1ZaUlITjBjbTlyWlMxM2FXUjBhRDBpTVRFaUlITjBjbTlyWlMxc2FXNWxZMkZ3UFNKeWIzVnVaQ0l2UGdvS0lDQWdJRHh3WVhSb0lHUTlJazBnTFRFMU1DdzJNQW9nSUNBZ0lDQWdJQ0FnSUNBZ1F5QXRNVFV5TEMwMklDMHhNVEFzTFRVeUlDMDJNQ3d0TnpBS0lDQWdJQ0FnSUNBZ0lDQWdJRU1nTFRJd0xDMDROQ0F5Tml3dE9EUWdOallzTFRZMkNpQWdJQ0FnSUNBZ0lDQWdJQ0JESURrMkxDMDFNaUF4TVRnc0xUTXdJREUxTUN3dE1qUUtJQ0FnSUNBZ0lDQWdJQ0FnSUVNZ01UYzJMQzB4T0NBeE9UQXNMVElnTVRnNExERTRDaUFnSUNBZ0lDQWdJQ0FnSUNCRElERTROaXcwTUNBeE5qZ3NOVFlnTVRVd0xEWXdDaUFnSUNBZ0lDQWdJQ0FnSUNCTUlERTFNQ3cyTkFvZ0lDQWdJQ0FnSUNBZ0lDQWdUQ0F0TVRVd0xEWTBJRm9pQ2lBZ0lDQWdJQ0FnSUNCbWFXeHNQU0lqWm1abVptWm1JaTgrQ2dvZ0lDQWdQR05wY21Oc1pTQmplRDBpTFRNNElpQmplVDBpTFRjMklpQnlQU0l5TmlJZ1ptbHNiRDBpSTJabVptWm1aaUl2UGdvZ0lDQWdQR05wY21Oc1pTQmplRDBpTFRNNElpQmplVDBpTFRjMklpQnlQU0l4TWlJZ1ptbHNiRDBpSXpCa05EZGhNU0l2UGdvS0lDQWdJRHh3WVhSb0lHUTlJazBnTFRZc0xUVTRJRU1nTWpBc0xUY3dJRFV3TEMwM01DQTNNQ3d0TlRZZ1F5QTNPQ3d0TlRBZ09ESXNMVFF3SURnd0xDMHpNQ0JNSUMwMExDMHpNQ0JhSWlCbWFXeHNQU0lqTUdRME4yRXhJaUJ2Y0dGamFYUjVQU0l3TGpnMUlpOCtDZ29nSUNBZ1BHTnBjbU5zWlNCamVEMGlNVE13SWlCamVUMGlMVFlpSUhJOUlqRXdJaUJtYVd4c1BTSWpNR1EwTjJFeElpOCtDZ29nSUNBZ1BIQmhkR2dnWkQwaVRTQXhOVEFzTFRJMElFTWdNVGN5TEMweU1DQXhPVEFzTFRRZ01UZzRMREU0SWlCbWFXeHNQU0p1YjI1bElpQnpkSEp2YTJVOUlpTm1abUkzTURNaUlITjBjbTlyWlMxM2FXUjBhRDBpTVRBaUlITjBjbTlyWlMxc2FXNWxZMkZ3UFNKeWIzVnVaQ0l2UGdvS0lDQWdJRHh3WVhSb0lHUTlJazBnTVRnMExEUWdUQ0F5TVRRc0xUSWlJSE4wY205clpUMGlJMlptWWpjd015SWdjM1J5YjJ0bExYZHBaSFJvUFNJMklpQnpkSEp2YTJVdGJHbHVaV05oY0QwaWNtOTFibVFpTHo0S0lDQWdJRHh3WVhSb0lHUTlJazBnTVRnMkxERTBJRXdnTWpFMkxERTBJaUJ6ZEhKdmEyVTlJaU5tWm1JM01ETWlJSE4wY205clpTMTNhV1IwYUQwaU5pSWdjM1J5YjJ0bExXeHBibVZqWVhBOUluSnZkVzVrSWk4K0NpQWdJQ0E4Y0dGMGFDQmtQU0pOSURFNE5Dd3lOQ0JNSURJeE1pd3pNaUlnYzNSeWIydGxQU0lqWm1aaU56QXpJaUJ6ZEhKdmEyVXRkMmxrZEdnOUlqWWlJSE4wY205clpTMXNhVzVsWTJGd1BTSnliM1Z1WkNJdlBnb0tJQ0FnSUR4amFYSmpiR1VnWTNnOUlpMDVNaUlnWTNrOUlqWTBJaUJ5UFNJek5DSWdabWxzYkQwaUkyWm1ZamN3TXlJdlBnb2dJQ0FnUEdOcGNtTnNaU0JqZUQwaU9USWlJR041UFNJMk5DSWdjajBpTXpRaUlHWnBiR3c5SWlObVptSTNNRE1pTHo0S0lDQWdJRHhqYVhKamJHVWdZM2c5SWkwNU1pSWdZM2s5SWpZMElpQnlQU0l4TkNJZ1ptbHNiRDBpSXpCa05EZGhNU0l2UGdvZ0lDQWdQR05wY21Oc1pTQmplRDBpT1RJaUlHTjVQU0kyTkNJZ2NqMGlNVFFpSUdacGJHdzlJaU13WkRRM1lURWlMejRLSUNBOEwyYytDand2YzNablBnbz0iLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiLAogICAgICAicHVycG9zZSI6ICJhbnkgbWFza2FibGUiCiAgICB9CiAgXQp9">
   <link rel="apple-touch-icon" href="logo trajet rat.png">
   <script>
     if ('serviceWorker' in navigator) {
@@ -1346,7 +1346,7 @@
     <!-- Compte (Supabase) : bouton masqué tant que la config n'est pas renseignée -->
     <button type="button" class="account-btn" id="accountBtn" style="display:none;" onclick="toggleAccountCard()" aria-label="Mon compte">👤</button>
     <h1>T<span class="rat-emphasis">rat</span>jet</h1>
-    <p>Entrez les paramètres de votre trajet, on s'occupe des calculs : coût du carburant, litres consommés et prix des péages. <br><span class="intro-bonus"><span class="intro-bonus-label">En bonus</span> : on vous trouve la station la moins chère et la plus proche de votre départ, et sur votre trajet !</span></p>
+    <p>Entrez votre trajet, on s'occupe des calculs : carburant ou électricité, prix des péages, et comparaison avec l'itinéraire sans péages pour savoir s'il est rentable. <br><span class="intro-bonus"><span class="intro-bonus-label">En bonus</span> : la station la moins chère près de votre départ et sur votre trajet, et vos véhicules et trajets favoris synchronisés sur tous vos appareils !</span></p>
   </div>
 
   <!-- Mon compte : connexion par lien magique (e-mail, sans mot de passe) et
@@ -1497,7 +1497,7 @@
   <!-- Résultats -->
   <div class="card resultats" id="sectionResultats" style="margin-top:14px;">
     <div class="card-title">Résultats</div>
-    <!-- Comparateur des 3 itinéraires (rempli par renderRouteOptions) -->
+    <!-- Comparateur des itinéraires Péages / Sans péages (rempli par renderRouteOptions) -->
     <div class="route-options" id="routeOptions"></div>
     <div class="route-options-hint" id="routeOptionsHint" style="display:none;">Touchez un itinéraire pour voir son détail ci-dessous (coûts, stations sur le trajet…)</div>
     <div class="ar-toggle">
@@ -1562,7 +1562,7 @@
   <!-- Station la moins chère près de chez moi, indépendamment de tout trajet -->
   <div id="modeStation" style="display:none;">
     <div class="card">
-      <div class="card-title">Station la moins chère près de chez moi</div>
+      <div class="card-title" id="stationModeTitle">Station la moins chère près de chez moi</div>
 
       <div class="section">
         <div class="param-row point-row">
@@ -1788,8 +1788,8 @@ async function searchPlaces(q, limit) {
 }
 
 // --- Véhicules enregistrés et trajets favoris : profils mémorisés dans le
-// navigateur (localStorage), appliqués d'un tap via des puces. Première
-// brique des "comptes" : ces données pourront être synchronisées plus tard. ---
+// navigateur (localStorage), appliqués d'un tap via des puces, et
+// synchronisés entre appareils quand un compte est connecté (cf. plus bas). ---
 const VEHICULES_KEY = 'tratjetVehicules'; // [{ nom, type, conso, capacite }]
 const TRAJETS_KEY = 'tratjetTrajets';     // [{ nom, points: [départ, étapes…, arrivée] }]
 function loadStore(key) {
@@ -2276,6 +2276,13 @@ function setCarburant(value, btn) {
 function setCarburantStation(value, btn) {
   document.getElementById('carburantStation').value = value;
   document.querySelectorAll('#carbChoicesStation .carb-choice').forEach(b => b.classList.toggle('active', b === btn));
+  // En électrique on cherche la borne la plus proche (pas de prix comparable
+  // entre bornes) : titre et bouton adaptés pour ne pas promettre un prix.
+  const electrique = value === 'electrique';
+  document.getElementById('stationModeTitle').textContent = electrique
+    ? 'Borne de recharge la plus proche' : 'Station la moins chère près de chez moi';
+  document.getElementById('stationSearchBtn').textContent = electrique
+    ? 'Chercher la borne la plus proche' : 'Chercher la station la moins chère';
   // Un changement de carburant invalide le résultat affiché.
   document.getElementById('cheapestNoteStation').style.display = 'none';
 }
@@ -2292,6 +2299,11 @@ function majUniteConso() {
   // (pas de prix comparable entre bornes, capacité en kWh).
   const reservoirBloc = document.getElementById('reservoirBloc');
   if (reservoirBloc) reservoirBloc.style.display = electrique ? 'none' : 'flex';
+
+  // Titre de la section stations des résultats : "faire le plein" n'a pas
+  // de sens pour une voiture électrique.
+  const stationTitle = document.getElementById('stationSectionTitle');
+  if (stationTitle) stationTitle.textContent = electrique ? 'Où recharger' : 'Où faire le plein';
 
   const etaitElectrique = carburantTypePrecedent === 'electrique';
   if (electrique && !etaitElectrique) {
@@ -3777,9 +3789,14 @@ function chargerRechercheDepuisLien() {
   container.appendChild(makePointRow(DEPART_FIXE));    // départ
   container.appendChild(makePointRow(q ? q.trim() : '')); // destination (lien partagé)
   refreshPoints();
-  // On nettoie l'URL : pas de ?q qui persiste après un rafraîchissement.
-  const baseUrl = window.location.href.split('?')[0].split('#')[0];
-  history.replaceState(null, '', baseUrl);
+  // On nettoie les paramètres de l'URL (pas de ?q ou ?peage qui persiste
+  // après un rafraîchissement), mais on préserve le hash : #station/#cout
+  // sont des liens d'onglet partageables, et #access_token/#error sont le
+  // retour du lien magique Supabase (lus de façon asynchrone par le SDK —
+  // les effacer ici casserait la connexion).
+  if (window.location.search) {
+    history.replaceState(null, '', window.location.pathname + window.location.hash);
+  }
 }
 
 chargerRechercheDepuisLien();
@@ -4085,7 +4102,7 @@ function setResultMode(mode) {
 function renderResultMode() {
   const d = lastResultData;
   const isAR = resultMode === 'ar';
-  renderRouteOptions(); // fiches comparatives des 3 itinéraires (suit le mode AR)
+  renderRouteOptions(); // fiches comparatives Péages / Sans péages (suit le mode AR)
   document.getElementById('r-dist').textContent   = fmtKm(isAR ? d.distA * 2 : d.distA);
   document.getElementById('r-duree').textContent  = formatDuree(isAR ? d.dureeSec * 2 : d.dureeSec);
   document.getElementById('r-litres').textContent = fmtL(isAR ? d.litresA * 2 : d.litresA, d.unit);
