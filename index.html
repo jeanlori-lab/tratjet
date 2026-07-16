@@ -1817,6 +1817,27 @@ function initCompte() {
     majCompteUI();
     if (event === 'SIGNED_IN') syncDepuisCloud();
   });
+  afficherErreurLienMagique();
+}
+
+// Supabase ajoute error/error_description dans le hash (ou les query params)
+// de l'URL de retour quand le lien magique a échoué (expiré, déjà utilisé,
+// URL de redirection non autorisée...). Sans ça, l'échec est totalement
+// silencieux pour l'utilisateur : on l'affiche donc dans la carte compte.
+function afficherErreurLienMagique() {
+  const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const query = new URLSearchParams(location.search);
+  const desc = hash.get('error_description') || query.get('error_description')
+    || hash.get('error') || query.get('error');
+  if (!desc) return;
+  const card = document.getElementById('accountCard');
+  const status = document.getElementById('accountStatus');
+  if (card) card.style.display = 'block';
+  if (status) {
+    status.className = 'account-status err';
+    status.textContent = 'Connexion impossible : ' + decodeURIComponent(desc).replace(/\+/g, ' ');
+  }
+  history.replaceState(null, '', location.pathname);
 }
 
 function majCompteUI() {
@@ -1841,17 +1862,52 @@ async function envoyerLienMagique() {
   btn.disabled = true;
   status.className = 'account-status';
   status.textContent = 'Envoi du lien…';
-  const { error } = await sbClient.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: location.origin + location.pathname },
-  });
+  let error = null;
+  try {
+    ({ error } = await sbClient.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: location.origin + location.pathname },
+    }));
+  } catch (e) { error = e; }
   btn.disabled = false;
   if (error) {
     status.className = 'account-status err';
-    status.textContent = 'Envoi impossible : ' + error.message;
+    const msg = (error.message && error.message !== '{}') ? error.message
+      : 'connexion au serveur impossible (réseau, bloqueur de contenu Safari, ou wifi restrictif ?)';
+    status.textContent = 'Envoi impossible : ' + msg;
+    // Sur échec réseau (message vide), on sonde le serveur pour situer la panne.
+    if (!error.message || error.message === '{}') {
+      status.textContent += ' — diagnostic en cours…';
+      status.textContent = 'Envoi impossible : ' + msg + ' — ' + (await diagnostiquerSupabase(email));
+    }
   } else {
     status.className = 'account-status ok';
     status.textContent = '✓ Lien envoyé ! Ouvrez l\'e-mail sur cet appareil et cliquez le lien pour vous connecter.';
+  }
+}
+
+// Rejoue la requête d'envoi à la main (hors SDK) pour voir la réponse
+// brute du serveur : code HTTP et corps, que le SDK masque parfois
+// derrière une erreur vide.
+async function diagnostiquerSupabase(email) {
+  const cfg = window.TRATJET_SUPABASE;
+  try {
+    const r = await fetch(cfg.url + '/auth/v1/otp', {
+      method: 'POST',
+      headers: { apikey: cfg.anonKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        create_user: true,
+        gotrue_meta_security: {},
+        code_challenge: null,
+        code_challenge_method: null,
+      }),
+    });
+    let corps = '';
+    try { corps = (await r.text()).slice(0, 300); } catch (e) {}
+    return 'diagnostic : le serveur répond HTTP ' + r.status + ' — ' + (corps || '(réponse vide)');
+  } catch (e) {
+    return 'diagnostic : serveur injoignable depuis cet appareil (' + (e.message || 'échec réseau') + ').';
   }
 }
 
