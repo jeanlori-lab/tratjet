@@ -480,6 +480,7 @@
       align-items: center;
       padding: 0 0 2px;
       margin-top: -6px;
+      margin-bottom: 16px;
     }
     .link-btn {
       background: none;
@@ -585,6 +586,35 @@
     .route-row .route-radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #cfd8e0; flex-shrink: 0; }
     .route-row.sel .route-radio { border-color: #1976d2; background: radial-gradient(circle, #1976d2 45%, transparent 52%); }
     .route-options-hint { font-size: 11px; color: #90a4ae; margin: -6px 0 12px; }
+
+    /* Préconisations par tronçon (trajets à étapes) : pour chaque tronçon à
+       péages, ce que coûterait/rapporterait de passer sans péage. */
+    .leg-advice {
+      background: #f4f8fd;
+      border: 1px solid #e2ecf7;
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+    .leg-advice-title { font-size: 13px; font-weight: 700; color: #455060; margin-bottom: 8px; }
+    .leg-advice-loading { font-size: 12px; color: #90a4ae; font-style: italic; }
+    .leg-advice-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 0;
+      border-top: 1px solid #e6eef8;
+      font-size: 12px; color: #455060;
+    }
+    .leg-advice-row .leg-mid { flex: 1; min-width: 0; }
+    .leg-advice-row .leg-noms { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+    .leg-advice-row .leg-detail { color: #607080; font-size: 11.5px; display: block; margin-top: 1px; }
+    .leg-advice-row .leg-detail strong { color: #2e7d32; }
+    .leg-badge {
+      flex-shrink: 0; font-size: 10px; font-weight: 800; letter-spacing: 0.04em;
+      text-transform: uppercase; border-radius: 999px; padding: 4px 9px;
+    }
+    .leg-badge.ok { background: #e8f5e9; color: #2e7d32; }
+    .leg-badge.bof { background: #fff3e0; color: #b26a00; }
+    .leg-advice-note { font-size: 10.5px; color: #90a4ae; margin-top: 7px; line-height: 1.4; }
     .points-wrap { position: relative; }
 
     /* Flèches d'inversion : à droite, chevauchent le coin des encadrés, discrètes */
@@ -1429,6 +1459,9 @@
         <span class="res-value res-value-big" id="r-litres">—</span>
       </div>
     </div>
+    <!-- Préconisations par tronçon (trajets à étapes) : rempli en arrière-plan
+         par analyserTronconsSansPeage() après l'affichage des résultats. -->
+    <div class="leg-advice" id="legAdvice" style="display:none;"></div>
     <div class="maps-wrap" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
     <a class="maps-link" id="mapsLink" href="#" target="_blank"
        style="width:130px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;">
@@ -4003,6 +4036,89 @@ function applySelectedRoute() {
   }
 }
 
+// --- Préconisations par tronçon (trajets à étapes) : pour chaque tronçon,
+// compare l'itinéraire rapide (avec péages, prix Vinci sur son tracé) à
+// l'itinéraire sans péage, et signale ceux où l'évitement est rentable.
+// "Rentable" = au moins SEUIL_RENTABLE_EUR_PAR_H d'économie nette (péage
+// évité moins le surcoût de carburant du détour) par heure de détour.
+// Lancé en arrière-plan après l'affichage des résultats, best-effort :
+// un tronçon indéterminable est simplement ignoré. ---
+const SEUIL_RENTABLE_EUR_PAR_H = 15;
+let legAdviceRunId = 0; // invalide l'analyse en cours si un nouveau calcul démarre
+
+async function analyserTronconsSansPeage(coords, lieux, apiKey, conso) {
+  const bloc = document.getElementById('legAdvice');
+  const runId = ++legAdviceRunId;
+  if (!bloc || lieux.length < 3) { if (bloc) bloc.style.display = 'none'; return; }
+
+  bloc.style.display = 'block';
+  bloc.innerHTML = '<div class="leg-advice-title">Éviter les péages, tronçon par tronçon ?</div>'
+    + '<div class="leg-advice-loading">Analyse des tronçons en cours…</div>';
+
+  const memeTrace = (a, b) => Math.abs(a.distanceKm - b.distanceKm) < 1 && Math.abs(a.dureeSec - b.dureeSec) < 90;
+  const rows = [];
+  // Tronçons analysés l'un après l'autre (pas en parallèle) pour rester
+  // gentil avec les quotas du routeur.
+  for (let i = 0; i < coords.length - 1; i++) {
+    if (runId !== legAdviceRunId) return; // un nouveau calcul a démarré
+    try {
+      const legCoords = [coords[i], coords[i + 1]];
+      const [rapide, zero] = await Promise.all([
+        getRoute(legCoords, apiKey, false),
+        getRoute(legCoords, apiKey, 'tollways').catch(() => null),
+      ]);
+      if (!zero || memeTrace(zero, rapide)) continue; // pas de péage sur ce tronçon
+      const peage = await getTollsVinci(rapide).catch(() => null);
+      if (runId !== legAdviceRunId) return;
+      if (!peage || typeof peage.cost !== 'number' || peage.cost <= 0) continue;
+      // Économie nette : péage évité moins le carburant du détour.
+      const surcoutCarb = (zero.distanceKm - rapide.distanceKm) * conso / 100 * (prixActuel || 0);
+      const economie = peage.cost - surcoutCarb;
+      if (economie <= 0.5) continue;
+      const detourSec = Math.max(0, zero.dureeSec - rapide.dureeSec);
+      const eurParH = detourSec >= 60 ? economie / (detourSec / 3600) : Infinity;
+      rows.push({
+        de: (lieux[i] || '').split(',')[0].trim(),
+        a: (lieux[i + 1] || '').split(',')[0].trim(),
+        economie, detourSec,
+        rentable: eurParH >= SEUIL_RENTABLE_EUR_PAR_H,
+      });
+    } catch (e) { /* tronçon indéterminable : ignoré */ }
+  }
+  if (runId !== legAdviceRunId) return;
+
+  if (!rows.length) { bloc.style.display = 'none'; return; }
+  bloc.innerHTML = '<div class="leg-advice-title">Éviter les péages, tronçon par tronçon ?</div>';
+  rows.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'leg-advice-row';
+    const mid = document.createElement('span');
+    mid.className = 'leg-mid';
+    const noms = document.createElement('span');
+    noms.className = 'leg-noms';
+    noms.textContent = r.de + ' → ' + r.a;
+    mid.appendChild(noms);
+    const detail = document.createElement('span');
+    detail.className = 'leg-detail';
+    const detourTxt = r.detourSec >= 60 ? '+' + formatDuree(r.detourSec) + ' pour ' : 'quasiment sans détour, ';
+    const strong = document.createElement('strong');
+    strong.textContent = fmtEur(r.economie) + ' économisés';
+    detail.appendChild(document.createTextNode('Sans péage : ' + detourTxt));
+    detail.appendChild(strong);
+    mid.appendChild(detail);
+    row.appendChild(mid);
+    const badge = document.createElement('span');
+    badge.className = 'leg-badge ' + (r.rentable ? 'ok' : 'bof');
+    badge.textContent = r.rentable ? '👍 Rentable' : 'Peu rentable';
+    row.appendChild(badge);
+    bloc.appendChild(row);
+  });
+  const note = document.createElement('div');
+  note.className = 'leg-advice-note';
+  note.textContent = 'Rentable = au moins ' + SEUIL_RENTABLE_EUR_PAR_H + ' € économisés par heure de détour (péage évité moins le carburant du détour). Valeurs en aller simple.';
+  bloc.appendChild(note);
+}
+
 async function calculer() {
   hideError();
   const apiKey  = document.getElementById('apiKey').value.trim();
@@ -4019,6 +4135,10 @@ async function calculer() {
 
   setLoading(true);
   document.getElementById('sectionResultats').style.display = 'none';
+  // Invalide une analyse par tronçon encore en cours et masque son bloc
+  // (il ne réapparaîtra que si le nouveau trajet a des étapes).
+  legAdviceRunId++;
+  document.getElementById('legAdvice').style.display = 'none';
 
   try {
     // Géocode tous les points dans l'ordre : départ, étapes…, destination.
@@ -4106,6 +4226,10 @@ async function calculer() {
     // où cet onglet n'a pas de résultat (pas de prix comparable entre bornes).
     setStationTab(carburantType === 'electrique' ? 'depart' : 'trajet');
     await rechercherStationMoinsChere();
+
+    // Trajet à étapes : analyse par tronçon en arrière-plan (le bloc affiche
+    // son indicateur de chargement puis se remplit tout seul).
+    analyserTronconsSansPeage(coords, lieux, apiKey, conso);
 
     document.getElementById('sectionResultats').style.display = 'block';
     document.getElementById('sectionResultats').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
