@@ -1878,7 +1878,7 @@ async function envoyerLienMagique() {
     // Sur échec réseau (message vide), on sonde le serveur pour situer la panne.
     if (!error.message || error.message === '{}') {
       status.textContent += ' — diagnostic en cours…';
-      status.textContent = 'Envoi impossible : ' + msg + ' — ' + (await diagnostiquerSupabase());
+      status.textContent = 'Envoi impossible : ' + msg + ' — ' + (await diagnostiquerSupabase(email));
     }
   } else {
     status.className = 'account-status ok';
@@ -1886,14 +1886,26 @@ async function envoyerLienMagique() {
   }
 }
 
-// Sonde directement le point de santé de l'API d'authentification pour
-// distinguer « le serveur Supabase est injoignable depuis cet appareil »
-// (DNS/bloqueur/pare-feu) d'un rejet de la requête elle-même (clé, CORS…).
-async function diagnostiquerSupabase() {
+// Rejoue la requête d'envoi à la main (hors SDK) pour voir la réponse
+// brute du serveur : code HTTP et corps, que le SDK masque parfois
+// derrière une erreur vide.
+async function diagnostiquerSupabase(email) {
   const cfg = window.TRATJET_SUPABASE;
   try {
-    const r = await fetch(cfg.url + '/auth/v1/health', { headers: { apikey: cfg.anonKey } });
-    return 'diagnostic : serveur joignable (HTTP ' + r.status + '), la requête d\'envoi elle-même est rejetée.';
+    const r = await fetch(cfg.url + '/auth/v1/otp', {
+      method: 'POST',
+      headers: { apikey: cfg.anonKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        create_user: true,
+        gotrue_meta_security: {},
+        code_challenge: null,
+        code_challenge_method: null,
+      }),
+    });
+    let corps = '';
+    try { corps = (await r.text()).slice(0, 300); } catch (e) {}
+    return 'diagnostic : le serveur répond HTTP ' + r.status + ' — ' + (corps || '(réponse vide)');
   } catch (e) {
     return 'diagnostic : serveur injoignable depuis cet appareil (' + (e.message || 'échec réseau') + ').';
   }
