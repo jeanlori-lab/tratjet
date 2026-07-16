@@ -958,29 +958,42 @@
     .cost-chip {
       display: flex; flex-direction: column; align-items: center; gap: 1px;
       background: #f5f8fb; border: 1px solid #dbe7f5; border-radius: 12px;
-      padding: 6px 10px; flex: 1; text-align: center;
+      padding: 6px 10px; flex: 1; text-align: center; position: relative;
     }
     .cost-chip-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #90a4ae; }
     .cost-chip-value { font-size: 14px; font-weight: 800; color: #1a2433; }
     .cost-chip-peage .cost-chip-value { color: #2e7d32; }
     .cost-chip-peage.unavailable .cost-chip-value { font-size: 10.5px; font-weight: 700; line-height: 1.3; }
     .cost-chip-peage .cost-chip-value a { color: #2e7d32; text-decoration: underline; }
-    /* Bouton "Détail" de la pastille péages + lignes de détail par tronçon. */
+    /* Flèche dépliante de la pastille péages (coin haut droit) + lignes de détail par tronçon. */
     .cost-chip-detail-btn {
-      display: block;
-      margin: 2px auto 0;
-      padding: 1px 8px;
-      border: 1px solid #bcd9bc;
-      border-radius: 999px;
-      background: #eef7ee;
-      color: #2e7d32;
-      font-size: 9.5px;
-      font-weight: 700;
+      position: absolute;
+      top: 4px;
+      right: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      padding: 0;
+      border: none;
+      background: none;
+      color: #7aa87a;
       font-family: inherit;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: transform 0.2s, color 0.15s;
     }
-    .cost-chip-detail-btn:hover { background: #ddefdd; }
+    .cost-chip-detail-btn:hover { color: #2e7d32; }
+    .cost-chip-detail-btn::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-right: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: rotate(45deg);
+      margin-top: -3px;
+    }
+    .cost-chip-detail-btn.open { transform: translateY(1px) rotate(180deg); }
     .cost-chip-lines {
       margin-top: 5px;
       padding-top: 5px;
@@ -4094,12 +4107,12 @@ function renderResultMode() {
 
   if (peageConnu) {
     peageValEl.appendChild(document.createTextNode(fmtEur(coutPeageAffiche)));
-    // Bouton "Détail" : déplie la pastille pour montrer le coût par tronçon.
+    // Flèche dépliante : montre le coût par tronçon dans la pastille.
     if (Array.isArray(d.peageDetails) && d.peageDetails.length) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'cost-chip-detail-btn';
-      btn.textContent = 'Détail';
+      btn.setAttribute('aria-label', 'Détail des péages');
       const lignes = document.createElement('div');
       lignes.className = 'cost-chip-lines';
       lignes.style.display = 'none';
@@ -4118,9 +4131,9 @@ function renderResultMode() {
       btn.addEventListener('click', () => {
         const ouvert = lignes.style.display !== 'none';
         lignes.style.display = ouvert ? 'none' : '';
-        btn.textContent = ouvert ? 'Détail' : 'Masquer';
+        btn.classList.toggle('open', !ouvert);
       });
-      peageValEl.appendChild(btn);
+      peageChip.appendChild(btn);
       peageValEl.appendChild(lignes);
     }
   } else if (d.vinciUrl) {
