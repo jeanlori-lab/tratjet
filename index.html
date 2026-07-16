@@ -20,6 +20,10 @@
        l'ancienne iframe OpenStreetMap (sans la position). -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Supabase : comptes (lien magique) + synchronisation des véhicules et
+       trajets favoris. Sans effet tant que TRATJET_SUPABASE n'est pas
+       renseigné plus bas (le bouton compte reste masqué). -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin=""></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -46,7 +50,39 @@
     .header {
       text-align: center;
       margin-bottom: 20px;
+      position: relative;
     }
+
+    /* Compte : petit bouton discret en haut à droite de l'en-tête, et carte
+       de connexion par lien magique (repliée par défaut). */
+    .account-btn {
+      position: absolute; top: 0; right: 0;
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 1.5px solid #d5e0ee; background: #fff;
+      font-size: 15px; line-height: 1; cursor: pointer;
+      box-shadow: 0 2px 6px rgba(15,23,41,0.08);
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+    .account-btn:hover { border-color: #9dc2ee; }
+    .account-btn.connected { border-color: #66bb6a; background: #f3faf3; }
+    .account-hint { font-size: 12px; color: #607080; line-height: 1.5; margin-bottom: 10px; }
+    .account-row { display: flex; gap: 6px; }
+    .account-row input { flex: 1; min-width: 0; }
+    .account-send {
+      flex-shrink: 0; padding: 9px 14px; border: none; border-radius: 10px;
+      background: #1976d2; color: #fff; font-size: 12.5px; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+    }
+    .account-send:disabled { opacity: 0.55; cursor: default; }
+    .account-status { font-size: 11.5px; color: #607080; margin-top: 8px; min-height: 15px; }
+    .account-status.ok { color: #2e7d32; font-weight: 600; }
+    .account-status.err { color: #c62828; font-weight: 600; }
+    .account-logout {
+      background: none; border: 1.5px solid #d5e0ee; border-radius: 10px;
+      padding: 7px 14px; font-size: 12px; font-weight: 600; color: #607080;
+      cursor: pointer; font-family: inherit;
+    }
+    .account-logout:hover { border-color: #c62828; color: #c62828; }
     .header h1 {
       font-family: 'Sora', 'Segoe UI', Arial, sans-serif;
       font-size: 34px;
@@ -1294,8 +1330,28 @@
 <div class="page">
 
   <div class="header">
+    <!-- Compte (Supabase) : bouton masqué tant que la config n'est pas renseignée -->
+    <button type="button" class="account-btn" id="accountBtn" style="display:none;" onclick="toggleAccountCard()" aria-label="Mon compte">👤</button>
     <h1>T<span class="rat-emphasis">rat</span>jet</h1>
     <p>Entrez les paramètres de votre trajet, on s'occupe des calculs : coût du carburant, litres consommés et prix des péages. <br><span class="intro-bonus"><span class="intro-bonus-label">En bonus</span> : on vous trouve la station la moins chère et la plus proche de votre départ, et sur votre trajet !</span></p>
+  </div>
+
+  <!-- Mon compte : connexion par lien magique (e-mail, sans mot de passe) et
+       synchronisation des véhicules + trajets favoris entre appareils. -->
+  <div class="card account-card" id="accountCard" style="display:none;">
+    <div class="card-title">Mon compte</div>
+    <div id="accountLoggedOut">
+      <p class="account-hint">Synchronisez vos véhicules et trajets favoris entre vos appareils. Entrez votre e-mail : on vous envoie un lien de connexion, pas de mot de passe à retenir.</p>
+      <div class="account-row">
+        <input type="email" id="accountEmail" placeholder="votre@email.fr" autocomplete="email">
+        <button type="button" class="account-send" id="accountSendBtn" onclick="envoyerLienMagique()">Recevoir le lien</button>
+      </div>
+      <div class="account-status" id="accountStatus"></div>
+    </div>
+    <div id="accountLoggedIn" style="display:none;">
+      <p class="account-hint">Connecté : <strong id="accountUserEmail"></strong><br>Vos véhicules et trajets favoris se synchronisent automatiquement. <span id="syncStatus"></span></p>
+      <button type="button" class="account-logout" onclick="seDeconnecter()">Se déconnecter</button>
+    </div>
   </div>
 
   <input type="hidden" id="apiKey" value="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY1NjRiM2M4Yjc0OTQ0ZDlhNmNjM2FiOWQzNjFhNTE2IiwiaCI6Im11cm11cjY0In0=">
@@ -1729,7 +1785,134 @@ function loadStore(key) {
 }
 function saveStore(key, arr) {
   try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
+  // Connecté : pousse la modification vers le cloud (débouncé).
+  if (key === VEHICULES_KEY || key === TRAJETS_KEY) planifierSync();
 }
+
+// --- Compte & synchronisation (Supabase) : connexion par lien magique,
+// véhicules + trajets favoris synchronisés entre appareils. localStorage
+// reste la source locale (cache hors-ligne) ; le cloud est mis à jour à
+// chaque modification et fusionné à la connexion. Sans configuration
+// (url/anonKey vides), tout ceci est inerte et le bouton compte est masqué.
+// La clé "anon" est publique par conception (la sécurité vient des règles
+// RLS côté Supabase : chaque utilisateur ne lit/écrit que sa ligne). ---
+window.TRATJET_SUPABASE = window.TRATJET_SUPABASE || { url: '', anonKey: '' };
+let sbClient = null;
+let sbUser = null;
+let syncTimer = null;
+
+function initCompte() {
+  const btn = document.getElementById('accountBtn');
+  const cfg = window.TRATJET_SUPABASE;
+  if (!btn || !cfg.url || !cfg.anonKey || typeof supabase === 'undefined') return;
+  try {
+    sbClient = supabase.createClient(cfg.url, cfg.anonKey);
+  } catch (e) { return; }
+  btn.style.display = 'block';
+  sbClient.auth.onAuthStateChange((event, session) => {
+    sbUser = (session && session.user) || null;
+    majCompteUI();
+    if (event === 'SIGNED_IN') syncDepuisCloud();
+  });
+}
+
+function majCompteUI() {
+  const btn = document.getElementById('accountBtn');
+  btn.classList.toggle('connected', !!sbUser);
+  btn.title = sbUser ? 'Connecté : ' + (sbUser.email || '') : 'Mon compte';
+  document.getElementById('accountLoggedOut').style.display = sbUser ? 'none' : 'block';
+  document.getElementById('accountLoggedIn').style.display = sbUser ? 'block' : 'none';
+  if (sbUser) document.getElementById('accountUserEmail').textContent = sbUser.email || '';
+}
+
+function toggleAccountCard() {
+  const card = document.getElementById('accountCard');
+  card.style.display = card.style.display === 'none' ? 'block' : 'none';
+}
+
+async function envoyerLienMagique() {
+  const email = document.getElementById('accountEmail').value.trim();
+  const status = document.getElementById('accountStatus');
+  if (!email || !email.includes('@')) { status.className = 'account-status err'; status.textContent = 'Entrez une adresse e-mail valide.'; return; }
+  const btn = document.getElementById('accountSendBtn');
+  btn.disabled = true;
+  status.className = 'account-status';
+  status.textContent = 'Envoi du lien…';
+  const { error } = await sbClient.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: location.origin + location.pathname },
+  });
+  btn.disabled = false;
+  if (error) {
+    status.className = 'account-status err';
+    status.textContent = 'Envoi impossible : ' + error.message;
+  } else {
+    status.className = 'account-status ok';
+    status.textContent = '✓ Lien envoyé ! Ouvrez l\'e-mail sur cet appareil et cliquez le lien pour vous connecter.';
+  }
+}
+
+async function seDeconnecter() {
+  try { await sbClient.auth.signOut(); } catch (e) {}
+  // Les données locales restent : on perd juste la synchronisation.
+}
+
+// Fusionne local + cloud à la connexion (union, dédoublonnée par nom de
+// véhicule / itinéraire de trajet), puis renvoie le résultat au cloud :
+// rien ne se perd, ni ce qui a été fait hors-ligne ni ce qui vient d'un
+// autre appareil.
+async function syncDepuisCloud() {
+  if (!sbClient || !sbUser) return;
+  const statusEl = document.getElementById('syncStatus');
+  try {
+    const { data, error } = await sbClient.from('user_data')
+      .select('vehicules,trajets').eq('user_id', sbUser.id).maybeSingle();
+    if (error) throw error;
+    const distants = data || { vehicules: [], trajets: [] };
+    const vehLocaux = loadStore(VEHICULES_KEY);
+    const vusVeh = new Set(vehLocaux.map(v => (v.nom || '').trim().toLowerCase()));
+    (Array.isArray(distants.vehicules) ? distants.vehicules : []).forEach(v => {
+      const cle = (v && v.nom || '').trim().toLowerCase();
+      if (cle && !vusVeh.has(cle)) { vehLocaux.push(v); vusVeh.add(cle); }
+    });
+    const trajLocaux = loadStore(TRAJETS_KEY);
+    const vusTraj = new Set(trajLocaux.map(t => (t.points || []).join('|').toLowerCase()));
+    (Array.isArray(distants.trajets) ? distants.trajets : []).forEach(t => {
+      const cle = (t && Array.isArray(t.points) ? t.points.join('|').toLowerCase() : '');
+      if (cle && !vusTraj.has(cle)) { trajLocaux.push(t); vusTraj.add(cle); }
+    });
+    try {
+      localStorage.setItem(VEHICULES_KEY, JSON.stringify(vehLocaux));
+      localStorage.setItem(TRAJETS_KEY, JSON.stringify(trajLocaux));
+    } catch (e) {}
+    renderVehChips();
+    renderTrajetChips();
+    await syncVersCloud();
+    if (statusEl) statusEl.textContent = '✓';
+  } catch (e) {
+    if (statusEl) statusEl.textContent = '(synchronisation indisponible)';
+  }
+}
+
+function planifierSync() {
+  if (!sbClient || !sbUser) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncVersCloud, 1500);
+}
+
+async function syncVersCloud() {
+  if (!sbClient || !sbUser) return;
+  try {
+    await sbClient.from('user_data').upsert({
+      user_id: sbUser.id,
+      vehicules: loadStore(VEHICULES_KEY),
+      trajets: loadStore(TRAJETS_KEY),
+      updated_at: new Date().toISOString(),
+    });
+  } catch (e) { /* best-effort : le local reste la référence */ }
+}
+
+initCompte();
 
 function makeSavedChip(icone, texte, titre, onApply, onDelete) {
   const chip = document.createElement('button');
