@@ -1817,6 +1817,27 @@ function initCompte() {
     majCompteUI();
     if (event === 'SIGNED_IN') syncDepuisCloud();
   });
+  afficherErreurLienMagique();
+}
+
+// Supabase ajoute error/error_description dans le hash (ou les query params)
+// de l'URL de retour quand le lien magique a échoué (expiré, déjà utilisé,
+// URL de redirection non autorisée...). Sans ça, l'échec est totalement
+// silencieux pour l'utilisateur : on l'affiche donc dans la carte compte.
+function afficherErreurLienMagique() {
+  const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const query = new URLSearchParams(location.search);
+  const desc = hash.get('error_description') || query.get('error_description')
+    || hash.get('error') || query.get('error');
+  if (!desc) return;
+  const card = document.getElementById('accountCard');
+  const status = document.getElementById('accountStatus');
+  if (card) card.style.display = 'block';
+  if (status) {
+    status.className = 'account-status err';
+    status.textContent = 'Connexion impossible : ' + decodeURIComponent(desc).replace(/\+/g, ' ');
+  }
+  history.replaceState(null, '', location.pathname);
 }
 
 function majCompteUI() {
