@@ -1862,14 +1862,19 @@ async function envoyerLienMagique() {
   btn.disabled = true;
   status.className = 'account-status';
   status.textContent = 'Envoi du lien…';
-  const { error } = await sbClient.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: location.origin + location.pathname },
-  });
+  let error = null;
+  try {
+    ({ error } = await sbClient.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: location.origin + location.pathname },
+    }));
+  } catch (e) { error = e; }
   btn.disabled = false;
   if (error) {
     status.className = 'account-status err';
-    status.textContent = 'Envoi impossible : ' + error.message;
+    const msg = (error.message && error.message !== '{}') ? error.message
+      : 'connexion au serveur impossible (réseau, bloqueur de contenu Safari, ou wifi restrictif ?)';
+    status.textContent = 'Envoi impossible : ' + msg;
   } else {
     status.className = 'account-status ok';
     status.textContent = '✓ Lien envoyé ! Ouvrez l\'e-mail sur cet appareil et cliquez le lien pour vous connecter.';
