@@ -3310,33 +3310,21 @@ function renderArrets(note, arrets, type, depart, arrivee) {
 // calculé séparément (comme les préconisations péages par tronçon) ; les
 // tronçons trop courts (<5 km, même seuil que le masquage de la section
 // stations) sont ignorés, ceux sans station trouvée le sont aussi.
-async function analyserStationsParTroncon(lastState, reservoir) {
+async function analyserStationsParTroncon(lastState) {
   const { coords, lieux, apiKey, type, conso } = lastState;
   const troncons = [];
-  // Distance cumulée depuis le départ du trajet (tous tronçons précédents
-  // confondus), pour situer le niveau de réservoir estimé à cette station
-  // — même logique que l'optimisation des pleins (conduite continue, sans
-  // recharge intermédiaire supposée), mais rattachée ici à un tronçon précis.
-  let cumKm = 0;
-  const kmParPct = (reservoir && reservoir.capacite && conso > 0) ? reservoir.capacite / conso : null;
   for (let i = 0; i < coords.length - 1; i++) {
     try {
       const route = await getRoute([coords[i], coords[i + 1]], apiKey, false);
-      if (route.distanceKm < TRAJET_MIN_KM_STATIONS) { cumKm += route.distanceKm; continue; }
+      if (route.distanceKm < TRAJET_MIN_KM_STATIONS) continue;
       const station = await fetchStationSurTrajet(route.polyline, type, null);
       if (station) {
         // Litres réellement consommés sur CE tronçon (varie avec sa
         // distance) : sert de base plausible pour le badge économie, pas
         // la capacité pleine du réservoir.
         const litresTroncon = conso > 0 ? (route.distanceKm * conso) / 100 : null;
-        let pctReservoir = null;
-        if (kmParPct) {
-          const distAuPoint = cumKm + (typeof station.kmSurTrajet === 'number' ? station.kmSurTrajet : route.distanceKm);
-          pctReservoir = Math.max(0, Math.round(reservoir.niveau - distAuPoint / kmParPct));
-        }
-        troncons.push({ depart: lieux[i], arrivee: lieux[i + 1], distKm: route.distanceKm, station, litresTroncon, pctReservoir });
+        troncons.push({ depart: lieux[i], arrivee: lieux[i + 1], distKm: route.distanceKm, station, litresTroncon });
       }
-      cumKm += route.distanceKm;
     } catch (e) { /* tronçon ignoré, best-effort */ }
   }
   return troncons;
@@ -3345,12 +3333,12 @@ async function analyserStationsParTroncon(lastState, reservoir) {
 // Affiche une liste déroulante pour choisir le tronçon (visuellement
 // distincte des pastilles "Arrêt 1/2" de l'optimisation réservoir, pour ne
 // pas laisser croire qu'il s'agit de la même chose).
-function renderTronconsStations(note, troncons, type, reservoir) {
+function renderTronconsStations(note, troncons, type) {
   // Plein plausible pour le badge économie : les litres réellement
   // consommés sur ce tronçon précis (varie selon sa distance), plafonnés à
-  // la capacité du réservoir si connue (défaut plausible sinon) — on ne
-  // peut pas mettre plus de carburant que le réservoir n'en contient.
-  const capaciteMax = (reservoir && reservoir.capacite) ? reservoir.capacite : 50;
+  // une contenance de réservoir plausible (cette vue ne s'affiche que sans
+  // optimisation des pleins, donc la vraie capacité est inconnue ici).
+  const capaciteMax = 50;
   const contentWrap = document.createElement('div');
   contentWrap.className = 'arret-content';
 
@@ -3369,9 +3357,7 @@ function renderTronconsStations(note, troncons, type, reservoir) {
     contentWrap.appendChild(detail);
     const fn = document.createElement('div');
     fn.className = 'cheapest-fuel-note';
-    fn.textContent = t.pctReservoir !== null && t.pctReservoir !== undefined
-      ? `Station la plus futée sur votre tronçon ${t.depart} → ${t.arrivee}. À ce moment de votre trajet, votre réservoir sera de ~${t.pctReservoir} %.`
-      : `Station la plus futée sur votre tronçon ${t.depart} → ${t.arrivee}.`;
+    fn.textContent = `Station la plus futée sur votre tronçon ${t.depart} → ${t.arrivee} (${fmtKm(t.distKm)}).`;
     contentWrap.appendChild(fn);
 
     // Économie de ce plein par rapport au prix moyen national (taille de
@@ -3423,12 +3409,15 @@ async function rechercherStationSurTrajet() {
   let station = null, litresPlein = null, arrets = null, troncons = null;
   const reservoir = !electrique ? getReservoirInfo() : null;
   const multiEtapes = Array.isArray(lieux) && lieux.length >= 3;
-  // Sur un trajet à étapes, le détail par tronçon prime toujours sur la
-  // simulation réservoir : celle-ci ignore la structure en étapes (elle ne
-  // raisonne qu'en distance cumulée sur tout le tracé combiné), donc elle
-  // ne dit jamais sur quel tronçon se situe l'arrêt proposé.
-  if (!electrique && multiEtapes) {
-    troncons = await analyserStationsParTroncon(lastStationSurTrajet, reservoir);
+  // Réservoir renseigné : la simulation de jauge prime toujours, y compris
+  // sur un trajet à étapes — elle place l'arrêt là où la jauge passera de
+  // ~20 % à ~10 % et cherche la station la moins chère dans CETTE fenêtre,
+  // ce qu'un découpage géographique par tronçon ne sait pas faire (il
+  // afficherait des jauges absurdes, ex. 0 %, faute de plein simulé).
+  // Le détail par tronçon ne sert que sans réservoir, où l'on ne peut pas
+  // simuler la jauge : il donne alors la moins chère de chaque portion.
+  if (!electrique && multiEtapes && !reservoir) {
+    troncons = await analyserStationsParTroncon(lastStationSurTrajet);
   } else if (!electrique) {
     if (reservoir && distKm > 0 && conso > 0) {
       // Optimisation économique : un ou plusieurs arrêts calculés selon le
@@ -3485,7 +3474,7 @@ async function rechercherStationSurTrajet() {
     empty.textContent = 'Non disponible pour l\'électrique (pas de prix comparable entre bornes).';
     note.appendChild(empty);
   } else if (troncons && troncons.length) {
-    renderTronconsStations(note, troncons, type, reservoir);
+    renderTronconsStations(note, troncons, type);
   } else if (arrets && arrets.length) {
     renderArrets(note, arrets, type, depart, arrivee);
   } else if (station) {
