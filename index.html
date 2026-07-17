@@ -3311,14 +3311,20 @@ function renderArrets(note, arrets, type, depart, arrivee) {
 // tronçons trop courts (<5 km, même seuil que le masquage de la section
 // stations) sont ignorés, ceux sans station trouvée le sont aussi.
 async function analyserStationsParTroncon(lastState) {
-  const { coords, lieux, apiKey, type } = lastState;
+  const { coords, lieux, apiKey, type, conso } = lastState;
   const troncons = [];
   for (let i = 0; i < coords.length - 1; i++) {
     try {
       const route = await getRoute([coords[i], coords[i + 1]], apiKey, false);
       if (route.distanceKm < TRAJET_MIN_KM_STATIONS) continue;
       const station = await fetchStationSurTrajet(route.polyline, type, null);
-      if (station) troncons.push({ depart: lieux[i], arrivee: lieux[i + 1], distKm: route.distanceKm, station });
+      if (station) {
+        // Litres réellement consommés sur CE tronçon (varie avec sa
+        // distance) : sert de base plausible pour le badge économie, pas
+        // la capacité pleine du réservoir.
+        const litresTroncon = conso > 0 ? (route.distanceKm * conso) / 100 : null;
+        troncons.push({ depart: lieux[i], arrivee: lieux[i + 1], distKm: route.distanceKm, station, litresTroncon });
+      }
     } catch (e) { /* tronçon ignoré, best-effort */ }
   }
   return troncons;
@@ -3328,9 +3334,11 @@ async function analyserStationsParTroncon(lastState) {
 // distincte des pastilles "Arrêt 1/2" de l'optimisation réservoir, pour ne
 // pas laisser croire qu'il s'agit de la même chose).
 function renderTronconsStations(note, troncons, type, reservoir) {
-  // Plein plausible pour le badge économie : la vraie capacité si
-  // l'optimisation des pleins est activée, un défaut plausible sinon.
-  const litresPleinTroncon = (reservoir && reservoir.capacite) ? reservoir.capacite : 50;
+  // Plein plausible pour le badge économie : les litres réellement
+  // consommés sur ce tronçon précis (varie selon sa distance), plafonnés à
+  // la capacité du réservoir si connue (défaut plausible sinon) — on ne
+  // peut pas mettre plus de carburant que le réservoir n'en contient.
+  const capaciteMax = (reservoir && reservoir.capacite) ? reservoir.capacite : 50;
   const contentWrap = document.createElement('div');
   contentWrap.className = 'arret-content';
 
@@ -3350,7 +3358,8 @@ function renderTronconsStations(note, troncons, type, reservoir) {
     // Économie de ce plein par rapport au prix moyen national (taille de
     // réservoir inconnue par tronçon : plein plausible plafonné, comme pour
     // la station la moins chère près du départ).
-    const badge = buildEcoBadge(t.station.prix, litresPleinTroncon);
+    const litresPlein = t.litresTroncon ? Math.min(t.litresTroncon, capaciteMax) : capaciteMax;
+    const badge = buildEcoBadge(t.station.prix, litresPlein);
     if (badge) contentWrap.appendChild(badge);
 
     contentWrap.appendChild(buildStationMap(t.station.lat, t.station.lon));
