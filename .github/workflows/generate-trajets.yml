@@ -1,9 +1,14 @@
 name: Générer les pages trajet (SEO)
 
-# Déclenchement manuel uniquement : on relit et on merge la PR produite
-# avant que les nouveaux chiffres remplacent les anciens sur le site.
+# Déclenchement manuel, ou automatique chaque lundi matin (rafraîchit les
+# prix carburant/péages des pages statiques trajets/*.html — le site
+# principal, lui, recalcule déjà tout en temps réel à chaque visite).
+# Dans tous les cas la PR produite reste à relire et merger manuellement :
+# rien ne remplace les chiffres en ligne sans validation.
 on:
   workflow_dispatch: {}
+  schedule:
+    - cron: '0 6 * * 1'
 
 permissions:
   contents: write
