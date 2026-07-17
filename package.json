@@ -1,0 +1,11 @@
+{
+  "name": "tratjet-tools",
+  "private": true,
+  "description": "Outillage de génération (pages trajet SEO). Le site lui-même (index.html) n'a aucune dépendance ni build.",
+  "scripts": {
+    "generate:trajets": "node scripts/generate-trajets.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}

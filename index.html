@@ -3837,11 +3837,17 @@ function endDrag() {
 function chargerRechercheDepuisLien() {
   const params = new URLSearchParams(window.location.search);
   const q = params.get('q');
+  // ?from=&to= (utilisé par les pages trajet SEO, qui connaissent les deux
+  // bouts) préremplissent le départ ; ?q= seul (lien de partage classique)
+  // ne préremplit que la destination, le départ restant à saisir.
+  const from = params.get('from');
+  const to = params.get('to');
   const container = pointsEl();
   container.innerHTML = '';
-  container.appendChild(makePointRow(DEPART_FIXE));    // départ
-  container.appendChild(makePointRow(q ? q.trim() : '')); // destination (lien partagé)
+  container.appendChild(makePointRow(from ? from.trim() : DEPART_FIXE));
+  container.appendChild(makePointRow(to ? to.trim() : (q ? q.trim() : '')));
   refreshPoints();
+  if (from && to) autoCalculerDepuisLien();
   // On nettoie les paramètres de l'URL (pas de ?q ou ?peage qui persiste
   // après un rafraîchissement), mais on préserve le hash : #station/#cout
   // sont des liens d'onglet partageables, et #access_token/#error sont le
@@ -3850,6 +3856,15 @@ function chargerRechercheDepuisLien() {
   if (window.location.search) {
     history.replaceState(null, '', window.location.pathname + window.location.hash);
   }
+}
+
+// Lancé automatiquement quand la page arrive avec ?from=&to= (bouton "Recalculer
+// avec ma voiture" d'une page trajet SEO) : attend que le prix carburant soit
+// chargé (chargerPrix() est asynchrone) avant de calculer, sans quoi calculer()
+// échouerait sur prixActuel encore null.
+async function autoCalculerDepuisLien() {
+  for (let i = 0; i < 40 && !prixActuel; i++) await new Promise(r => setTimeout(r, 100));
+  if (prixActuel) calculer();
 }
 
 chargerRechercheDepuisLien();
