@@ -1118,6 +1118,23 @@
       background: #2e7d32;
       color: #fff;
     }
+    /* Liste déroulante des tronçons (station la moins chère par tronçon,
+       trajets à étapes) : volontairement différente des pastilles d'arrêt
+       ci-dessus, pour ne pas laisser croire qu'il s'agit de la même chose. */
+    .troncon-select {
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: inherit;
+      color: #2e7d32;
+      background: #eef7ee;
+      border: 1px solid #bcd9bc;
+      border-radius: 10px;
+      cursor: pointer;
+    }
 
     /* Bascule principale Coût carburant / Station la moins chère, en haut de
        page. Classes dédiées (pas .ar-toggle-btn) pour ne pas être affectées
@@ -3292,8 +3309,9 @@ async function analyserStationsParTroncon(lastState) {
   return troncons;
 }
 
-// Affiche un onglet par tronçon (comme les arrêts réservoir), chacun avec
-// le nom du tronçon en intitulé plutôt qu'un numéro générique.
+// Affiche une liste déroulante pour choisir le tronçon (visuellement
+// distincte des pastilles "Arrêt 1/2" de l'optimisation réservoir, pour ne
+// pas laisser croire qu'il s'agit de la même chose).
 function renderTronconsStations(note, troncons, type) {
   const contentWrap = document.createElement('div');
   contentWrap.className = 'arret-content';
@@ -3324,20 +3342,16 @@ function renderTronconsStations(note, troncons, type) {
   }
 
   if (troncons.length > 1) {
-    const tabsWrap = document.createElement('div');
-    tabsWrap.className = 'arret-tabs';
+    const select = document.createElement('select');
+    select.className = 'troncon-select';
     troncons.forEach((t, i) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'arret-tab-btn' + (i === 0 ? ' active' : '');
-      btn.textContent = t.depart + ' → ' + t.arrivee;
-      btn.addEventListener('click', () => {
-        tabsWrap.querySelectorAll('.arret-tab-btn').forEach((b, j) => b.classList.toggle('active', j === i));
-        renderContent(i);
-      });
-      tabsWrap.appendChild(btn);
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      opt.textContent = t.depart + ' → ' + t.arrivee;
+      select.appendChild(opt);
     });
-    note.appendChild(tabsWrap);
+    select.addEventListener('change', () => renderContent(parseInt(select.value, 10)));
+    note.appendChild(select);
   }
   note.appendChild(contentWrap);
   renderContent(0);
@@ -3353,7 +3367,11 @@ async function rechercherStationSurTrajet() {
   let station = null, litresPlein = null, arrets = null, troncons = null;
   const reservoir = !electrique ? getReservoirInfo() : null;
   const multiEtapes = Array.isArray(lieux) && lieux.length >= 3;
-  if (!electrique && multiEtapes && !reservoir) {
+  // Sur un trajet à étapes, le détail par tronçon prime toujours sur la
+  // simulation réservoir : celle-ci ignore la structure en étapes (elle ne
+  // raisonne qu'en distance cumulée sur tout le tracé combiné), donc elle
+  // ne dit jamais sur quel tronçon se situe l'arrêt proposé.
+  if (!electrique && multiEtapes) {
     troncons = await analyserStationsParTroncon(lastStationSurTrajet);
   } else if (!electrique) {
     if (reservoir && distKm > 0 && conso > 0) {
