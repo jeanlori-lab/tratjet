@@ -1118,6 +1118,38 @@
       background: #2e7d32;
       color: #fff;
     }
+    /* Liste déroulante des tronçons (station la moins chère par tronçon,
+       trajets à étapes) : volontairement différente des pastilles d'arrêt
+       ci-dessus, pour ne pas laisser croire qu'il s'agit de la même chose. */
+    .troncon-select-wrap { position: relative; margin-bottom: 10px; }
+    .troncon-select {
+      display: block;
+      width: 100%;
+      padding: 8px 34px 8px 10px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: inherit;
+      color: #2e7d32;
+      background: #eef7ee;
+      border: 1px solid #bcd9bc;
+      border-radius: 10px;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    /* Chevron explicite : un <select> nu ne se distingue pas assez d'un
+       simple encadré de texte, d'où l'ajout d'une flèche bien visible. */
+    .troncon-select-wrap::after {
+      content: '';
+      position: absolute;
+      right: 14px; top: 50%;
+      width: 8px; height: 8px;
+      margin-top: -6px;
+      border-right: 2px solid #2e7d32;
+      border-bottom: 2px solid #2e7d32;
+      transform: rotate(45deg);
+      pointer-events: none;
+    }
 
     /* Bascule principale Coût carburant / Station la moins chère, en haut de
        page. Classes dédiées (pas .ar-toggle-btn) pour ne pas être affectées
@@ -3207,11 +3239,19 @@ function renderArrets(note, arrets, type, depart, arrivee) {
     const a = arrets[idx];
 
     const detail = buildStationDetail(a.station, type, null, null, false);
+    // Distance à la route AVANT la date de relevé (ajoutée en dernier par
+    // buildStationDetail) : on l'insère juste avant plutôt qu'en bout de ligne.
     if (isFinite(a.station.distRoute)) {
-      detail.appendChild(document.createTextNode(' (à ' + a.station.distRoute.toFixed(1) + ' km de la route)'));
+      const distNode = document.createTextNode(' (à ' + a.station.distRoute.toFixed(1) + ' km de la route)');
+      const dateSpan = detail.querySelector('.src-note');
+      if (dateSpan) detail.insertBefore(distNode, dateSpan); else detail.appendChild(distNode);
     }
     contentWrap.appendChild(detail);
 
+    // Nom du tronçon si connu (trajet à étapes) : rattache l'arrêt à la
+    // portion du trajet concernée, dans le même vocabulaire que la vue
+    // par tronçon sans réservoir.
+    const surTroncon = a.troncon ? ` sur votre tronçon ${a.troncon.depart} → ${a.troncon.arrivee}` : '';
     const fn = document.createElement('div');
     fn.className = 'cheapest-fuel-note';
     if (a.customNote) {
@@ -3221,11 +3261,9 @@ function renderArrets(note, arrets, type, depart, arrivee) {
         ? '⚠️ Niveau très bas au départ : arrêt conseillé dès le début du trajet.'
         : '⚠️ Niveau très bas à cette étape : arrêt conseillé au plus vite.';
     } else if (a.horsZone) {
-      fn.textContent = `⛽ Aucune station dans la zone idéale pour cet arrêt : un peu plus tôt sur le trajet, votre jauge sera de ~${a.pctArrivee} %.`;
-    } else if (idx === 0) {
-      fn.textContent = `Arrêt calculé selon votre réservoir : à cet endroit du trajet, votre jauge sera de ~${a.pctArrivee} %.`;
+      fn.textContent = `⛽ Aucune station dans la zone idéale pour cet arrêt${surTroncon} : un peu plus tôt sur le trajet, votre jauge sera de ~${a.pctArrivee} %.`;
     } else {
-      fn.textContent = `Jauge estimée à cet arrêt : ~${a.pctArrivee} %.`;
+      fn.textContent = `Station la plus futée${surTroncon}. À ce moment de votre trajet, votre réservoir sera de ~${a.pctArrivee} %.`;
     }
     contentWrap.appendChild(fn);
 
@@ -3247,23 +3285,155 @@ function renderArrets(note, arrets, type, depart, arrivee) {
     refreshStationMaps();
   }
 
+  // Plusieurs arrêts : même liste déroulante que la vue par tronçon (les
+  // pastilles "Arrêt 1/2" d'avant se distinguaient mal et ne disaient rien
+  // du contenu).
   if (arrets.length > 1) {
-    const tabsWrap = document.createElement('div');
-    tabsWrap.className = 'arret-tabs';
+    const wrap = document.createElement('div');
+    wrap.className = 'troncon-select-wrap';
+    const select = document.createElement('select');
+    select.className = 'troncon-select';
     arrets.forEach((a, i) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'arret-tab-btn' + (i === 0 ? ' active' : '');
-      btn.textContent = 'Arrêt ' + (i + 1);
-      btn.addEventListener('click', () => {
-        tabsWrap.querySelectorAll('.arret-tab-btn').forEach((b, j) => b.classList.toggle('active', j === i));
-        renderContent(i);
-      });
-      tabsWrap.appendChild(btn);
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      const ou = a.troncon ? `${a.troncon.depart} → ${a.troncon.arrivee}`
+        : (a.station.ville || a.station.nom || '');
+      opt.textContent = `Arrêt ${i + 1}` + (ou ? ` · ${ou}` : '');
+      select.appendChild(opt);
     });
-    note.appendChild(tabsWrap);
+    select.addEventListener('change', () => renderContent(parseInt(select.value, 10)));
+    wrap.appendChild(select);
+    note.appendChild(wrap);
   }
 
+  note.appendChild(contentWrap);
+  renderContent(0);
+}
+
+// Station la moins chère par tronçon (trajets à étapes, sans optimisation
+// réservoir active) : plus pertinent qu'une seule station sur tout le
+// trajet combiné, qui ne dit pas sur quelle portion elle se trouve et
+// suppose une conduite continue — alors qu'un trajet à étapes implique
+// justement des arrêts naturels (visite, nuitée) où l'on fait le plein par
+// commodité, pas au point global théoriquement optimal. Un tronçon par
+// couple de points consécutifs (départ→étape, étape→étape, étape→arrivée),
+// calculé séparément (comme les préconisations péages par tronçon) ; les
+// tronçons trop courts (<5 km, même seuil que le masquage de la section
+// stations) sont ignorés, ceux sans station trouvée le sont aussi.
+// Position kilométrique de chaque point du trajet (départ, étapes…,
+// arrivée) le long du tracé combiné : sommet de la polyline le plus proche
+// de chaque point, en distance cumulée. Sert à rattacher un arrêt (situé à
+// X km du départ) au tronçon sur lequel il tombe.
+function kmDesEtapes(polyline5, coords) {
+  try {
+    const points = decodePolyline(polyline5, 5); // [[lat, lng], ...]
+    if (points.length < 2) return null;
+    const kmParDegLat = 110.57;
+    const cums = [0];
+    for (let i = 1; i < points.length; i++) {
+      const dLat = (points[i][0] - points[i - 1][0]) * kmParDegLat;
+      const dLng = (points[i][1] - points[i - 1][1]) * 111.32 * Math.cos(points[i][0] * Math.PI / 180);
+      cums.push(cums[i - 1] + Math.sqrt(dLat * dLat + dLng * dLng));
+    }
+    return coords.map(([lng, lat]) => {
+      let best = 0, d2min = Infinity;
+      const cosLat = Math.cos(lat * Math.PI / 180);
+      for (let i = 0; i < points.length; i++) {
+        const dLat = (lat - points[i][0]) * kmParDegLat;
+        const dLng = (lng - points[i][1]) * 111.32 * cosLat;
+        const d2 = dLat * dLat + dLng * dLng;
+        if (d2 < d2min) { d2min = d2; best = i; }
+      }
+      return cums[best];
+    });
+  } catch (e) { return null; }
+}
+
+async function analyserStationsParTroncon(lastState) {
+  const { coords, lieux, apiKey, type, conso } = lastState;
+  const troncons = [];
+  for (let i = 0; i < coords.length - 1; i++) {
+    try {
+      const route = await getRoute([coords[i], coords[i + 1]], apiKey, false);
+      if (route.distanceKm < TRAJET_MIN_KM_STATIONS) continue;
+      const station = await fetchStationSurTrajet(route.polyline, type, null);
+      if (station) {
+        // Litres réellement consommés sur CE tronçon (varie avec sa
+        // distance) : sert de base plausible pour le badge économie, pas
+        // la capacité pleine du réservoir.
+        const litresTroncon = conso > 0 ? (route.distanceKm * conso) / 100 : null;
+        troncons.push({ depart: lieux[i], arrivee: lieux[i + 1], distKm: route.distanceKm, station, litresTroncon });
+      }
+    } catch (e) { /* tronçon ignoré, best-effort */ }
+  }
+  return troncons;
+}
+
+// Affiche une liste déroulante pour choisir le tronçon (visuellement
+// distincte des pastilles "Arrêt 1/2" de l'optimisation réservoir, pour ne
+// pas laisser croire qu'il s'agit de la même chose).
+function renderTronconsStations(note, troncons, type) {
+  // Plein plausible pour le badge économie : les litres réellement
+  // consommés sur ce tronçon précis (varie selon sa distance), plafonnés à
+  // une contenance de réservoir plausible (cette vue ne s'affiche que sans
+  // optimisation des pleins, donc la vraie capacité est inconnue ici).
+  const capaciteMax = 50;
+  const contentWrap = document.createElement('div');
+  contentWrap.className = 'arret-content';
+
+  function renderContent(idx) {
+    contentWrap.textContent = '';
+    const t = troncons[idx];
+    const detail = buildStationDetail(t.station, type, null, null, false);
+    // La distance à la route doit apparaître avant la date de relevé (déjà
+    // ajoutée par buildStationDetail en tout dernier) : on l'insère juste
+    // avant, plutôt que de l'ajouter après coup en bout de ligne.
+    if (isFinite(t.station.distRoute)) {
+      const distNode = document.createTextNode(' (à ' + t.station.distRoute.toFixed(1) + ' km de la route)');
+      const dateSpan = detail.querySelector('.src-note');
+      if (dateSpan) detail.insertBefore(distNode, dateSpan); else detail.appendChild(distNode);
+    }
+    contentWrap.appendChild(detail);
+    const fn = document.createElement('div');
+    fn.className = 'cheapest-fuel-note';
+    fn.textContent = `Station la plus futée sur votre tronçon ${t.depart} → ${t.arrivee} (${fmtKm(t.distKm)}).`;
+    contentWrap.appendChild(fn);
+
+    // Économie de ce plein par rapport au prix moyen national (taille de
+    // réservoir inconnue par tronçon : plein plausible plafonné, comme pour
+    // la station la moins chère près du départ).
+    const litresPlein = t.litresTroncon ? Math.min(t.litresTroncon, capaciteMax) : capaciteMax;
+    const badge = buildEcoBadge(t.station.prix, litresPlein);
+    if (badge) contentWrap.appendChild(badge);
+
+    contentWrap.appendChild(buildStationMap(t.station.lat, t.station.lon));
+    const btnRow = document.createElement('div');
+    btnRow.className = 'cheapest-btn-row';
+    const link = document.createElement('a');
+    link.className = 'cheapest-link';
+    link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${encodeURIComponent(t.depart)}&destination=${encodeURIComponent(t.arrivee)}&waypoints=${t.station.lat},${t.station.lon}`;
+    link.target = '_blank';
+    link.textContent = '📍 Ajouter cette station à mon trajet';
+    btnRow.appendChild(link);
+    contentWrap.appendChild(btnRow);
+    refreshStationMaps();
+  }
+
+  if (troncons.length > 1) {
+    const wrap = document.createElement('div');
+    wrap.className = 'troncon-select-wrap';
+    const select = document.createElement('select');
+    select.className = 'troncon-select';
+    troncons.forEach((t, i) => {
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      opt.textContent = t.depart + ' → ' + t.arrivee;
+      select.appendChild(opt);
+    });
+    select.addEventListener('change', () => renderContent(parseInt(select.value, 10)));
+    wrap.appendChild(select);
+    note.appendChild(wrap);
+  }
   note.appendChild(contentWrap);
   renderContent(0);
 }
@@ -3271,13 +3441,23 @@ function renderArrets(note, arrets, type, depart, arrivee) {
 async function rechercherStationSurTrajet() {
   const note = document.getElementById('cheapestNoteTrajet');
   if (!lastStationSurTrajet) { note.style.display = 'none'; note.dataset.ready = ''; applyStationTabVisibility(); return; }
-  const { polyline, type, depart, arrivee, distKm, conso } = lastStationSurTrajet;
+  const { polyline, type, depart, arrivee, distKm, conso, lieux } = lastStationSurTrajet;
   const electrique = type === 'electrique';
   note.classList.add('loading');
   // Pas de prix comparable pour l'électrique : pas de recherche, juste un message.
-  let station = null, litresPlein = null, arrets = null;
-  if (!electrique) {
-    const reservoir = getReservoirInfo();
+  let station = null, litresPlein = null, arrets = null, troncons = null;
+  const reservoir = !electrique ? getReservoirInfo() : null;
+  const multiEtapes = Array.isArray(lieux) && lieux.length >= 3;
+  // Réservoir renseigné : la simulation de jauge prime toujours, y compris
+  // sur un trajet à étapes — elle place l'arrêt là où la jauge passera de
+  // ~20 % à ~10 % et cherche la station la moins chère dans CETTE fenêtre,
+  // ce qu'un découpage géographique par tronçon ne sait pas faire (il
+  // afficherait des jauges absurdes, ex. 0 %, faute de plein simulé).
+  // Le détail par tronçon ne sert que sans réservoir, où l'on ne peut pas
+  // simuler la jauge : il donne alors la moins chère de chaque portion.
+  if (!electrique && multiEtapes && !reservoir) {
+    troncons = await analyserStationsParTroncon(lastStationSurTrajet);
+  } else if (!electrique) {
     if (reservoir && distKm > 0 && conso > 0) {
       // Optimisation économique : un ou plusieurs arrêts calculés selon le
       // réservoir, chacun ciblant le segment où la jauge passera de ~20 % à
@@ -3285,6 +3465,23 @@ async function rechercherStationSurTrajet() {
       const plan = await planArretsSurTrajet(polyline, type, distKm, conso, reservoir);
       if (plan.length > 0) {
         arrets = plan;
+        // Trajet à étapes : rattache chaque arrêt au tronçon sur lequel il
+        // tombe (position km de l'arrêt vs positions des étapes sur le tracé).
+        if (multiEtapes && lastStationSurTrajet.coords) {
+          const bornes = kmDesEtapes(polyline, lastStationSurTrajet.coords);
+          if (bornes) {
+            for (const a of arrets) {
+              const km = a.station && a.station.kmSurTrajet;
+              if (typeof km !== 'number') continue;
+              for (let i = 0; i < bornes.length - 1; i++) {
+                if (km >= bornes[i] && km <= bornes[i + 1]) {
+                  a.troncon = { depart: lieux[i], arrivee: lieux[i + 1] };
+                  break;
+                }
+              }
+            }
+          }
+        }
       } else {
         // Trajet faisable sans arrêt : on montre quand même la moins chère
         // sur tout le trajet, avec un plein plausible (top-up depuis le
@@ -3323,7 +3520,7 @@ async function rechercherStationSurTrajet() {
   const title = document.createElement('span');
   title.className = 'cheapest-title';
   title.style.fontSize = '0.9em';
-  title.textContent = 'Station la moins chère sur le trajet';
+  title.textContent = troncons ? 'Station la moins chère par tronçon' : 'Station la moins chère sur le trajet';
   header.appendChild(title);
   note.appendChild(header);
 
@@ -3332,6 +3529,8 @@ async function rechercherStationSurTrajet() {
     empty.className = 'cheapest-empty';
     empty.textContent = 'Non disponible pour l\'électrique (pas de prix comparable entre bornes).';
     note.appendChild(empty);
+  } else if (troncons && troncons.length) {
+    renderTronconsStations(note, troncons, type);
   } else if (arrets && arrets.length) {
     renderArrets(note, arrets, type, depart, arrivee);
   } else if (station) {
@@ -4192,6 +4391,13 @@ function renderResultMode() {
   const peageValEl = document.getElementById('r-cout-peage');
   peageChip.classList.toggle('unavailable', !peageConnu);
   peageValEl.textContent = '';
+  // La flèche dépliante est ajoutée à la pastille entière (peageChip, pas
+  // peageValEl : positionnement absolu dans le coin) — jamais vidée par le
+  // textContent ci-dessus, donc chaque recalcul en empilait une nouvelle
+  // sans retirer la précédente. On la retire explicitement avant d'en
+  // recréer une, sans quoi plusieurs flèches se superposent.
+  const ancienBtn = peageChip.querySelector('.cost-chip-detail-btn');
+  if (ancienBtn) ancienBtn.remove();
 
   if (peageConnu) {
     peageChip.title = 'Tarifs officiels des concessionnaires, classe 1 (voiture)';
@@ -4568,7 +4774,7 @@ async function calculer() {
     // Station la moins chère à proximité du départ (best-effort, ne bloque rien).
     const carburantType = document.getElementById('carburant').value;
     lastStationSearch = { lat: c1[1], lon: c1[0], type: carburantType, rayon: STATION_RAYON_KM, depart, arrivee };
-    lastStationSurTrajet = { polyline: rapide.polyline, type: carburantType, depart, arrivee, distKm: rapide.distA, conso };
+    lastStationSurTrajet = { polyline: rapide.polyline, type: carburantType, depart, arrivee, distKm: rapide.distA, conso, coords, lieux, apiKey };
 
     // Affiche l'itinéraire sélectionné (rapide par défaut) : résultats,
     // fiches comparatives, lien Maps, et lance la recherche de stations.
