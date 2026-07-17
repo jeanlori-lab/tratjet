@@ -955,12 +955,12 @@
 
     /* Pied de page : lien discret vers les sources et la méthode. */
     .page-footer { text-align: center; margin: 26px 0 6px; }
-    .page-footer button {
+    .page-footer button, .page-footer a {
       background: none; border: none; padding: 4px 8px; cursor: pointer;
       font-family: inherit; font-size: 11px; color: #a4b0bd;
       text-decoration: underline; text-underline-offset: 2px;
     }
-    .page-footer button:hover { color: #607080; }
+    .page-footer button:hover, .page-footer a:hover { color: #607080; }
     .sources-card { display: none; text-align: left; }
     .sources-card h3 { font-size: 12px; color: #90a4ae; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
     .sources-card p { font-size: 12px; color: #607080; line-height: 1.55; margin-bottom: 8px; }
@@ -1627,7 +1627,8 @@
 
   <!-- Transparence : d'où viennent les chiffres, et leurs limites. -->
   <div class="page-footer">
-    <button type="button" onclick="toggleSources()">Sources &amp; méthode</button>
+    <a href="trajets/">Coût des trajets les plus recherchés</a>
+    · <button type="button" onclick="toggleSources()">Sources &amp; méthode</button>
     <div class="card sources-card" id="sourcesCard">
       <h3>D'où viennent les chiffres</h3>
       <p><strong>Itinéraires, distances et durées</strong> : OpenRouteService (données OpenStreetMap). Les durées sont théoriques, <strong>hors trafic</strong>.</p>
