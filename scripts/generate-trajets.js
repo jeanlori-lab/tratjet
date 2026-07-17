@@ -88,7 +88,7 @@ function renderPage(t, r) {
   const faq = [
     {
       q: `Combien coûte le trajet ${t.depart} - ${t.arrivee} en voiture ?`,
-      a: `Comptez environ ${fmtEur(totalRapide)} (carburant + péages, base SP95 à 7,5 L/100 km) pour ${fmtKm(r.distanceKm)}, soit ${fmtDuree(r.dureeSec)} de route.`
+      a: `Comptez environ ${fmtEur(totalRapide)} (carburant + péages, base SP95 à 6,6 L/100 km) pour ${fmtKm(r.distanceKm)}, soit ${fmtDuree(r.dureeSec)} de route.`
         + (typeof r.coutPeage === 'number' ? ` Les péages représentent ${fmtEur(r.coutPeage)} de ce total.` : ''),
     },
     {

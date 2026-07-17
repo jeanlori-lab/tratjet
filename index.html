@@ -1423,7 +1423,7 @@
 
     <!-- Bloc Carburant / Consommation. Repliable : une fois les réglages
          connus (mémorisés dans le navigateur), il s'affiche en une ligne
-         résumé "⛽ SP95 · 7,5 L/100 km · 👥 2" pour laisser l'écran au
+         résumé "⛽ SP95 · 6,6 L/100 km · 👥 2" pour laisser l'écran au
          trajet et au résultat. -->
     <div class="section section-carburant">
     <!-- Véhicules enregistrés (localStorage) : une puce = un profil
@@ -1455,14 +1455,14 @@
     <div class="param-row conso-row">
       <div class="param-label">Consommation</div>
       <div class="param-input">
-        <input type="hidden" id="conso" value="7.5">
+        <input type="hidden" id="conso" value="6.6">
         <div class="conso-line">
           <div class="conso-roulette" id="consoRoulette" role="slider" aria-label="Consommation au 100 km" aria-valuemin="1" aria-valuemax="30" tabindex="0">
             <div class="roulette-viewport"><div class="roulette-track" id="rouletteTrack"></div></div>
             <div class="roulette-center"></div>
           </div>
           <button type="button" class="conso-arrow" id="consoMinus" aria-label="Diminuer la consommation">−</button>
-          <div class="conso-value"><input type="text" id="consoVal" class="conso-val-input" value="7,5" inputmode="decimal" readonly aria-label="Consommation au 100 km, modifiable"> <span class="roulette-unit" id="consoUnitLabel">L / 100 km</span></div>
+          <div class="conso-value"><input type="text" id="consoVal" class="conso-val-input" value="6,6" inputmode="decimal" readonly aria-label="Consommation au 100 km, modifiable"> <span class="roulette-unit" id="consoUnitLabel">L / 100 km</span></div>
           <button type="button" class="conso-arrow" id="consoPlus" aria-label="Augmenter la consommation">+</button>
         </div>
       </div>
@@ -2298,7 +2298,7 @@ let prixActuel = null;
 // (électrique <-> thermique), sans écraser une valeur déjà ajustée si on
 // reste dans la même famille.
 const CONSO_ELECTRIQUE_DEFAUT = 17;
-const CONSO_THERMIQUE_DEFAUT = 7.5;
+const CONSO_THERMIQUE_DEFAUT = 6.6;
 let carburantTypePrecedent = null;
 // Choix du carburant par pastilles (remplace l'ancien menu déroulant) : met
 // à jour la valeur cachée + l'état visuel, puis déclenche les mêmes mises à
@@ -2417,7 +2417,7 @@ function holdRepeat(el, action) {
 
 // --- Roulette de consommation (1 à 30, pas de 0,1) ---
 const CONSO_MIN = 1, CONSO_MAX = 30, CONSO_PPU = 60; // px par L/100km
-function consoValeur() { return parseFloat(document.getElementById('conso').value) || 7.5; }
+function consoValeur() { return parseFloat(document.getElementById('conso').value) || 6.6; }
 function consoSet(v, doReset) {
   v = Math.min(CONSO_MAX, Math.max(CONSO_MIN, Math.round(v * 10) / 10));
   document.getElementById('conso').value = v.toFixed(1);
@@ -2444,7 +2444,7 @@ function consoInit() {
   }
   track.innerHTML = html;
 
-  let dragging = false, startX = 0, startVal = 7.5;
+  let dragging = false, startX = 0, startVal = 6.6;
   // Vitesse lissée du glissement (en unités de consommation par ms), pour
   // prolonger le mouvement en douceur (inertie) au relâchement au lieu de
   // s'arrêter net.
