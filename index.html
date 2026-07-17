@@ -451,7 +451,11 @@
       input[type="text"], input[type="number"], select { font-size: 16px; }
     }
 
+    /* Source du prix moyen : texte complet sur ordinateur, raccourci sur mobile. */
+    .src-court { display: none; }
     @media (max-width: 480px) {
+      .src-long { display: none; }
+      .src-court { display: inline; }
       /* Mobile : le libellé passe au-dessus, l'encadré prend toute la largeur */
       .card { padding: 16px; }
       .section { padding: 6px 12px; }
@@ -2640,7 +2644,9 @@ async function chargerPrix() {
       el.textContent = prixActuel.toFixed(3) + ' €/L';
       const src = document.createElement('span');
       src.className = 'src-note';
-      src.textContent = ' · moyenne France ce jour (data.gouv.fr)';
+      // Version longue sur ordinateur, raccourcie sur mobile (largeur limitée) :
+      // les deux spans coexistent, le CSS n'en montre qu'un selon l'écran.
+      src.innerHTML = '<span class="src-long"> · moyenne France ce jour (data.gouv.fr)</span><span class="src-court"> (data.gouv.fr)</span>';
       el.appendChild(src);
     } else {
       document.getElementById('prixAffiche').textContent = 'Indisponible';
