@@ -748,15 +748,15 @@
       padding: 0;
       border: none;
       background: none;
-      font-size: 13px;
-      line-height: 1;
+      display: none;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
       color: #c3cdd6;
       z-index: 3;
-      display: none;
       transition: color 0.15s, transform 0.1s;
     }
-    .point-row.has-geoloc .geoloc-btn { display: block; }
+    .point-row.has-geoloc .geoloc-btn { display: flex; }
     .geoloc-btn:hover { color: #1976d2; }
     .geoloc-btn:active { transform: translateY(-50%) scale(0.85); }
     .geoloc-btn.loading { animation: geoloc-pulse 0.9s ease-in-out infinite; }
@@ -3625,7 +3625,9 @@ function makePointRow(value) {
       '<input type="text" class="point-input" autocomplete="off" oninput="onPointInput(this)">' +
       '<div class="autocomplete-list"></div>' +
     '</div>' +
-    '<button type="button" class="geoloc-btn" title="Utiliser ma position actuelle">◎</button>' +
+    '<button type="button" class="geoloc-btn" title="Utiliser ma position actuelle">' +
+      '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm8.94 3A8.99 8.99 0 0 0 13 3.06V1h-2v2.06A8.99 8.99 0 0 0 3.06 11H1v2h2.06A8.99 8.99 0 0 0 11 20.94V23h2v-2.06A8.99 8.99 0 0 0 20.94 13H23v-2h-2.06ZM12 19a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg>' +
+    '</button>' +
     '<button type="button" class="fav-star" title="Enregistrer en favori">☆</button></div>' +
     '<button type="button" class="stop-remove" onclick="removePoint(this)" title="Supprimer cette étape">✕</button>';
   const input = row.querySelector('.point-input');
