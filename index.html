@@ -4318,6 +4318,13 @@ function renderResultMode() {
   const peageValEl = document.getElementById('r-cout-peage');
   peageChip.classList.toggle('unavailable', !peageConnu);
   peageValEl.textContent = '';
+  // La flèche dépliante est ajoutée à la pastille entière (peageChip, pas
+  // peageValEl : positionnement absolu dans le coin) — jamais vidée par le
+  // textContent ci-dessus, donc chaque recalcul en empilait une nouvelle
+  // sans retirer la précédente. On la retire explicitement avant d'en
+  // recréer une, sans quoi plusieurs flèches se superposent.
+  const ancienBtn = peageChip.querySelector('.cost-chip-detail-btn');
+  if (ancienBtn) ancienBtn.remove();
 
   if (peageConnu) {
     peageChip.title = 'Tarifs officiels des concessionnaires, classe 1 (voiture)';
