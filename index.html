@@ -3327,7 +3327,10 @@ async function analyserStationsParTroncon(lastState) {
 // Affiche une liste déroulante pour choisir le tronçon (visuellement
 // distincte des pastilles "Arrêt 1/2" de l'optimisation réservoir, pour ne
 // pas laisser croire qu'il s'agit de la même chose).
-function renderTronconsStations(note, troncons, type) {
+function renderTronconsStations(note, troncons, type, reservoir) {
+  // Plein plausible pour le badge économie : la vraie capacité si
+  // l'optimisation des pleins est activée, un défaut plausible sinon.
+  const litresPleinTroncon = (reservoir && reservoir.capacite) ? reservoir.capacite : 50;
   const contentWrap = document.createElement('div');
   contentWrap.className = 'arret-content';
 
@@ -3347,7 +3350,7 @@ function renderTronconsStations(note, troncons, type) {
     // Économie de ce plein par rapport au prix moyen national (taille de
     // réservoir inconnue par tronçon : plein plausible plafonné, comme pour
     // la station la moins chère près du départ).
-    const badge = buildEcoBadge(t.station.prix, LITRES_PLEIN_MAX_DEFAUT);
+    const badge = buildEcoBadge(t.station.prix, litresPleinTroncon);
     if (badge) contentWrap.appendChild(badge);
 
     contentWrap.appendChild(buildStationMap(t.station.lat, t.station.lon));
@@ -3454,7 +3457,7 @@ async function rechercherStationSurTrajet() {
     empty.textContent = 'Non disponible pour l\'électrique (pas de prix comparable entre bornes).';
     note.appendChild(empty);
   } else if (troncons && troncons.length) {
-    renderTronconsStations(note, troncons, type);
+    renderTronconsStations(note, troncons, type, reservoir);
   } else if (arrets && arrets.length) {
     renderArrets(note, arrets, type, depart, arrivee);
   } else if (station) {
