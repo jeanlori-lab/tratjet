@@ -1121,11 +1121,11 @@
     /* Liste déroulante des tronçons (station la moins chère par tronçon,
        trajets à étapes) : volontairement différente des pastilles d'arrêt
        ci-dessus, pour ne pas laisser croire qu'il s'agit de la même chose. */
+    .troncon-select-wrap { position: relative; margin-bottom: 10px; }
     .troncon-select {
       display: block;
       width: 100%;
-      margin-bottom: 10px;
-      padding: 8px 10px;
+      padding: 8px 34px 8px 10px;
       font-size: 13px;
       font-weight: 700;
       font-family: inherit;
@@ -1134,6 +1134,21 @@
       border: 1px solid #bcd9bc;
       border-radius: 10px;
       cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    /* Chevron explicite : un <select> nu ne se distingue pas assez d'un
+       simple encadré de texte, d'où l'ajout d'une flèche bien visible. */
+    .troncon-select-wrap::after {
+      content: '';
+      position: absolute;
+      right: 14px; top: 50%;
+      width: 8px; height: 8px;
+      margin-top: -6px;
+      border-right: 2px solid #2e7d32;
+      border-bottom: 2px solid #2e7d32;
+      transform: rotate(45deg);
+      pointer-events: none;
     }
 
     /* Bascule principale Coût carburant / Station la moins chère, en haut de
@@ -3328,6 +3343,13 @@ function renderTronconsStations(note, troncons, type) {
     fn.className = 'cheapest-fuel-note';
     fn.textContent = `Sur le tronçon ${t.depart} → ${t.arrivee} (${fmtKm(t.distKm)}).`;
     contentWrap.appendChild(fn);
+
+    // Économie de ce plein par rapport au prix moyen national (taille de
+    // réservoir inconnue par tronçon : plein plausible plafonné, comme pour
+    // la station la moins chère près du départ).
+    const badge = buildEcoBadge(t.station.prix, LITRES_PLEIN_MAX_DEFAUT);
+    if (badge) contentWrap.appendChild(badge);
+
     contentWrap.appendChild(buildStationMap(t.station.lat, t.station.lon));
     const btnRow = document.createElement('div');
     btnRow.className = 'cheapest-btn-row';
@@ -3342,6 +3364,8 @@ function renderTronconsStations(note, troncons, type) {
   }
 
   if (troncons.length > 1) {
+    const wrap = document.createElement('div');
+    wrap.className = 'troncon-select-wrap';
     const select = document.createElement('select');
     select.className = 'troncon-select';
     troncons.forEach((t, i) => {
@@ -3351,7 +3375,8 @@ function renderTronconsStations(note, troncons, type) {
       select.appendChild(opt);
     });
     select.addEventListener('change', () => renderContent(parseInt(select.value, 10)));
-    note.appendChild(select);
+    wrap.appendChild(select);
+    note.appendChild(wrap);
   }
   note.appendChild(contentWrap);
   renderContent(0);
