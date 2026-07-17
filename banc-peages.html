@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Tratjet — Banc de test péages</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #eef2f6; color: #1a2433; padding: 24px 16px; }
+    .page { max-width: 760px; margin: 0 auto; }
+    h1 { font-size: 22px; margin-bottom: 6px; }
+    p.hint { font-size: 13px; color: #607080; margin-bottom: 16px; line-height: 1.5; }
+    button.run {
+      padding: 10px 22px; border: none; border-radius: 10px; background: #1976d2;
+      color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+      margin-bottom: 16px;
+    }
+    button.run:disabled { opacity: 0.55; cursor: default; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(15,23,41,0.07); font-size: 13px; }
+    th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid #eef2f6; }
+    th { background: #f5f8fb; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: #90a4ae; }
+    td.num { text-align: right; white-space: nowrap; }
+    .st { font-size: 16px; }
+    .reseau { font-size: 11px; color: #607080; }
+    .src { font-size: 11px; color: #a4b0bd; }
+    .ok { color: #2e7d32; font-weight: 700; }
+    .ko { color: #c62828; font-weight: 700; }
+    .na { color: #e2971a; font-weight: 700; }
+    .info { color: #607080; }
+    #recap { margin-top: 14px; font-size: 14px; font-weight: 600; color: #455060; }
+    iframe { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <h1>Banc de test péages</h1>
+  <p class="hint">Compare le prix des péages calculé par Tratjet (mêmes fonctions que le site, via une iframe)
+    aux tarifs officiels 2026 connus, trajet par trajet et réseau par réseau. Tolérance : ±10 %.
+    Les lignes sans tarif attendu (•) sont informatives : elles montrent ce que Tratjet trouve
+    (ou ne trouve pas) sur ce réseau. Lancement séquentiel pour ménager les quotas.</p>
+  <button type="button" class="run" id="runBtn" onclick="lancer()" disabled>Chargement de l'appli…</button>
+  <table>
+    <thead><tr>
+      <th></th><th>Trajet</th><th>Réseau attendu</th><th class="num">Attendu</th>
+      <th class="num">Calculé</th><th class="num">Écart</th><th>Source</th><th class="num">Distance</th>
+    </tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div id="recap"></div>
+</div>
+
+<!-- L'appli réelle, cachée : on réutilise ses fonctions getRoute/getTolls
+     et sa clé API telles quelles (zéro duplication de code). -->
+<iframe id="app" src="index.html"></iframe>
+
+<script>
+// Trajets de référence. "attendu" = tarif officiel classe 1 (2026) quand il est
+// connu de source fiable, null sinon (ligne informative). Coordonnées [lng, lat].
+// Sources des attendus : grilles/relevés publics février 2026 (à re-valider
+// chaque 1er février, date de révision des tarifs).
+const TRAJETS = [
+  { nom: 'Paris → Lille',       de: [2.3522, 48.8566], vers: [3.0573, 50.6292],  reseau: 'Sanef (A1)',        attendu: 18.7 },
+  { nom: 'Paris → Strasbourg',  de: [2.3522, 48.8566], vers: [7.7521, 48.5734],  reseau: 'Sanef (A4)',        attendu: 39.8 },
+  { nom: 'Paris → Caen',        de: [2.3522, 48.8566], vers: [-0.3708, 49.1829], reseau: 'SAPN (A13)',        attendu: null },
+  { nom: 'Paris → Lyon',        de: [2.3522, 48.8566], vers: [4.8357, 45.7640],  reseau: 'APRR (A6)',         attendu: 41.5 },
+  { nom: 'Dijon → Chambéry',    de: [5.0415, 47.3220], vers: [5.9207, 45.5646],  reseau: 'APRR/AREA (A39/A43)', attendu: null },
+  { nom: 'Lyon → Grenoble',     de: [4.8357, 45.7640], vers: [5.7245, 45.1885],  reseau: 'AREA (A43/A48)',    attendu: null },
+  { nom: 'Lyon → Marseille',    de: [4.8357, 45.7640], vers: [5.3698, 43.2965],  reseau: 'Vinci/ASF (A7)',    attendu: 27.4 },
+  { nom: 'Paris → Bordeaux',    de: [2.3522, 48.8566], vers: [-0.5792, 44.8378], reseau: 'Vinci/ASF (A10)',   attendu: null },
+  { nom: 'Paris → Nantes',      de: [2.3522, 48.8566], vers: [-1.5536, 47.2184], reseau: 'Vinci/Cofiroute (A11)', attendu: null },
+  { nom: 'Paris → Marseille',   de: [2.3522, 48.8566], vers: [5.3698, 43.2965],  reseau: 'Multi : APRR + Vinci',  attendu: null },
+];
+const TOLERANCE = 0.10;
+
+const appFrame = document.getElementById('app');
+let app = null;
+appFrame.addEventListener('load', () => {
+  app = appFrame.contentWindow;
+  const btn = document.getElementById('runBtn');
+  btn.disabled = false;
+  btn.textContent = 'Lancer le banc';
+});
+
+const fmtE = n => n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+
+function ligne(t) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = '<td class="st">⏳</td><td>' + t.nom + '</td><td class="reseau">' + t.reseau + '</td>'
+    + '<td class="num">' + (t.attendu != null ? fmtE(t.attendu) : '•') + '</td>'
+    + '<td class="num">—</td><td class="num">—</td><td class="src">—</td><td class="num">—</td>';
+  document.getElementById('rows').appendChild(tr);
+  return tr.querySelectorAll('td');
+}
+
+async function lancer() {
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  btn.textContent = 'Banc en cours…';
+  document.getElementById('rows').textContent = '';
+  document.getElementById('recap').textContent = '';
+  const apiKey = app.document.getElementById('apiKey').value;
+  let ok = 0, ko = 0, na = 0;
+
+  for (const t of TRAJETS) {
+    const tds = ligne(t);
+    try {
+      const route = await app.getRoute([t.de, t.vers], apiKey, false);
+      tds[7].textContent = Math.round(route.distanceKm) + ' km';
+      const peage = await app.getTolls(route, t.de, t.vers, t.nom.split(' → ')[0], t.nom.split(' → ')[1]);
+      const cout = peage && typeof peage.cost === 'number' ? peage.cost : null;
+      if (cout === null) {
+        tds[0].textContent = '⚠️';
+        tds[4].innerHTML = '<span class="na">indéterminé</span>';
+        na++;
+      } else {
+        tds[4].textContent = fmtE(cout);
+        tds[6].textContent = (peage.source || '?');
+        if (t.attendu != null) {
+          const ecart = (cout - t.attendu) / t.attendu;
+          tds[5].textContent = (ecart >= 0 ? '+' : '') + (ecart * 100).toFixed(1) + ' %';
+          const pass = Math.abs(ecart) <= TOLERANCE;
+          tds[0].textContent = pass ? '✅' : '❌';
+          tds[5].className = 'num ' + (pass ? 'ok' : 'ko');
+          pass ? ok++ : ko++;
+        } else {
+          tds[0].textContent = '•';
+          tds[5].innerHTML = '<span class="info">informatif</span>';
+        }
+      }
+    } catch (e) {
+      tds[0].textContent = '❌';
+      tds[4].innerHTML = '<span class="ko">erreur : ' + (e.message || e) + '</span>';
+      ko++;
+    }
+  }
+  document.getElementById('recap').textContent =
+    `Bilan : ${ok} conforme(s) · ${ko} en échec · ${na} indéterminé(s) — les "indéterminés" sont les trous de couverture à combler.`;
+  btn.disabled = false;
+  btn.textContent = 'Relancer le banc';
+}
+</script>
+</body>
+</html>
