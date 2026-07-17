@@ -1,0 +1,22 @@
+[
+  { "slug": "paris-lyon",       "depart": "Paris",     "arrivee": "Lyon" },
+  { "slug": "paris-marseille",  "depart": "Paris",     "arrivee": "Marseille" },
+  { "slug": "paris-bordeaux",   "depart": "Paris",     "arrivee": "Bordeaux" },
+  { "slug": "paris-nantes",     "depart": "Paris",     "arrivee": "Nantes" },
+  { "slug": "paris-lille",      "depart": "Paris",     "arrivee": "Lille" },
+  { "slug": "paris-strasbourg", "depart": "Paris",     "arrivee": "Strasbourg" },
+  { "slug": "paris-toulouse",   "depart": "Paris",     "arrivee": "Toulouse" },
+  { "slug": "paris-rennes",     "depart": "Paris",     "arrivee": "Rennes" },
+  { "slug": "paris-nice",       "depart": "Paris",     "arrivee": "Nice" },
+  { "slug": "paris-biarritz",   "depart": "Paris",     "arrivee": "Biarritz" },
+  { "slug": "paris-caen",       "depart": "Paris",     "arrivee": "Caen" },
+  { "slug": "paris-clermont-ferrand", "depart": "Paris", "arrivee": "Clermont-Ferrand" },
+  { "slug": "lyon-marseille",   "depart": "Lyon",      "arrivee": "Marseille" },
+  { "slug": "lyon-bordeaux",    "depart": "Lyon",      "arrivee": "Bordeaux" },
+  { "slug": "lyon-nice",        "depart": "Lyon",      "arrivee": "Nice" },
+  { "slug": "lyon-strasbourg",  "depart": "Lyon",      "arrivee": "Strasbourg" },
+  { "slug": "bordeaux-toulouse","depart": "Bordeaux",  "arrivee": "Toulouse" },
+  { "slug": "nantes-bordeaux",  "depart": "Nantes",    "arrivee": "Bordeaux" },
+  { "slug": "marseille-nice",   "depart": "Marseille", "arrivee": "Nice" },
+  { "slug": "lille-strasbourg", "depart": "Lille",     "arrivee": "Strasbourg" }
+]

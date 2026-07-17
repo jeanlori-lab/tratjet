@@ -1,0 +1,41 @@
+name: Générer les pages trajet (SEO)
+
+# Déclenchement manuel uniquement : on relit et on merge la PR produite
+# avant que les nouveaux chiffres remplacent les anciens sur le site.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Installe les dépendances (Playwright)
+        run: npm install
+
+      - name: Installe Chromium pour Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Génère les pages trajet
+        run: npm run generate:trajets
+
+      - name: Ouvre une pull request avec les pages mises à jour
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "Régénère les pages trajet (chiffres à jour)"
+          title: "Pages trajet SEO : chiffres mis à jour"
+          body: |
+            Régénération automatique des pages `trajets/*.html` et de `sitemap.xml`
+            à partir des trajets listés dans `trajets/trajets.json`, avec les vrais
+            calculs de l'application (aucun tarif inventé).
+
+            À relire avant de merger : vérifier que les chiffres semblent cohérents
+            trajet par trajet (aucune régression du type péage soudain à 0 € ou
+            distance aberrante).
+          branch: auto/pages-trajet
+          delete-branch: true
