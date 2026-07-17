@@ -948,6 +948,24 @@
     }
     .res-trajet-line strong { font-weight: 600; color: #455060; }
 
+    /* Notes de transparence : mentions discrètes de source/limite (date des
+       prix, "hors trafic", classe de péage…), toujours en retrait visuel. */
+    .src-note { font-size: 10px; font-weight: 500; color: #a4b0bd; }
+    .cost-chip-src { margin-top: 4px; text-align: center; }
+
+    /* Pied de page : lien discret vers les sources et la méthode. */
+    .page-footer { text-align: center; margin: 26px 0 6px; }
+    .page-footer button {
+      background: none; border: none; padding: 4px 8px; cursor: pointer;
+      font-family: inherit; font-size: 11px; color: #a4b0bd;
+      text-decoration: underline; text-underline-offset: 2px;
+    }
+    .page-footer button:hover { color: #607080; }
+    .sources-card { display: none; text-align: left; }
+    .sources-card h3 { font-size: 12px; color: #90a4ae; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+    .sources-card p { font-size: 12px; color: #607080; line-height: 1.55; margin-bottom: 8px; }
+    .sources-card p strong { color: #455060; }
+
     /* Coût & conso : les chiffres qui comptent vraiment, mis en avant en
        grand et en gras pour qu'on les repère au premier coup d'œil. */
     .res-value-big { font-size: 29px; font-weight: 900; color: #1565c0; }
@@ -1504,7 +1522,7 @@
       <button type="button" class="ar-toggle-btn active" data-mode="simple" onclick="setResultMode('simple')">Aller simple</button>
       <button type="button" class="ar-toggle-btn" data-mode="ar" onclick="setResultMode('ar')">Aller-retour</button>
     </div>
-    <div class="res-trajet-line"><strong id="r-dist">—</strong> · <strong id="r-duree">—</strong></div>
+    <div class="res-trajet-line"><strong id="r-dist">—</strong> · <strong id="r-duree">—</strong> <span class="src-note">hors trafic</span></div>
 
     <div class="res-section-title">Coût & conso</div>
     <div class="section res-section">
@@ -1604,6 +1622,19 @@
       <div class="error" id="stationError"></div>
 
       <div class="cheapest-note" id="cheapestNoteStation" style="display:none; margin-top:14px;"></div>
+    </div>
+  </div>
+
+  <!-- Transparence : d'où viennent les chiffres, et leurs limites. -->
+  <div class="page-footer">
+    <button type="button" onclick="toggleSources()">Sources &amp; méthode</button>
+    <div class="card sources-card" id="sourcesCard">
+      <h3>D'où viennent les chiffres</h3>
+      <p><strong>Itinéraires, distances et durées</strong> : OpenRouteService (données OpenStreetMap). Les durées sont théoriques, <strong>hors trafic</strong>.</p>
+      <p><strong>Prix des carburants</strong> : flux officiel des prix en station (data.gouv.fr), tel que déclaré par les exploitants. Le prix moyen national est recalculé à chaque visite ; le prix d'une station donnée peut dater de quelques jours (la date du relevé est affichée).</p>
+      <p><strong>Péages</strong> : tarifs officiels des concessionnaires pour une voiture (classe 1), via Vinci Autoroutes (et ViaMichelin en secours). Quand aucun tarif n'est trouvé, on l'indique plutôt que d'inventer un chiffre.</p>
+      <p><strong>Bornes électriques</strong> : base nationale IRVE (data.gouv.fr). Le prix de l'électricité est une estimation sur la base du tarif réglementé — la tarification réelle varie selon les bornes.</p>
+      <p><strong>Limites</strong> : tous les montants sont des estimations. La consommation réelle dépend de la conduite, du chargement et de la météo ; le trafic n'est pas pris en compte dans les durées.</p>
     </div>
   </div>
 
@@ -1860,6 +1891,11 @@ function majCompteUI() {
   document.getElementById('accountLoggedOut').style.display = sbUser ? 'none' : 'block';
   document.getElementById('accountLoggedIn').style.display = sbUser ? 'block' : 'none';
   if (sbUser) document.getElementById('accountUserEmail').textContent = sbUser.email || '';
+}
+
+function toggleSources() {
+  const card = document.getElementById('sourcesCard');
+  card.style.display = card.style.display === 'block' ? 'none' : 'block';
 }
 
 function toggleAccountCard() {
@@ -2567,7 +2603,12 @@ async function chargerPrix() {
     }
     if (prix !== null) {
       prixActuel = prix;
-      document.getElementById('prixAffiche').textContent = prixActuel.toFixed(3) + ' €/L';
+      const el = document.getElementById('prixAffiche');
+      el.textContent = prixActuel.toFixed(3) + ' €/L';
+      const src = document.createElement('span');
+      src.className = 'src-note';
+      src.textContent = ' · moyenne France ce jour (data.gouv.fr)';
+      el.appendChild(src);
     } else {
       document.getElementById('prixAffiche').textContent = 'Indisponible';
     }
@@ -2748,7 +2789,9 @@ async function fetchStationMoinsChere(lat, lon, type, rayonKm, mode) {
       const sLon = geo ? geo[0] : (f.longitude !== undefined ? parseFloat(f.longitude) : null);
       // Filtre client en plus du rayon serveur (sécurité si l'API renvoie plus large).
       if (!illimite && sLat !== null && sLon !== null && distKm(lat, lon, sLat, sLon) > rayonKm) continue;
-      if (!best || (veutMax ? prix > best.prix : prix < best.prix)) best = { prix, nom: f.nom || '', ville: f.ville || '', lat: sLat, lon: sLon };
+      // Date du relevé de ce carburant (champ *_maj du flux), pour affichage.
+      const maj = f[field.replace('_prix', '_maj')] || null;
+      if (!best || (veutMax ? prix > best.prix : prix < best.prix)) best = { prix, nom: f.nom || '', ville: f.ville || '', lat: sLat, lon: sLon, maj };
     }
     return best;
   } catch (e) { return null; }
@@ -2827,6 +2870,16 @@ function buildStationDetail(station, type, lat, lon, big) {
       && station.lat !== null && station.lon !== null) {
     const dKm = distKm(lat, lon, station.lat, station.lon);
     if (isFinite(dKm)) detail.appendChild(document.createTextNode(' (' + dKm.toFixed(1) + ' km)'));
+  }
+  // Date du relevé du prix (transparence : un prix peut dater de plusieurs jours).
+  if (station.maj) {
+    const dte = new Date(station.maj);
+    if (!isNaN(dte)) {
+      const src = document.createElement('span');
+      src.className = 'src-note';
+      src.textContent = ' · relevé le ' + dte.toLocaleDateString('fr-FR', { day: 'numeric', month: 'numeric' });
+      detail.appendChild(src);
+    }
   }
   return detail;
 }
@@ -3076,7 +3129,7 @@ async function fetchStationSurTrajet(polyline5, type, fenetreKm) {
       }
       const distRoute = Math.sqrt(d2min);
       if (distRoute > RAYON_TRAJET_KM) continue;
-      best = { prix, nom: f.nom || '', ville: f.ville || '', lat: sLat, lon: sLon, distRoute, kmSurTrajet: echKm[idxMin] };
+      best = { prix, nom: f.nom || '', ville: f.ville || '', lat: sLat, lon: sLon, distRoute, kmSurTrajet: echKm[idxMin], maj: f[field.replace('_prix', '_maj')] || null };
     }
     return best;
   } catch (e) { return null; }
@@ -4022,7 +4075,7 @@ async function getTollsVinci(route) {
     // Libellé "Tronçon N" (les noms de gares seront branchés quand on aura
     // la forme exacte des réponses de l'API).
     const details = tarifs.map((t, i) => ({ label: 'Tronçon ' + (i + 1), price: t.price }));
-    return { cost, details };
+    return { cost, details, source: 'vinci' };
   } catch (e) {
     return null;
   }
@@ -4066,7 +4119,7 @@ async function getTollsViaMichelin(c1, c2, depart, arrivee) {
           .map(t => ({ label: t.name || 'Péage', price: t.cost.amount }))
       : null;
 
-    return { cost, details: details && details.length ? details : null };
+    return { cost, details: details && details.length ? details : null, source: 'viamichelin' };
   } catch (e) {
     return null;
   }
@@ -4123,6 +4176,7 @@ function renderResultMode() {
   peageValEl.textContent = '';
 
   if (peageConnu) {
+    peageChip.title = 'Tarifs officiels des concessionnaires, classe 1 (voiture)';
     peageValEl.appendChild(document.createTextNode(fmtEur(coutPeageAffiche)));
     // Flèche dépliante : montre le coût par tronçon dans la pastille.
     if (Array.isArray(d.peageDetails) && d.peageDetails.length) {
@@ -4145,6 +4199,12 @@ function renderResultMode() {
         ligne.appendChild(val);
         lignes.appendChild(ligne);
       });
+      const srcLigne = document.createElement('div');
+      srcLigne.className = 'src-note cost-chip-src';
+      srcLigne.textContent = d.peageSource === 'vinci' ? 'Tarifs Vinci Autoroutes · classe 1'
+        : d.peageSource === 'viamichelin' ? 'Source ViaMichelin · classe 1'
+        : 'Tarifs officiels · classe 1';
+      lignes.appendChild(srcLigne);
       btn.addEventListener('click', () => {
         const ouvert = lignes.style.display !== 'none';
         lignes.style.display = ouvert ? 'none' : '';
@@ -4293,7 +4353,7 @@ function applySelectedRoute() {
   applyStationTabVisibility();
   lastResultData = {
     distA: o.distA, dureeSec: o.dureeSec, litresA: o.litresA, coutA: o.coutA,
-    coutPeage: o.coutPeage, peageDetails: o.peageDetails,
+    coutPeage: o.coutPeage, peageDetails: o.peageDetails, peageSource: o.peageSource || null,
     vinciUrl: o.vinciUrl || null, unit: o.unit,
   };
   renderResultMode();
@@ -4447,6 +4507,7 @@ async function calculer() {
     const rapide = mkOption(routeRapide);
     rapide.coutPeage = peage && typeof peage.cost === 'number' ? peage.cost : null;
     rapide.peageDetails = (peage && peage.details) || null;
+    rapide.peageSource = (peage && peage.source) || null;
 
     // Lien Vinci de secours (pastille péages) : seulement quand le prix des
     // péages n'a pas pu être déterminé (jamais quand on sait déjà qu'il est
