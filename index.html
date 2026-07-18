@@ -625,7 +625,6 @@
     .route-row .route-delta.ref { color: #90a4ae; font-weight: 600; }
     .route-row .route-radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #cfd8e0; flex-shrink: 0; }
     .route-row.sel .route-radio { border-color: #1976d2; background: radial-gradient(circle, #1976d2 45%, transparent 52%); }
-    .route-options-hint { font-size: 11px; color: #90a4ae; margin: -6px 0 12px; }
 
     /* Préconisations par tronçon (trajets à étapes) : pour chaque tronçon à
        péages, ce que coûterait/rapporterait de passer sans péage. */
@@ -1380,7 +1379,7 @@
     /* Navigation Maps/Waze : rattachée au récap des itinéraires, pas en bas
        de page. Waze masqué via JS dès qu'il y a une étape (son lien ne gère
        qu'une destination, jamais de points de passage). */
-    .route-nav-row { display: none; justify-content: flex-end; gap: 6px; margin: 7px 0 10px; padding-top: 7px; border-top: 1px solid #dbe7f5; }
+    .route-nav-row { display: none; justify-content: flex-end; gap: 6px; margin: 7px 0 20px; padding-top: 7px; border-top: 1px solid #dbe7f5; }
     .route-nav-row.show { display: flex; }
     .nav-icon-btn {
       height: 24px; padding: 0 9px;
@@ -1598,7 +1597,6 @@
     <div class="card-title">Résultats</div>
     <!-- Comparateur des itinéraires Péages / Sans péages (rempli par renderRouteOptions) -->
     <div class="route-options" id="routeOptions"></div>
-    <div class="route-options-hint" id="routeOptionsHint" style="display:none;">Touchez un itinéraire pour voir son détail ci-dessous (coûts, stations sur le trajet…)</div>
     <!-- Navigation externe : rattachée au récap, pas en bas de page. Waze
          masqué par JS dès qu'il y a une étape (voir applySelectedRoute). -->
     <div class="route-nav-row" id="routeNavRow">
@@ -4516,13 +4514,11 @@ const ROUTE_OPTION_META = {
 
 function renderRouteOptions() {
   const wrap = document.getElementById('routeOptions');
-  const hint = document.getElementById('routeOptionsHint');
   if (!wrap) return;
   wrap.textContent = '';
   const opts = routeOptionsData;
   const nbOptions = opts ? Object.keys(opts).length : 0;
   wrap.style.display = nbOptions >= 2 ? 'flex' : 'none';
-  hint.style.display = nbOptions >= 2 ? 'block' : 'none';
   if (nbOptions < 2) return;
 
   const f = resultMode === 'ar' ? 2 : 1;
