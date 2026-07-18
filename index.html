@@ -3187,12 +3187,12 @@ function getReservoirInfo() {
   return { capacite, niveau };
 }
 
-// Plein maximal réaliste pour le badge économie quand la capacité du
-// réservoir n'est pas connue (optimisation non activée) : un plein ne peut
-// jamais dépasser un réservoir de voiture courant, donc on plafonne à une
-// valeur haute plausible plutôt que d'afficher les litres de tout le trajet
-// (qui peuvent largement dépasser la contenance réelle sur un long trajet).
-const LITRES_PLEIN_MAX_DEFAUT = 60;
+// Plein par défaut pour le badge économie quand la capacité du réservoir
+// n'est pas connue (optimisation non activée) : plafonne les litres du
+// trajet (qui peuvent largement dépasser un réservoir réel sur un long
+// trajet) à une contenance de voiture courante. Même valeur que la vue
+// par tronçon, pour un affichage cohérent partout sans optimisation.
+const LITRES_PLEIN_MAX_DEFAUT = 50;
 
 // Calcule les arrêts nécessaires sur tout le trajet selon le réservoir : à
 // chaque étape, on cible le segment où la jauge passera de ~20 % à ~10 %
@@ -3383,7 +3383,7 @@ function renderTronconsStations(note, troncons, type) {
   // consommés sur ce tronçon précis (varie selon sa distance), plafonnés à
   // une contenance de réservoir plausible (cette vue ne s'affiche que sans
   // optimisation des pleins, donc la vraie capacité est inconnue ici).
-  const capaciteMax = 50;
+  const capaciteMax = LITRES_PLEIN_MAX_DEFAUT;
   const contentWrap = document.createElement('div');
   contentWrap.className = 'arret-content';
 
