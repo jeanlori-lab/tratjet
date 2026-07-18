@@ -625,7 +625,6 @@
     .route-row .route-delta.ref { color: #90a4ae; font-weight: 600; }
     .route-row .route-radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #cfd8e0; flex-shrink: 0; }
     .route-row.sel .route-radio { border-color: #1976d2; background: radial-gradient(circle, #1976d2 45%, transparent 52%); }
-    .route-options-hint { font-size: 11px; color: #90a4ae; margin: -6px 0 12px; }
 
     /* Préconisations par tronçon (trajets à étapes) : pour chaque tronçon à
        péages, ce que coûterait/rapporterait de passer sans péage. */
@@ -1375,8 +1374,53 @@
       transition: background 0.15s;
     }
     .maps-link:hover { background: #bbdefb; }
-    #wazeLink:hover { background: #cfe3fb !important; }
     #vinciLink:hover { background: #cce8cc !important; }
+
+    /* Navigation Maps/Waze : rattachée au récap des itinéraires, pas en bas
+       de page. Waze masqué via JS dès qu'il y a une étape (son lien ne gère
+       qu'une destination, jamais de points de passage). */
+    .route-nav-row { display: none; justify-content: flex-end; gap: 6px; margin: 7px 0 20px; padding-top: 7px; border-top: 1px solid #dbe7f5; }
+    .route-nav-row.show { display: flex; }
+    .nav-icon-btn {
+      height: 24px; padding: 0 9px;
+      background: #fff;
+      border: 1.5px solid #bcd3ef;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      box-shadow: 0 1px 2px rgba(15,23,41,0.06);
+      transition: border-color 0.15s, transform 0.1s, background 0.15s;
+      font-family: inherit; font-size: 10.5px; font-weight: 700; color: #1976d2;
+    }
+    .nav-icon-btn:hover { border-color: #1976d2; background: #eaf3ff; }
+    .nav-icon-btn:active { transform: scale(0.95); }
+    .nav-icon-btn img { display: block; object-fit: contain; }
+    .nav-icon-btn.maps img { width: 12px; height: 12px; }
+    .nav-icon-btn.waze img { width: 14px; height: 14px; }
+
+    /* Choix avec/sans péages au clic sur Maps ou Waze, uniquement quand les
+       deux itinéraires existent réellement (sinon rien à choisir). */
+    .nav-choice-overlay {
+      display: none; position: fixed; inset: 0; z-index: 50;
+      background: rgba(15,23,41,0.4);
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .nav-choice-overlay.show { display: flex; }
+    .nav-choice-modal { background: #fff; border-radius: 16px; padding: 20px; width: 100%; max-width: 320px; box-shadow: 0 12px 32px rgba(15,23,41,0.25); }
+    .nav-choice-title { font-size: 14px; font-weight: 800; color: #1a2433; margin-bottom: 14px; text-align: center; }
+    .nav-choice-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 12px; margin-bottom: 8px;
+      border: 1.5px solid #dbe7f5; border-radius: 12px; background: #f5f8fb;
+      font-family: inherit; font-size: 13px; font-weight: 700; color: #1a2433;
+      cursor: pointer; transition: border-color 0.15s, background 0.15s;
+    }
+    .nav-choice-btn:hover { border-color: #1976d2; background: #eaf3ff; }
+    .nav-choice-cancel {
+      display: block; width: 100%; padding: 8px; margin-top: 4px;
+      border: none; background: none; font-family: inherit; font-size: 12px;
+      font-weight: 600; color: #90a4ae; cursor: pointer;
+    }
   </style>
   <!-- PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1553,7 +1597,12 @@
     <div class="card-title">Résultats</div>
     <!-- Comparateur des itinéraires Péages / Sans péages (rempli par renderRouteOptions) -->
     <div class="route-options" id="routeOptions"></div>
-    <div class="route-options-hint" id="routeOptionsHint" style="display:none;">Touchez un itinéraire pour voir son détail ci-dessous (coûts, stations sur le trajet…)</div>
+    <!-- Navigation externe : rattachée au récap, pas en bas de page. Waze
+         masqué par JS dès qu'il y a une étape (voir applySelectedRoute). -->
+    <div class="route-nav-row" id="routeNavRow">
+      <button type="button" class="nav-icon-btn maps" onclick="ouvrirNavigation('maps')"><img src="logo maps.png" alt=""> Maps</button>
+      <button type="button" class="nav-icon-btn waze" id="navWazeBtn" onclick="ouvrirNavigation('waze')"><img src="logo waze.png" alt=""> Waze</button>
+    </div>
     <div class="ar-toggle">
       <button type="button" class="ar-toggle-btn active" data-mode="simple" onclick="setResultMode('simple')">Aller simple</button>
       <button type="button" class="ar-toggle-btn" data-mode="ar" onclick="setResultMode('ar')">Aller-retour</button>
@@ -1584,25 +1633,13 @@
     <!-- Préconisations par tronçon (trajets à étapes) : rempli en arrière-plan
          par analyserTronconsSansPeage() après l'affichage des résultats. -->
     <div class="leg-advice" id="legAdvice" style="display:none;"></div>
-    <div class="maps-wrap" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-    <a class="maps-link" id="mapsLink" href="#" target="_blank"
-       style="width:130px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;box-sizing:border-box;">
-        <img src="logo maps.png" alt="" style="width:18px;height:18px;object-fit:contain;">
-        Maps
-    </a>
-    <a class="maps-link" id="wazeLink" href="#" target="_blank"
-       style="width:130px !important;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;background:#eaf3ff;color:#1976d2;box-sizing:border-box;">
-        <img src="logo waze.png" alt="" style="width:26px;height:26px;object-fit:contain;">
-        Waze
-    </a>
-    <div style="flex-basis:100%;display:flex;justify-content:center;">
+    <div class="maps-wrap" style="display:flex;justify-content:center;">
       <a class="maps-link" id="vinciLink" href="#" target="_blank"
          style="width:220px !important;height:38px;display:none;align-items:center;justify-content:center;gap:8px;background:#eef7ee;color:#2e7d32;box-sizing:border-box;">
           <img src="logo prix peages.png" alt="" style="width:18px;height:18px;object-fit:contain;">
           Voir le prix des péages
       </a>
     </div>
-</div>
     <div class="station-section-title" id="stationSectionTitle" style="display:none;">Où faire le plein</div>
     <div class="station-tabs" id="stationTabs" style="display:none;">
       <button type="button" class="station-tab-btn active" data-tab="trajet" onclick="setStationTab('trajet')">Sur le trajet</button>
@@ -1672,6 +1709,17 @@
       <p><strong>Péages</strong> : tarifs officiels des concessionnaires pour une voiture (classe 1), via Vinci Autoroutes (et ViaMichelin en secours). Quand aucun tarif n'est trouvé, on l'indique plutôt que d'inventer un chiffre.</p>
       <p><strong>Bornes électriques</strong> : base nationale IRVE (data.gouv.fr). Le prix de l'électricité est une estimation sur la base du tarif réglementé — la tarification réelle varie selon les bornes.</p>
       <p><strong>Limites</strong> : tous les montants sont des estimations. La consommation réelle dépend de la conduite, du chargement et de la météo ; le trafic n'est pas pris en compte dans les durées.</p>
+    </div>
+  </div>
+
+  <!-- Choix avec/sans péages au clic sur Maps ou Waze (seulement quand les
+       deux itinéraires existent réellement, voir ouvrirNavigation()). -->
+  <div class="nav-choice-overlay" id="navChoiceOverlay" onclick="if (event.target === this) fermerNavChoice()">
+    <div class="nav-choice-modal">
+      <div class="nav-choice-title">Avec ou sans péages ?</div>
+      <button type="button" class="nav-choice-btn" id="navChoiceAvec">🛣️ Avec péages</button>
+      <button type="button" class="nav-choice-btn" id="navChoiceSans">🆓 Sans péages</button>
+      <button type="button" class="nav-choice-cancel" onclick="fermerNavChoice()">Annuler</button>
     </div>
   </div>
 
@@ -4456,6 +4504,7 @@ function renderResultMode() {
 // Sélectionner une fiche bascule tout le détail en dessous (coûts, litres,
 // stations sur le trajet, lien Maps). ---
 let routeOptionsData = null;    // { rapide: {...}, zero?: {...} }
+let wazeUrlActuel = null;       // lien Waze vers la destination (identique quel que soit l'itinéraire choisi)
 let selectedRouteOption = 'rapide';
 
 const ROUTE_OPTION_META = {
@@ -4465,13 +4514,11 @@ const ROUTE_OPTION_META = {
 
 function renderRouteOptions() {
   const wrap = document.getElementById('routeOptions');
-  const hint = document.getElementById('routeOptionsHint');
   if (!wrap) return;
   wrap.textContent = '';
   const opts = routeOptionsData;
   const nbOptions = opts ? Object.keys(opts).length : 0;
   wrap.style.display = nbOptions >= 2 ? 'flex' : 'none';
-  hint.style.display = nbOptions >= 2 ? 'block' : 'none';
   if (nbOptions < 2) return;
 
   const f = resultMode === 'ar' ? 2 : 1;
@@ -4574,14 +4621,46 @@ function applySelectedRoute() {
   };
   renderResultMode();
 
-  if (o.mapsUrl) document.getElementById('mapsLink').href = o.mapsUrl;
-
   if (lastStationSurTrajet) {
     lastStationSurTrajet.polyline = o.polyline;
     lastStationSurTrajet.distKm = o.distA;
     rechercherStationSurTrajet(); // best-effort, asynchrone
   }
 }
+
+// --- Navigation externe (Maps/Waze) depuis le récap des itinéraires. Quand
+// les deux itinéraires (avec et sans péages) existent réellement, on
+// demande lequel utiliser avant d'ouvrir l'appli — sinon, rien à choisir,
+// on ouvre directement. Waze n'a qu'un seul lien possible (voir plus haut) :
+// le choix lui est quand même proposé par cohérence avec Maps, mais les
+// deux réponses ouvrent le même lien (Waze calcule sa propre route). ---
+let navChoiceCible = null; // 'maps' | 'waze'
+
+function ouvrirNavigation(cible) {
+  const opts = routeOptionsData;
+  if (!opts || !opts.rapide) return;
+  if (!opts.zero) { lancerNavigation(cible, 'rapide'); return; }
+  navChoiceCible = cible;
+  document.getElementById('navChoiceOverlay').classList.add('show');
+}
+
+function fermerNavChoice() {
+  document.getElementById('navChoiceOverlay').classList.remove('show');
+  navChoiceCible = null;
+}
+
+function lancerNavigation(cible, quelleRoute) {
+  if (cible === 'maps') {
+    const o = (routeOptionsData && routeOptionsData[quelleRoute]) || routeOptionsData.rapide;
+    if (o && o.mapsUrl) window.open(o.mapsUrl, '_blank');
+  } else if (wazeUrlActuel) {
+    window.open(wazeUrlActuel, '_blank');
+  }
+  fermerNavChoice();
+}
+
+document.getElementById('navChoiceAvec').addEventListener('click', () => lancerNavigation(navChoiceCible, 'rapide'));
+document.getElementById('navChoiceSans').addEventListener('click', () => lancerNavigation(navChoiceCible, 'zero'));
 
 // --- Préconisations par tronçon (trajets à étapes) : pour chaque tronçon,
 // compare l'itinéraire rapide (avec péages, prix Vinci sur son tracé) à
@@ -4760,8 +4839,17 @@ async function calculer() {
     selectedRouteOption = 'rapide';
 
     // Waze navigue toujours depuis la position GPS actuelle de l'appareil (il
-    // n'accepte pas de point de départ personnalisé) : seule la destination compte.
-    document.getElementById('wazeLink').href = `https://waze.com/ul?ll=${c2[1]},${c2[0]}&navigate=yes`;
+    // n'accepte pas de point de départ personnalisé, ni de points de
+    // passage) : seule la destination compte, et le lien est le même quel
+    // que soit l'itinéraire choisi (avec ou sans péages) — Waze calcule sa
+    // propre route. Mémorisé ici, utilisé par ouvrirNavigation() au clic.
+    wazeUrlActuel = `https://waze.com/ul?ll=${c2[1]},${c2[0]}&navigate=yes`;
+
+    // Rangée Maps/Waze : visible dès qu'un itinéraire est calculé ; Waze en
+    // plus masqué dès qu'il y a une étape (son lien ne gère qu'un point
+    // d'arrivée, jamais de points de passage intermédiaires).
+    document.getElementById('routeNavRow').classList.add('show');
+    document.getElementById('navWazeBtn').style.display = lieux.length > 2 ? 'none' : 'flex';
 
     // Station la moins chère à proximité du départ (best-effort, ne bloque rien).
     const carburantType = document.getElementById('carburant').value;
