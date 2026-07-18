@@ -3021,7 +3021,7 @@ async function rechercherStationMoinsChere() {
       const reservoirDepart = getReservoirInfo();
       const litresPlein = reservoirDepart
         ? reservoirDepart.capacite * (1 - reservoirDepart.niveau / 100)
-        : Math.min(lastResultData.litresA, LITRES_PLEIN_MAX_DEFAUT);
+        : LITRES_PLEIN_MAX_DEFAUT;
       const badge = buildEcoBadge(station.prix, litresPlein);
       if (badge) cheapestNote.appendChild(badge);
     }
@@ -3505,12 +3505,10 @@ async function rechercherStationSurTrajet() {
       }
     } else {
       // Réservoir non renseigné : comportement classique, station la moins
-      // chère sur tout le trajet. Plein plafonné à une taille de réservoir
-      // plausible (inconnue ici), jamais les litres de tout le trajet.
+      // chère sur tout le trajet. Économie affichée pour un plein de
+      // référence fixe (réservoir réel inconnu), pas les litres du trajet.
       station = await fetchStationSurTrajet(polyline, type, null);
-      if (station && lastResultData && isFinite(lastResultData.litresA)) {
-        litresPlein = Math.min(lastResultData.litresA, LITRES_PLEIN_MAX_DEFAUT);
-      }
+      if (station) litresPlein = LITRES_PLEIN_MAX_DEFAUT;
     }
   }
   note.classList.remove('loading');
