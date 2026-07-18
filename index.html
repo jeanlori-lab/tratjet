@@ -2929,7 +2929,7 @@ function buildStationDetail(station, type, lat, lon, big) {
     if (!isNaN(dte)) {
       const src = document.createElement('span');
       src.className = 'src-note';
-      src.textContent = ' · relevé le ' + dte.toLocaleDateString('fr-FR', { day: 'numeric', month: 'numeric' });
+      src.textContent = ' · relevé le ' + dte.toLocaleDateString('fr-FR', { day: 'numeric', month: 'numeric', year: 'numeric' });
       detail.appendChild(src);
     }
   }
