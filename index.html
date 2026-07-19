@@ -4553,6 +4553,57 @@ async function analyserTronconsSansPeage(coords, lieux, apiKey, conso) {
   bloc.appendChild(note);
 }
 
+// --- Même verdict de rentabilité, pour un trajet simple (départ → arrivée
+// sans étape) : les deux itinéraires (rapide et zéro péage) et le prix du
+// péage sont déjà calculés dans calculer(), pas besoin de requête
+// supplémentaire ni de découpage par tronçon. ---
+function afficherRentabiliteSimple(routeRapide, routeZero, coutPeage, conso, depart, arrivee) {
+  const bloc = document.getElementById('legAdvice');
+  const memeTrace = (a, b) => Math.abs(a.distanceKm - b.distanceKm) < 1 && Math.abs(a.dureeSec - b.dureeSec) < 90;
+  if (!routeZero || memeTrace(routeZero, routeRapide) || typeof coutPeage !== 'number' || coutPeage <= 0) {
+    bloc.style.display = 'none';
+    return;
+  }
+  const surcoutCarb = (routeZero.distanceKm - routeRapide.distanceKm) * conso / 100 * (prixActuel || 0);
+  const economie = coutPeage - surcoutCarb;
+  if (economie <= 0.5) { bloc.style.display = 'none'; return; }
+  const detourSec = Math.max(0, routeZero.dureeSec - routeRapide.dureeSec);
+  const eurParH = detourSec >= 60 ? economie / (detourSec / 3600) : Infinity;
+  // Seuls les évitements vraiment rentables sont proposés (même seuil que
+  // par tronçon) : pas la peine de suggérer un détour qu'on déconseille.
+  if (eurParH < SEUIL_RENTABLE_EUR_PAR_H) { bloc.style.display = 'none'; return; }
+
+  bloc.style.display = 'block';
+  bloc.innerHTML = '<div class="leg-advice-title">Éviter le péage ?</div>';
+  const row = document.createElement('div');
+  row.className = 'leg-advice-row';
+  const mid = document.createElement('span');
+  mid.className = 'leg-mid';
+  const noms = document.createElement('span');
+  noms.className = 'leg-noms';
+  noms.textContent = (depart || '').split(',')[0].trim() + ' → ' + (arrivee || '').split(',')[0].trim();
+  mid.appendChild(noms);
+  const detail = document.createElement('span');
+  detail.className = 'leg-detail';
+  const detourTxt = detourSec >= 60 ? '+' + formatDuree(detourSec) + ' pour ' : 'quasiment sans détour, ';
+  const strong = document.createElement('strong');
+  strong.textContent = fmtEur(economie) + ' économisés';
+  detail.appendChild(document.createTextNode('Sans péage : ' + detourTxt));
+  detail.appendChild(strong);
+  mid.appendChild(detail);
+  row.appendChild(mid);
+  const badge = document.createElement('span');
+  badge.className = 'leg-badge ok';
+  badge.textContent = '👍 Rentable';
+  row.appendChild(badge);
+  bloc.appendChild(row);
+
+  const note = document.createElement('div');
+  note.className = 'leg-advice-note';
+  note.textContent = 'Rentable = au moins ' + SEUIL_RENTABLE_EUR_PAR_H + ' € économisés par heure de détour (péage évité moins le carburant du détour).';
+  bloc.appendChild(note);
+}
+
 async function calculer() {
   hideError();
   const apiKey  = document.getElementById('apiKey').value.trim();
@@ -4673,9 +4724,15 @@ async function calculer() {
     setStationTab(carburantType === 'electrique' || multiEtapes ? 'depart' : 'trajet');
     await rechercherStationMoinsChere();
 
-    // Trajet à étapes : analyse par tronçon en arrière-plan (le bloc affiche
-    // son indicateur de chargement puis se remplit tout seul).
-    analyserTronconsSansPeage(coords, lieux, apiKey, conso);
+    // Rentabilité d'éviter le péage : par tronçon pour un trajet à étapes
+    // (analyse en arrière-plan, le bloc affiche son indicateur de chargement
+    // puis se remplit tout seul) ; directement pour un trajet simple, les
+    // itinéraires étant déjà calculés ci-dessus (pas de requête en plus).
+    if (multiEtapes) {
+      analyserTronconsSansPeage(coords, lieux, apiKey, conso);
+    } else {
+      afficherRentabiliteSimple(routeRapide, routeZero, rapide.coutPeage, conso, depart, arrivee);
+    }
 
     document.getElementById('sectionResultats').style.display = 'block';
     document.getElementById('sectionResultats').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
