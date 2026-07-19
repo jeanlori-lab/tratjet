@@ -586,38 +586,6 @@
       background: #f5f9ff; border: 1.5px dashed #9dc2ee; padding: 3.5px 10px;
     }
     .saved-chip-add:hover { background: #e8f2ff; }
-    /* Bouton "Enregistrer ce véhicule", en bas du bloc carburant : mêmes
-       tons orangés que le bloc, pleine largeur, pointillés. */
-    .veh-save-btn {
-      display: flex; align-items: center; justify-content: center; gap: 7px;
-      flex-wrap: wrap; min-width: 0;
-      width: 100%; padding: 9px 6px; margin: 12px 0 8px;
-      background: #fff; border: 1.5px dashed #e2971a; border-radius: 12px;
-      color: #c9760a; font-size: 12.5px; font-weight: 700; cursor: pointer;
-      font-family: inherit; line-height: 1.3;
-      transition: background 0.15s;
-    }
-    .veh-save-btn:hover { background: #fff8ec; }
-    /* Signe "+" dessiné en CSS pur (deux barres superposées) plutôt qu'un
-       glyphe de police : le rendu d'un "+" texte n'est pas centré dans sa
-       boîte de caractère de façon identique sur toutes les plateformes
-       (décalage visible vers le haut sur certains systèmes), un tracé
-       géométrique garantit un centrage identique partout. */
-    .veh-save-plus {
-      position: relative;
-      display: inline-block;
-      width: 18px; height: 18px; border-radius: 50%; background: #e2971a;
-      flex-shrink: 0;
-    }
-    .veh-save-plus::before, .veh-save-plus::after {
-      content: '';
-      position: absolute; top: 50%; left: 50%;
-      background: #fff;
-      transform: translate(-50%, -50%);
-      border-radius: 1px;
-    }
-    .veh-save-plus::before { width: 8px; height: 1.6px; }
-    .veh-save-plus::after { width: 1.6px; height: 8px; }
     .save-form { display: none; align-items: center; gap: 6px; margin: 12px 0 8px; }
     .save-form.open { display: flex; }
     .save-form input { flex: 1; min-width: 0; }
@@ -1625,10 +1593,9 @@
 
     <!-- Enregistre le véhicule courant (carburant + conso + capacité du
          réservoir, jamais le niveau au départ) sous un nom : il apparaît
-         ensuite en puce dans "Mes véhicules" en haut du bloc. -->
-    <button type="button" class="veh-save-btn" id="vehSaveBtn" onclick="toggleVehForm(true)">
-      <span class="veh-save-plus"></span> Enregistrer ce véhicule
-    </button>
+         ensuite en puce dans "Mes véhicules" en haut du bloc. Même forme
+         que "Enregistrer ce trajet" (lien discret, pas un gros bouton). -->
+    <button type="button" class="link-btn" id="vehSaveBtn" onclick="toggleVehForm(true)">☆ Enregistrer ce véhicule</button>
     <div class="save-form" id="vehSaveForm">
       <input type="text" id="vehNom" placeholder="Nom du véhicule (ex : Clio)" maxlength="30" autocomplete="off">
       <button type="button" class="save-form-btn save-form-ok" onclick="confirmerVehicule()" aria-label="Enregistrer le véhicule">✓</button>
