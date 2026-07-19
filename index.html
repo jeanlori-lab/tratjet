@@ -172,35 +172,35 @@
     .reservoir-row { padding: 10px 0 8px; border-bottom-color: #eef2f6; border-bottom-width: 1px; }
     .niveau-label { font-size: 11px; font-weight: 600; color: #90a4ae; margin-bottom: 4px; }
     .niveau-label-depart { margin-top: 10px; }
-    .reservoir-hint { font-size: 10.5px; color: #b0bcc9; line-height: 1.4; margin-bottom: 8px; }
-    /* Seul titre du bloc : même police que les libellés Carburant /
-       Consommation (.param-label), forcé sur UNE ligne (taille fluide,
-       jamais de retour à la ligne, même sur petit écran) — mais plus
-       discret (poids et couleur réduits) qu'un réglage principal. */
-    .optim-title {
-      font-weight: 600; color: #90a4ae; line-height: 1.2;
-      font-size: clamp(11px, 3.6vw, 13px);
-      white-space: nowrap;
-      flex: 1;
-    }
+    /* Texte d'aide : masqué tant que l'optimisation est décochée (voir
+       setOptimPlein), pour ne pas peser sur l'état par défaut. Ne réapparaît
+       qu'une fois cochée, juste au-dessus des curseurs. */
+    .reservoir-hint { font-size: 10.5px; color: #b0bcc9; line-height: 1.4; margin-top: 8px; margin-bottom: 8px; display: none; }
+    .reservoir-hint.show { display: block; }
     .niveau-label strong { color: #1976d2; }
     .niveau-slider { width: 100%; accent-color: #1976d2; cursor: pointer; display: block; }
-    /* Interrupteur "optimisation des pleins" : centré verticalement avec le
-       titre sur la même ligne ; les curseurs restent toujours visibles, mais
-       estompés et inertes tant qu'il est décoché. */
-    .optim-switch-row { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
-    .optim-toggle {
-      position: relative; width: 44px; height: 26px; border-radius: 999px;
-      background: #cfd8e0; border: none; cursor: pointer; flex-shrink: 0;
-      transition: background 0.2s; padding: 0;
+    /* Case à cocher minimaliste (pas un gros interrupteur) : toute la ligne
+       est le bouton, pour un état décoché qui se fait discret parmi les
+       réglages du formulaire. */
+    .optim-switch-row {
+      display: flex; align-items: center; gap: 8px;
+      background: none; border: none; padding: 0; margin: 0; width: 100%;
+      cursor: pointer; font-family: inherit; text-align: left;
     }
-    .optim-toggle::after {
-      content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
-      border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-      transition: left 0.2s;
+    .optim-checkbox {
+      position: relative; width: 16px; height: 16px; border-radius: 5px;
+      border: 1.5px solid #cfd8e0; background: #fff; flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s;
     }
-    .optim-toggle.on { background: #1976d2; }
-    .optim-toggle.on::after { left: 21px; }
+    .optim-checkbox::after {
+      content: ''; position: absolute; left: 4px; top: 1px; width: 5px; height: 9px;
+      border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg);
+      opacity: 0; transition: opacity 0.1s;
+    }
+    .optim-switch-row.on .optim-checkbox { background: #1976d2; border-color: #1976d2; }
+    .optim-switch-row.on .optim-checkbox::after { opacity: 1; }
+    .optim-title { font-weight: 600; color: #90a4ae; font-size: 11.5px; line-height: 1.2; }
+    .optim-switch-row.on .optim-title { color: #455060; }
     .reservoir-inactive { display: none; }
     .cheapest-fuel-note { font-size: 12px; color: #607080; margin-top: 6px; line-height: 1.45; }
     /* Badge "économie" sous la station recommandée : ce qu'on gagne en y
@@ -487,8 +487,6 @@
       .section { padding: 6px 12px; }
       .param-row { flex-wrap: wrap; row-gap: 7px; }
       .param-label { width: auto; flex: none; font-size: 14px; }
-      /* Aligné sur .param-label mobile, mais rétrécit si besoin pour tenir sur une ligne. */
-      .optim-title { font-size: clamp(11px, 3.6vw, 13px); }
       .param-input { flex: 1 0 100%; }
       /* Étapes : pas de ligne de libellé (numéro en placeholder), encadré + ✕ sur une ligne */
       .is-stop .param-label { display: none; }
@@ -588,38 +586,6 @@
       background: #f5f9ff; border: 1.5px dashed #9dc2ee; padding: 3.5px 10px;
     }
     .saved-chip-add:hover { background: #e8f2ff; }
-    /* Bouton "Enregistrer ce véhicule", en bas du bloc carburant : mêmes
-       tons orangés que le bloc, pleine largeur, pointillés. */
-    .veh-save-btn {
-      display: flex; align-items: center; justify-content: center; gap: 7px;
-      flex-wrap: wrap; min-width: 0;
-      width: 100%; padding: 9px 6px; margin: 12px 0 8px;
-      background: #fff; border: 1.5px dashed #e2971a; border-radius: 12px;
-      color: #c9760a; font-size: 12.5px; font-weight: 700; cursor: pointer;
-      font-family: inherit; line-height: 1.3;
-      transition: background 0.15s;
-    }
-    .veh-save-btn:hover { background: #fff8ec; }
-    /* Signe "+" dessiné en CSS pur (deux barres superposées) plutôt qu'un
-       glyphe de police : le rendu d'un "+" texte n'est pas centré dans sa
-       boîte de caractère de façon identique sur toutes les plateformes
-       (décalage visible vers le haut sur certains systèmes), un tracé
-       géométrique garantit un centrage identique partout. */
-    .veh-save-plus {
-      position: relative;
-      display: inline-block;
-      width: 18px; height: 18px; border-radius: 50%; background: #e2971a;
-      flex-shrink: 0;
-    }
-    .veh-save-plus::before, .veh-save-plus::after {
-      content: '';
-      position: absolute; top: 50%; left: 50%;
-      background: #fff;
-      transform: translate(-50%, -50%);
-      border-radius: 1px;
-    }
-    .veh-save-plus::before { width: 8px; height: 1.6px; }
-    .veh-save-plus::after { width: 1.6px; height: 8px; }
     .save-form { display: none; align-items: center; gap: 6px; margin: 12px 0 8px; }
     .save-form.open { display: flex; }
     .save-form input { flex: 1; min-width: 0; }
@@ -1611,11 +1577,11 @@
          .reservoir-row) pour ne pas peser sur le formulaire. -->
     <div class="param-row reservoir-row" id="reservoirBloc">
       <div class="param-input">
-        <div class="optim-switch-row">
-          <div class="optim-title">Optionnel : optimisation des pleins</div>
-          <button type="button" class="optim-toggle" id="optimToggle" role="switch" aria-checked="false" aria-label="Activer l'optimisation des pleins" onclick="setOptimPlein(!optimPleinActive)"></button>
-        </div>
-        <div class="reservoir-hint">On vous trouve la station la moins chère sur votre trajet, à l'endroit où il vous restera 10 à 20 % de carburant.</div>
+        <button type="button" class="optim-switch-row" id="optimToggle" role="checkbox" aria-checked="false" onclick="setOptimPlein(!optimPleinActive)">
+          <span class="optim-checkbox"></span>
+          <span class="optim-title">Optimiser mes pleins sur ce trajet</span>
+        </button>
+        <div class="reservoir-hint" id="reservoirHint">On vous trouve la station la moins chère sur votre trajet, à l'endroit où il vous restera 10 à 20 % de carburant.</div>
         <div id="reservoirPanel" class="reservoir-inactive">
           <div class="niveau-label">Contenance du réservoir : <strong id="reservoirCapaciteVal">50 L</strong></div>
           <input type="range" id="reservoirCapacite" class="niveau-slider" min="25" max="120" step="5" value="50" disabled aria-label="Contenance du réservoir en litres">
@@ -1627,10 +1593,9 @@
 
     <!-- Enregistre le véhicule courant (carburant + conso + capacité du
          réservoir, jamais le niveau au départ) sous un nom : il apparaît
-         ensuite en puce dans "Mes véhicules" en haut du bloc. -->
-    <button type="button" class="veh-save-btn" id="vehSaveBtn" onclick="toggleVehForm(true)">
-      <span class="veh-save-plus"></span> Enregistrer ce véhicule
-    </button>
+         ensuite en puce dans "Mes véhicules" en haut du bloc. Même forme
+         que "Enregistrer ce trajet" (lien discret, pas un gros bouton). -->
+    <button type="button" class="link-btn" id="vehSaveBtn" style="display:block;margin-left:auto;" onclick="toggleVehForm(true)">☆ Enregistrer ce véhicule</button>
     <div class="save-form" id="vehSaveForm">
       <input type="text" id="vehNom" placeholder="Nom du véhicule (ex : Clio)" maxlength="30" autocomplete="off">
       <button type="button" class="save-form-btn save-form-ok" onclick="confirmerVehicule()" aria-label="Enregistrer le véhicule">✓</button>
@@ -2717,7 +2682,9 @@ function setOptimPlein(on) {
   const toggle = document.getElementById('optimToggle');
   toggle.classList.toggle('on', on);
   toggle.setAttribute('aria-checked', on ? 'true' : 'false');
-  // Curseurs toujours visibles : estompés et inertes quand c'est décoché.
+  // Texte d'aide et curseurs masqués tant que c'est décoché : pas la peine
+  // d'expliquer un réglage qui n'est pas actif.
+  document.getElementById('reservoirHint').classList.toggle('show', on);
   document.getElementById('reservoirPanel').classList.toggle('reservoir-inactive', !on);
   document.getElementById('reservoirCapacite').disabled = !on;
   document.getElementById('niveauDepart').disabled = !on;
