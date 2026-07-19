@@ -638,34 +638,36 @@
        résultats, affiché seulement quand pertinent : une ligne par option,
        la sélection change tout le détail en dessous (coûts, litres,
        stations, liens Maps). */
-    .route-options { display: none; flex-direction: column; gap: 7px; margin-bottom: 14px; }
+    /* Variante B : les deux itinéraires comparés côte à côte façon "match",
+       pour juger l'écart d'un seul coup d'œil sans avoir à lire deux fiches
+       empilées. Le radio de sélection cède la place à la bordure/couleur
+       (pas la place pour les deux dans une colonne étroite). */
+    .route-options { display: none; flex-direction: row; gap: 8px; margin-bottom: 14px; align-items: stretch; }
     .route-row {
-      display: flex; flex-direction: column;
-      border: 1.5px solid #e3eaf3; border-radius: 13px; padding: 9px 12px;
-      cursor: pointer; background: #fff; font-family: inherit; text-align: left;
+      display: flex; flex-direction: column; flex: 1; min-width: 0;
+      border: 1.5px solid #e3eaf3; border-radius: 13px; padding: 12px 10px;
+      cursor: pointer; background: #fff; font-family: inherit; text-align: center;
       transition: border-color 0.15s, background 0.15s;
-      width: 100%;
     }
-    .route-row.sel { border-color: #1976d2; border-width: 2px; padding: 8.5px 11.5px; background: #f4f9ff; box-shadow: 0 4px 12px rgba(25,118,210,0.14); }
-    .route-row-top { display: flex; align-items: center; gap: 10px; width: 100%; }
+    .route-row.sel { border-color: #1976d2; border-width: 2px; padding: 11.5px 9.5px; background: linear-gradient(180deg, #f4f9ff, #fff); box-shadow: 0 4px 12px rgba(25,118,210,0.14); }
+    .route-row-top { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; }
     .route-row .route-ico { font-size: 17px; flex-shrink: 0; }
-    .route-row .route-mid { flex: 1; min-width: 0; }
-    .route-row .route-nom { font-size: 12px; font-weight: 800; color: #455060; }
+    .route-row .route-mid { min-width: 0; display: flex; flex-direction: column; align-items: center; order: 2; margin-top: 6px; }
+    .route-row .route-nom { font-size: 11px; font-weight: 800; color: #455060; text-transform: uppercase; letter-spacing: 0.03em; }
     .route-row.sel .route-nom { color: #1565c0; }
-    .route-row .route-infos { font-size: 10.5px; color: #90a4ae; font-weight: 600; margin-top: 1px; }
-    .route-row .route-right { text-align: right; flex-shrink: 0; }
-    .route-row .route-prix { font-size: 16px; font-weight: 900; color: #1a2433; }
-    .route-row.sel .route-prix { color: #1565c0; }
-    .route-row .route-delta { font-size: 9.5px; font-weight: 700; }
+    .route-row .route-infos { font-size: 10px; color: #90a4ae; font-weight: 600; margin-top: 2px; }
+    .route-row .route-right { order: 1; text-align: center; flex-shrink: 0; }
+    .route-row .route-prix { font-size: 22px; font-weight: 900; color: #1a2433; }
+    .route-row.sel .route-prix { color: #1565c0; font-size: 25px; }
+    .route-row .route-delta { font-size: 10px; font-weight: 700; display: block; margin-top: 2px; }
     .route-row .route-delta.eco { color: #2e7d32; }
     .route-row .route-delta.plus { color: #c77700; }
     .route-row .route-delta.ref { color: #90a4ae; font-weight: 600; }
-    .route-row .route-radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #cfd8e0; flex-shrink: 0; }
-    .route-row.sel .route-radio { border-color: #1976d2; background: radial-gradient(circle, #1976d2 45%, transparent 52%); }
+    .route-row .route-radio { display: none; }
     /* Boutons Maps/Waze intégrés dans la fiche de l'itinéraire sélectionné
        (sous le prix), plutôt qu'en rangée flottante séparée : ils suivent
        ainsi naturellement l'itinéraire choisi. */
-    .route-nav-inline { display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #dbe7f5; justify-content: flex-end; }
+    .route-nav-inline { display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #dbe7f5; justify-content: center; flex-wrap: wrap; }
     .route-nav-inline .nav-icon-btn { height: 22px; padding: 0 8px; font-size: 10px; }
 
     /* Préconisations par tronçon (trajets à étapes) : pour chaque tronçon à
