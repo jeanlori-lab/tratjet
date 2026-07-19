@@ -549,9 +549,12 @@
     }
     .saved-chip:hover { background: #bbdefb; }
     /* Trajet/véhicule actuellement appliqué : ressort par rapport aux
-       autres chips, redevient normal dès qu'un paramètre change (voir
+       autres chips (fond plein foncé, plus seulement l'opacité qui était
+       trop subtile), redevient normal dès qu'un paramètre change (voir
        resetResultat()). */
-    .saved-chip.selected { opacity: 1; }
+    .saved-chip.selected { opacity: 1; background: #1976d2; color: #fff; }
+    .saved-chip.selected .saved-chip-x { color: #cfe3fb; }
+    .saved-chip.selected .saved-chip-x:hover { color: #fff; }
     .saved-chip .chip-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .saved-chip-x { color: #90a4ae; font-weight: 700; padding: 0 2px; flex-shrink: 0; }
     .saved-chip-x:hover { color: #e53935; }
@@ -1137,6 +1140,19 @@
     /* Liste déroulante des tronçons (station la moins chère par tronçon,
        trajets à étapes) : volontairement différente des pastilles d'arrêt
        ci-dessus, pour ne pas laisser croire qu'il s'agit de la même chose. */
+    /* Bouton "voir par tronçon" (trajets à étapes) : plein et coloré (pas
+       en pointillés comme les autres CTA secondaires) pour bien se voir
+       comme un vrai bouton cliquable. */
+    .troncon-cta {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 12px 10px; margin-top: 14px;
+      background: linear-gradient(135deg, #43a047, #2e7d32); border: none; border-radius: 12px;
+      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+      font-family: inherit; line-height: 1.3;
+      box-shadow: 0 4px 12px rgba(46,125,50,0.3);
+    }
+    .troncon-cta:active { transform: scale(0.98); }
+    .troncon-cta-icon { font-size: 16px; }
     .troncon-select-wrap { position: relative; margin-bottom: 10px; }
     .troncon-select {
       display: block;
@@ -1635,6 +1651,14 @@
     </div>
     <div class="cheapest-note" id="cheapestNote" style="display:none;"></div>
     <div class="cheapest-note" id="cheapestNoteTrajet" style="display:none;"></div>
+    <!-- Trajet à étapes : bouton optionnel pour calculer la station la moins
+         chère de chaque tronçon (coûteux en requêtes, donc pas automatique
+         contrairement à "près du départ"). -->
+    <button type="button" class="troncon-cta" id="tronconCtaBtn" style="display:none;" onclick="calculerStationsParTroncon()">
+      <span class="troncon-cta-icon">⛽</span>
+      Voir les stations les moins chères, tronçon par tronçon
+    </button>
+    <div class="cheapest-note" id="cheapestNoteTroncons" style="display:none;"></div>
   </div>
   </div>
 
@@ -2141,18 +2165,21 @@ function confirmerVehicule() {
   renderVehChips();
 }
 function appliquerVehicule(v, chip) {
+  // '#trajetChips' préservé partout : appliquer un véhicule ne doit pas
+  // effacer un trajet déjà mis en avant — les deux peuvent être actifs
+  // en même temps.
   const btn = document.querySelector(`#carbChoices .carb-choice[data-value="${v.type}"]`);
-  if (btn) setCarburant(v.type, btn);
+  if (btn) setCarburant(v.type, btn, '#trajetChips');
   // Après setCarburant : majUniteConso peut avoir remis une conso par défaut.
-  if (isFinite(v.conso)) consoSet(v.conso, true);
+  if (isFinite(v.conso)) consoSet(v.conso, '#trajetChips');
   if (v.capacite && v.type !== 'electrique') {
     const cap = document.getElementById('reservoirCapacite');
     cap.value = v.capacite;
     document.getElementById('reservoirCapaciteVal').textContent = Math.round(v.capacite) + ' L';
   }
-  resetResultat();
-  // Après resetResultat() (qui efface toute sélection précédente) : marque
-  // ce véhicule comme actuellement appliqué.
+  resetResultat('#trajetChips');
+  // Après resetResultat() (qui efface toute sélection précédente sauf le
+  // trajet) : marque ce véhicule comme actuellement appliqué.
   if (chip) chip.classList.add('selected');
 }
 
@@ -2200,13 +2227,16 @@ function confirmerTrajet() {
   renderTrajetChips();
 }
 function appliquerTrajet(t, chip) {
+  // '#vehChips' préservé : appliquer un trajet ne doit pas effacer un
+  // véhicule déjà mis en avant — voir le commentaire équivalent dans
+  // appliquerVehicule().
   const container = pointsEl();
   container.textContent = '';
   t.points.forEach(p => container.appendChild(makePointRow(p)));
   refreshPoints();
-  resetResultat();
-  // Après resetResultat() (qui efface toute sélection précédente) : marque
-  // ce trajet comme actuellement appliqué.
+  resetResultat('#vehChips');
+  // Après resetResultat() (qui efface toute sélection précédente sauf le
+  // véhicule) : marque ce trajet comme actuellement appliqué.
   if (chip) chip.classList.add('selected');
 }
 
@@ -2370,12 +2400,12 @@ let carburantTypePrecedent = null;
 // Choix du carburant par pastilles (remplace l'ancien menu déroulant) : met
 // à jour la valeur cachée + l'état visuel, puis déclenche les mêmes mises à
 // jour que l'ancien onchange du <select>.
-function setCarburant(value, btn) {
+function setCarburant(value, btn, keepScope) {
   document.getElementById('carburant').value = value;
   document.querySelectorAll('#carbChoices .carb-choice').forEach(b => b.classList.toggle('active', b === btn));
-  resetResultat();
+  resetResultat(keepScope);
   chargerPrix();
-  majUniteConso();
+  majUniteConso(keepScope);
 }
 function setCarburantStation(value, btn) {
   document.getElementById('carburantStation').value = value;
@@ -2391,7 +2421,7 @@ function setCarburantStation(value, btn) {
   document.getElementById('cheapestNoteStation').style.display = 'none';
 }
 
-function majUniteConso() {
+function majUniteConso(keepScope) {
   const type = document.getElementById('carburant').value;
   const electrique = type === 'electrique';
   const unitLabel = document.getElementById('consoUnitLabel');
@@ -2411,9 +2441,9 @@ function majUniteConso() {
 
   const etaitElectrique = carburantTypePrecedent === 'electrique';
   if (electrique && !etaitElectrique) {
-    consoSet(CONSO_ELECTRIQUE_DEFAUT, true);
+    consoSet(CONSO_ELECTRIQUE_DEFAUT, keepScope || true);
   } else if (!electrique && etaitElectrique) {
-    consoSet(CONSO_THERMIQUE_DEFAUT, true);
+    consoSet(CONSO_THERMIQUE_DEFAUT, keepScope || true);
   }
   carburantTypePrecedent = type;
 }
@@ -2425,13 +2455,21 @@ function setLoading(on) {
   document.getElementById('calcBtn').disabled = on;
   document.getElementById('calcBtnWrap').classList.toggle('loading', on); // fait rouler la voiture-rat au-dessus du bouton
 }
-function resetResultat() {
+// keepScope : sélecteur d'un groupe de chips (ex. '#vehChips') à laisser
+// tel quel — utilisé par appliquerVehicule/appliquerTrajet, qui appellent
+// resetResultat() pour masquer d'anciens résultats sans effacer la
+// sélection de l'AUTRE catégorie (on doit pouvoir avoir un trajet ET un
+// véhicule tous les deux mis en avant en même temps). Sans keepScope
+// (changement de n'importe quel autre paramètre), les deux catégories sont
+// réinitialisées : plus rien ne garantit alors qu'elles correspondent
+// encore à l'état actuel.
+function resetResultat(keepScope) {
   document.getElementById('sectionResultats').style.display = 'none';
   hideError();
-  // Un paramètre a changé : le trajet/véhicule éventuellement mis en avant
-  // (voir appliquerVehicule/appliquerTrajet) ne correspond plus forcément
-  // à l'état actuel, retour à l'affichage normal.
-  document.querySelectorAll('.saved-chip.selected').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.saved-chip.selected').forEach(c => {
+    if (keepScope && c.closest(keepScope)) return;
+    c.classList.remove('selected');
+  });
 }
 
 // Bascule principale : Coût carburant (trajet complet) / Station la moins
@@ -2505,7 +2543,7 @@ function consoSet(v, doReset) {
   }
   const slider = document.getElementById('consoRoulette');
   if (slider) slider.setAttribute('aria-valuenow', v);
-  if (doReset) resetResultat();
+  if (doReset) resetResultat(typeof doReset === 'string' ? doReset : undefined);
 }
 function consoInit() {
   const track = document.getElementById('rouletteTrack');
@@ -3002,6 +3040,8 @@ function setStationTab(tab) {
 function applyStationTabVisibility() {
   const noteDepart = document.getElementById('cheapestNote');
   const noteTrajet = document.getElementById('cheapestNoteTrajet');
+  const tronconBtn = document.getElementById('tronconCtaBtn');
+  const tronconNote = document.getElementById('cheapestNoteTroncons');
   // Trajet trop court : la section entière reste masquée, quel que soit
   // l'état des recherches (best-effort, lancées ou non en arrière-plan).
   if (typeof lastTripDistanceKm === 'number' && lastTripDistanceKm < TRAJET_MIN_KM_STATIONS) {
@@ -3009,6 +3049,8 @@ function applyStationTabVisibility() {
     document.getElementById('stationTabs').style.display = 'none';
     noteDepart.style.display = 'none';
     noteTrajet.style.display = 'none';
+    tronconBtn.style.display = 'none';
+    tronconNote.style.display = 'none';
     return;
   }
   if (noteDepart.dataset.ready === '1') noteDepart.style.display = currentStationTab === 'depart' ? 'block' : 'none';
@@ -3030,9 +3072,130 @@ function applyStationTabVisibility() {
     stationTitle.textContent = electrique ? 'Où recharger' : 'Où faire le plein';
     document.querySelector('.station-tab-btn[data-tab="trajet"]').style.display = '';
   }
+  // Bouton "voir par tronçon" : uniquement pour un trajet à étapes non
+  // électrique (pas de prix comparable entre bornes), une fois la station
+  // "près du départ" affichée ; il s'efface au profit du résultat une fois
+  // calculé (voir calculerStationsParTroncon()).
+  if (multiEtapes && !electrique && noteDepart.dataset.ready === '1') {
+    tronconBtn.style.display = tronconNote.dataset.ready === '1' ? 'none' : 'flex';
+  } else {
+    tronconBtn.style.display = 'none';
+    if (tronconNote.dataset.ready !== '1') tronconNote.style.display = 'none';
+  }
   // Les cartes Leaflet construites dans un onglet masqué ont une taille
   // nulle : recalcul dès que l'onglet devient visible.
   requestAnimationFrame(refreshStationMaps);
+}
+
+// --- Station la moins chère par tronçon (trajets à étapes), à la demande
+// (bouton) plutôt qu'automatique : une requête par tronçon (départ→étape,
+// étape→étape, étape→arrivée), donc potentiellement coûteux en appels sur
+// un trajet à beaucoup d'étapes. Les tronçons trop courts (<5 km, même
+// seuil que le masquage de la section stations) sont ignorés, ceux sans
+// station trouvée le sont aussi. ---
+async function calculerStationsParTroncon() {
+  const btn = document.getElementById('tronconCtaBtn');
+  const note = document.getElementById('cheapestNoteTroncons');
+  if (!lastStationSurTrajet) return;
+  const { coords, lieux, apiKey, type } = lastStationSurTrajet;
+  btn.disabled = true;
+  btn.textContent = 'Calcul en cours…';
+  note.classList.add('loading');
+  note.style.display = 'block';
+
+  const troncons = [];
+  for (let i = 0; i < coords.length - 1; i++) {
+    try {
+      const route = await getRoute([coords[i], coords[i + 1]], apiKey, false);
+      if (route.distanceKm < TRAJET_MIN_KM_STATIONS) continue;
+      const station = await fetchStationSurTrajet(route.polyline, type, null);
+      if (station) troncons.push({ depart: lieux[i], arrivee: lieux[i + 1], distKm: route.distanceKm, station });
+    } catch (e) { /* tronçon ignoré, best-effort */ }
+  }
+
+  note.classList.remove('loading');
+  note.textContent = '';
+  note.dataset.ready = '1';
+  btn.style.display = 'none';
+
+  if (!troncons.length) {
+    const empty = document.createElement('div');
+    empty.className = 'cheapest-empty';
+    empty.textContent = 'Aucune station trouvée à moins de ~5 min de la route sur les tronçons de ce trajet.';
+    note.appendChild(empty);
+    return;
+  }
+
+  const header = document.createElement('div');
+  header.className = 'cheapest-header';
+  const icon = document.createElement('span');
+  icon.className = 'cheapest-icon';
+  icon.textContent = '🐀';
+  header.appendChild(icon);
+  const title = document.createElement('span');
+  title.className = 'cheapest-title';
+  title.style.fontSize = '0.9em';
+  title.textContent = 'Station la moins chère par tronçon';
+  header.appendChild(title);
+  note.appendChild(header);
+
+  const contentWrap = document.createElement('div');
+  contentWrap.className = 'arret-content';
+
+  function renderContent(idx) {
+    contentWrap.textContent = '';
+    const t = troncons[idx];
+    const detail = buildStationDetail(t.station, type, null, null, false);
+    // La distance à la route doit apparaître avant la date de relevé (déjà
+    // ajoutée par buildStationDetail en tout dernier) : on l'insère juste
+    // avant, plutôt que de l'ajouter après coup en bout de ligne.
+    if (isFinite(t.station.distRoute)) {
+      const distNode = document.createTextNode(' (à ' + t.station.distRoute.toFixed(1) + ' km de la route)');
+      const dateSpan = detail.querySelector('.src-note');
+      if (dateSpan) detail.insertBefore(distNode, dateSpan); else detail.appendChild(distNode);
+    }
+    contentWrap.appendChild(detail);
+    const fn = document.createElement('div');
+    fn.className = 'cheapest-fuel-note';
+    fn.textContent = `Station la plus futée sur votre tronçon ${t.depart} → ${t.arrivee} (${fmtKm(t.distKm)}).`;
+    contentWrap.appendChild(fn);
+
+    // Économie pour un plein de référence fixe (réservoir réel inconnu ici,
+    // comme "près du départ" et "sur le trajet") : un plein plausible de
+    // 50 L.
+    const badge = buildEcoBadge(t.station.prix, LITRES_PLEIN_MAX_DEFAUT);
+    if (badge) contentWrap.appendChild(badge);
+
+    contentWrap.appendChild(buildStationMap(t.station.lat, t.station.lon));
+    const btnRow = document.createElement('div');
+    btnRow.className = 'cheapest-btn-row';
+    const link = document.createElement('a');
+    link.className = 'cheapest-link';
+    link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${encodeURIComponent(t.depart)}&destination=${encodeURIComponent(t.arrivee)}&waypoints=${t.station.lat},${t.station.lon}`;
+    link.target = '_blank';
+    link.textContent = '📍 Ajouter cette station à mon trajet';
+    btnRow.appendChild(link);
+    contentWrap.appendChild(btnRow);
+    refreshStationMaps();
+  }
+
+  if (troncons.length > 1) {
+    const wrap = document.createElement('div');
+    wrap.className = 'troncon-select-wrap';
+    const select = document.createElement('select');
+    select.className = 'troncon-select';
+    troncons.forEach((t, i) => {
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      opt.textContent = t.depart + ' → ' + t.arrivee;
+      select.appendChild(opt);
+    });
+    select.addEventListener('change', () => renderContent(parseInt(select.value, 10)));
+    wrap.appendChild(select);
+    note.appendChild(wrap);
+  }
+  note.appendChild(contentWrap);
+  renderContent(0);
 }
 
 async function rechercherStationMoinsChere() {
@@ -4565,19 +4728,21 @@ function lancerNavigation(cible, quelleRoute) {
 // détour qui reste raisonnable dans l'absolu : un rapport €/h élevé ne
 // suffit pas à justifier un détour de 2h30 que personne ne ferait vraiment.
 // Le plafond de détour est dégressif selon la durée du trajet de référence :
-// 35 % pour un trajet court (≤1h30), 20 % pour un trajet long (≥8h),
-// interpolé linéairement entre les deux — plus le trajet est long, plus un
-// détour donné pèse peu proportionnellement, mais on ne laisse jamais
-// dépasser 20 %.
+// 100 % en dessous d'1h (quasiment aucune limite sur un trajet très court),
+// puis 50 % à 1h pile jusqu'à 25 % pour un trajet long (≥8h), interpolé
+// linéairement entre les deux — plus le trajet est long, plus un détour
+// donné pèse peu proportionnellement, mais on ne laisse jamais dépasser
+// 25 %.
 // Lancé en arrière-plan après l'affichage des résultats, best-effort :
 // un tronçon indéterminable est simplement ignoré. ---
 const SEUIL_RENTABLE_EUR_PAR_H = 15;
-const DETOUR_PCT_COURT = 0.35; // trajet de référence ≤ 1h30
-const DETOUR_PCT_LONG = 0.20;  // trajet de référence ≥ 8h
-const DETOUR_REF_COURT_SEC = 90 * 60;
+const DETOUR_PCT_TRES_COURT = 1.00; // trajet de référence < 1h
+const DETOUR_PCT_COURT = 0.50;      // trajet de référence = 1h
+const DETOUR_PCT_LONG = 0.25;       // trajet de référence ≥ 8h
+const DETOUR_REF_COURT_SEC = 3600;
 const DETOUR_REF_LONG_SEC = 8 * 3600;
 function detourMaxPct(dureeRefSec) {
-  if (dureeRefSec <= DETOUR_REF_COURT_SEC) return DETOUR_PCT_COURT;
+  if (dureeRefSec < DETOUR_REF_COURT_SEC) return DETOUR_PCT_TRES_COURT;
   if (dureeRefSec >= DETOUR_REF_LONG_SEC) return DETOUR_PCT_LONG;
   const t = (dureeRefSec - DETOUR_REF_COURT_SEC) / (DETOUR_REF_LONG_SEC - DETOUR_REF_COURT_SEC);
   return DETOUR_PCT_COURT - t * (DETOUR_PCT_COURT - DETOUR_PCT_LONG);
@@ -4673,7 +4838,7 @@ async function analyserTronconsSansPeage(coords, lieux, apiKey, conso) {
   });
   const note = document.createElement('div');
   note.className = 'leg-advice-note';
-  note.textContent = 'Rentable = au moins ' + SEUIL_RENTABLE_EUR_PAR_H + ' € économisés par heure de détour (péage évité moins le carburant du détour), et un détour d\'au plus 20 à 35 % du temps de trajet selon sa durée. Valeurs en aller simple.';
+  note.textContent = 'Rentable = au moins ' + SEUIL_RENTABLE_EUR_PAR_H + ' € économisés par heure de détour (péage évité moins le carburant du détour), et un détour d\'au plus 25 à 50 % du temps de trajet selon sa durée. Valeurs en aller simple.';
   bloc.appendChild(note);
 }
 
@@ -4731,7 +4896,7 @@ function afficherRentabiliteSimple(routeRapide, routeZero, coutPeage, conso, dep
 
   const note = document.createElement('div');
   note.className = 'leg-advice-note';
-  note.textContent = 'Rentable = au moins ' + SEUIL_RENTABLE_EUR_PAR_H + ' € économisés par heure de détour (péage évité moins le carburant du détour), et un détour d\'au plus 20 à 35 % du temps de trajet selon sa durée.';
+  note.textContent = 'Rentable = au moins ' + SEUIL_RENTABLE_EUR_PAR_H + ' € économisés par heure de détour (péage évité moins le carburant du détour), et un détour d\'au plus 25 à 50 % du temps de trajet selon sa durée.';
   bloc.appendChild(note);
 }
 
@@ -4842,6 +5007,12 @@ async function calculer() {
     const carburantType = document.getElementById('carburant').value;
     lastStationSearch = { lat: c1[1], lon: c1[0], type: carburantType, rayon: STATION_RAYON_KM, depart, arrivee };
     lastStationSurTrajet = { polyline: rapide.polyline, type: carburantType, depart, arrivee, distKm: rapide.distA, conso, coords, lieux, apiKey };
+    // Nouveau trajet calculé : un éventuel résultat par tronçon d'un calcul
+    // précédent ne correspond plus à rien, et le bouton doit réapparaître.
+    const noteTroncons = document.getElementById('cheapestNoteTroncons');
+    noteTroncons.style.display = 'none';
+    noteTroncons.dataset.ready = '';
+    noteTroncons.textContent = '';
 
     // Affiche l'itinéraire sélectionné (rapide par défaut) : résultats,
     // fiches comparatives, lien Maps, et lance la recherche de stations.
