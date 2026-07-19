@@ -85,7 +85,7 @@
     .account-logout:hover { border-color: #c62828; color: #c62828; }
     .header h1 {
       font-family: 'Sora', 'Segoe UI', Arial, sans-serif;
-      font-size: 34px;
+      font-size: 26px;
       font-weight: 700;
       letter-spacing: -0.02em;
       display: inline-block;
@@ -99,13 +99,35 @@
       color: #e2971a;
       font-weight: 800;
     }
+    /* Intro réduite à une ligne : l'ancien paragraphe complet reste
+       accessible au clic ("En savoir plus"), replié par défaut pour ne
+       plus prendre de place à chaque visite. */
+    .header .tagline {
+      font-size: 12px;
+      color: #90a4ae;
+      margin-top: 4px;
+    }
+    .header .intro-toggle {
+      display: inline-block;
+      margin-top: 3px;
+      font-size: 11px;
+      color: #90a4ae;
+      text-decoration: underline;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: inherit;
+    }
     .header p {
-      font-size: 13px;
+      display: none;
+      font-size: 12.5px;
       color: #607080;
-      margin-top: 12px;
+      margin-top: 10px;
       line-height: 1.5;
       padding: 0 12px;
+      text-align: left;
     }
+    .header p.open { display: block; }
     .header p .intro-bonus { display: inline-block; margin-top: 4px; }
     .header p .intro-bonus-label { color: #e2971a; font-weight: 800; }
 
@@ -148,6 +170,12 @@
     .niveau-label { font-size: 12px; font-weight: 600; color: #607080; margin-bottom: 4px; }
     .niveau-label-depart { margin-top: 10px; }
     .reservoir-hint { font-size: 11px; color: #90a4ae; line-height: 1.4; margin-bottom: 8px; }
+    .advanced-toggle {
+      display: inline-block; margin-top: 10px;
+      font-size: 11.5px; color: #90a4ae; text-decoration: underline;
+      cursor: pointer; background: none; border: none; font-family: inherit;
+    }
+    .advanced-toggle:hover { color: #607080; }
     /* Seul titre du bloc : même police que les libellés Carburant /
        Consommation (.param-label), forcé sur UNE ligne (taille fluide,
        jamais de retour à la ligne, même sur petit écran). */
@@ -1457,6 +1485,8 @@
     <!-- Compte (Supabase) : bouton masqué tant que la config n'est pas renseignée -->
     <button type="button" class="account-btn" id="accountBtn" style="display:none;" onclick="toggleAccountCard()" aria-label="Mon compte">👤</button>
     <h1>T<span class="rat-emphasis">rat</span>jet</h1>
+    <div class="tagline">Carburant, péages, et la station la moins chère — en un calcul.</div>
+    <button type="button" class="intro-toggle" onclick="this.nextElementSibling.classList.toggle('open')">En savoir plus</button>
     <p>Entrez votre trajet, on s'occupe des calculs : carburant ou électricité, prix des péages, et comparaison avec l'itinéraire sans péages pour savoir s'il est rentable. <br><span class="intro-bonus"><span class="intro-bonus-label">En bonus</span> : la station la moins chère près de votre départ et sur votre trajet, et vos véhicules et trajets favoris synchronisés sur tous vos appareils !</span></p>
   </div>
 
@@ -1561,6 +1591,11 @@
       </div>
     </div>
 
+    <!-- Options avancées repliées par défaut (voir toggleAdvancedOptions) :
+         seule une minorité de trajets a besoin de caler précisément l'arrêt
+         carburant. -->
+    <button type="button" class="advanced-toggle" id="advancedToggle" onclick="toggleAdvancedOptions()">Options avancées (réservoir, optimisation des pleins) ▾</button>
+
     <!-- Réservoir + niveau au départ : servent à conseiller la station la
          moins chère au bon moment du trajet (onglet "Sur le trajet"), quand
          la jauge passera entre ~20 % et ~10 % restants. Bornes du curseur :
@@ -1568,7 +1603,7 @@
          Curseurs repliés tant que l'interrupteur est décoché (défaut) — seul
          le texte d'explication reste visible ; l'onglet "Sur le trajet"
          garde alors son comportement classique. -->
-    <div class="param-row reservoir-row" id="reservoirBloc">
+    <div class="param-row reservoir-row" id="reservoirBloc" style="display:none;">
       <div class="param-input">
         <div class="optim-switch-row">
           <div class="optim-title">Optionnel : optimisation des pleins</div>
@@ -1633,7 +1668,7 @@
           <span class="cost-chip-value" id="r-cout-peage">—</span>
         </div>
       </div>
-      <div class="res-row">
+      <div class="res-row" id="rCoutRow">
         <span class="res-label">Coût total</span>
         <span class="res-value res-value-big" id="r-cout">—</span>
       </div>
@@ -2429,6 +2464,25 @@ function setCarburantStation(value, btn) {
   document.getElementById('cheapestNoteStation').style.display = 'none';
 }
 
+// Options avancées (réservoir + optimisation des pleins) repliées par
+// défaut derrière un texte dépliable : elles ne concernent qu'une minorité
+// de trajets (calage précis de l'arrêt carburant), pas la peine de les
+// imposer à chaque visite.
+let advancedOptionsOpen = false;
+function updateReservoirBlocVisibility() {
+  const electrique = document.getElementById('carburant').value === 'electrique';
+  const bloc = document.getElementById('reservoirBloc');
+  const toggle = document.getElementById('advancedToggle');
+  if (toggle) toggle.style.display = electrique ? 'none' : 'inline-block';
+  if (bloc) bloc.style.display = (!electrique && advancedOptionsOpen) ? 'flex' : 'none';
+}
+function toggleAdvancedOptions() {
+  advancedOptionsOpen = !advancedOptionsOpen;
+  const toggle = document.getElementById('advancedToggle');
+  if (toggle) toggle.textContent = 'Options avancées (réservoir, optimisation des pleins) ' + (advancedOptionsOpen ? '▴' : '▾');
+  updateReservoirBlocVisibility();
+}
+
 function majUniteConso(keepScope) {
   const type = document.getElementById('carburant').value;
   const electrique = type === 'electrique';
@@ -2439,8 +2493,7 @@ function majUniteConso(keepScope) {
 
   // Réservoir en litres + recommandation d'arrêt : sans objet en électrique
   // (pas de prix comparable entre bornes, capacité en kWh).
-  const reservoirBloc = document.getElementById('reservoirBloc');
-  if (reservoirBloc) reservoirBloc.style.display = electrique ? 'none' : 'flex';
+  updateReservoirBlocVisibility();
 
   // Titre de la section stations des résultats : "faire le plein" n'a pas
   // de sens pour une voiture électrique.
@@ -4542,6 +4595,13 @@ function renderResultMode() {
 
   const rCout = document.getElementById('r-cout');
   rCout.textContent = fmtEur(coutTotalAffiche);
+  // Quand deux itinéraires sont comparés, la fiche sélectionnée affiche déjà
+  // ce même total en gros : pas la peine de le répéter une seconde fois
+  // juste en dessous. Ne reste alors que la répartition carburant/péages
+  // (chips) et les litres, qui eux ne sont montrés nulle part ailleurs.
+  const nbOptions = routeOptionsData ? Object.keys(routeOptionsData).length : 0;
+  const rCoutRow = document.getElementById('rCoutRow');
+  if (rCoutRow) rCoutRow.style.display = nbOptions >= 2 ? 'none' : 'flex';
 }
 
 // --- Comparateur des itinéraires : rapide (tout péage) et zéro péage,
