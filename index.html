@@ -2946,6 +2946,7 @@ function buildEcoBadge(prixStation, litres) {
   if (gain < 0.05) return null;
   const badge = document.createElement('div');
   badge.className = 'eco-badge';
+  badge.appendChild(document.createTextNode('💰'));
   const txt = document.createElement('span');
   const strong = document.createElement('strong');
   strong.textContent = '−' + fmtEur(gain);
@@ -3023,6 +3024,10 @@ async function rechercherStationMoinsChere() {
 
   const header = document.createElement('div');
   header.className = 'cheapest-header';
+  const icon = document.createElement('span');
+  icon.className = 'cheapest-icon';
+  icon.textContent = '🐀';
+  header.appendChild(icon);
   const title = document.createElement('span');
   title.className = 'cheapest-title';
   title.style.fontSize = '0.9em';
@@ -3282,10 +3287,10 @@ function renderArrets(note, arrets, type, depart, arrivee) {
       fn.textContent = a.customNote;
     } else if (a.urgent) {
       fn.textContent = idx === 0
-        ? 'Niveau très bas au départ : arrêt conseillé dès le début du trajet.'
-        : 'Niveau très bas à cette étape : arrêt conseillé au plus vite.';
+        ? '⚠️ Niveau très bas au départ : arrêt conseillé dès le début du trajet.'
+        : '⚠️ Niveau très bas à cette étape : arrêt conseillé au plus vite.';
     } else if (a.horsZone) {
-      fn.textContent = `Aucune station dans la zone idéale pour cet arrêt : un peu plus tôt sur le trajet, votre jauge sera de ~${a.pctArrivee} %.`;
+      fn.textContent = `⛽ Aucune station dans la zone idéale pour cet arrêt : un peu plus tôt sur le trajet, votre jauge sera de ~${a.pctArrivee} %.`;
     } else {
       fn.textContent = `Station la plus futée. À ce moment de votre trajet, votre réservoir sera de ~${a.pctArrivee} %.`;
     }
@@ -3302,7 +3307,7 @@ function renderArrets(note, arrets, type, depart, arrivee) {
     link.className = 'cheapest-link';
     link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${encodeURIComponent(depart)}&destination=${encodeURIComponent(arrivee)}&waypoints=${a.station.lat},${a.station.lon}`;
     link.target = '_blank';
-    link.textContent = 'Ajouter cette station à mon trajet';
+    link.textContent = '📍 Ajouter cette station à mon trajet';
     btnRow.appendChild(link);
     contentWrap.appendChild(btnRow);
 
@@ -3368,7 +3373,7 @@ async function rechercherStationSurTrajet() {
           litresPlein = reservoir.capacite * (1 - reservoir.niveau / 100);
           arrets = [{
             station, pctArrivee: null, urgent: false, horsZone: false, litresPlein,
-            customNote: `Pas d'arrêt indispensable : vous arriveriez avec ~${arriveePct} % de réservoir. Voici quand même la station la moins chère sur le trajet.`,
+            customNote: `⛽ Pas d'arrêt indispensable : vous arriveriez avec ~${arriveePct} % de réservoir. Voici quand même la station la moins chère sur le trajet.`,
           }];
         }
       }
@@ -3386,6 +3391,10 @@ async function rechercherStationSurTrajet() {
 
   const header = document.createElement('div');
   header.className = 'cheapest-header';
+  const icon = document.createElement('span');
+  icon.className = 'cheapest-icon';
+  icon.textContent = '🐀';
+  header.appendChild(icon);
   const title = document.createElement('span');
   title.className = 'cheapest-title';
   title.style.fontSize = '0.9em';
@@ -3421,7 +3430,7 @@ async function rechercherStationSurTrajet() {
     const destination = encodeURIComponent(arrivee);
     link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}&waypoints=${station.lat},${station.lon}`;
     link.target = '_blank';
-    link.textContent = 'Ajouter cette station à mon trajet';
+    link.textContent = '📍 Ajouter cette station à mon trajet';
     btnRow.appendChild(link);
     note.appendChild(btnRow);
   } else {
