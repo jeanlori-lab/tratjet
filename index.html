@@ -604,13 +604,14 @@
        stations, liens Maps). */
     .route-options { display: none; flex-direction: column; gap: 7px; margin-bottom: 14px; }
     .route-row {
-      display: flex; align-items: center; gap: 10px;
+      display: flex; flex-direction: column;
       border: 1.5px solid #e3eaf3; border-radius: 13px; padding: 9px 12px;
       cursor: pointer; background: #fff; font-family: inherit; text-align: left;
       transition: border-color 0.15s, background 0.15s;
       width: 100%;
     }
     .route-row.sel { border-color: #1976d2; border-width: 2px; padding: 8.5px 11.5px; background: #f4f9ff; box-shadow: 0 4px 12px rgba(25,118,210,0.14); }
+    .route-row-top { display: flex; align-items: center; gap: 10px; width: 100%; }
     .route-row .route-ico { font-size: 17px; flex-shrink: 0; }
     .route-row .route-mid { flex: 1; min-width: 0; }
     .route-row .route-nom { font-size: 12px; font-weight: 800; color: #455060; }
@@ -625,6 +626,11 @@
     .route-row .route-delta.ref { color: #90a4ae; font-weight: 600; }
     .route-row .route-radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #cfd8e0; flex-shrink: 0; }
     .route-row.sel .route-radio { border-color: #1976d2; background: radial-gradient(circle, #1976d2 45%, transparent 52%); }
+    /* Boutons Maps/Waze intégrés dans la fiche de l'itinéraire sélectionné
+       (sous le prix), plutôt qu'en rangée flottante séparée : ils suivent
+       ainsi naturellement l'itinéraire choisi. */
+    .route-nav-inline { display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #dbe7f5; justify-content: flex-end; }
+    .route-nav-inline .nav-icon-btn { height: 22px; padding: 0 8px; font-size: 10px; }
 
     /* Préconisations par tronçon (trajets à étapes) : pour chaque tronçon à
        péages, ce que coûterait/rapporterait de passer sans péage. */
@@ -1574,12 +1580,11 @@
     <div class="card-title">Résultats</div>
     <!-- Comparateur des itinéraires Péages / Sans péages (rempli par renderRouteOptions) -->
     <div class="route-options" id="routeOptions"></div>
-    <!-- Navigation externe : rattachée au récap, pas en bas de page. Waze
-         masqué par JS dès qu'il y a une étape (voir applySelectedRoute). -->
-    <div class="route-nav-row" id="routeNavRow">
-      <button type="button" class="nav-icon-btn maps" onclick="lancerNavigation('maps', selectedRouteOption)"><img src="logo maps.png" alt=""> Maps</button>
-      <button type="button" class="nav-icon-btn waze" id="navWazeBtn" onclick="lancerNavigation('waze', selectedRouteOption)"><img src="logo waze.png" alt=""> Waze</button>
-    </div>
+    <!-- Navigation externe (Maps/Waze) : intégrée dans la fiche de
+         l'itinéraire sélectionné quand il y en a plusieurs (voir
+         renderRouteOptions/buildNavInline) ; cette rangée ne sert que de
+         secours quand il n'y a qu'un seul itinéraire (pas de fiche). -->
+    <div class="route-nav-row" id="routeNavRow"></div>
     <div class="ar-toggle">
       <button type="button" class="ar-toggle-btn active" data-mode="simple" onclick="setResultMode('simple')">Aller simple</button>
       <button type="button" class="ar-toggle-btn" data-mode="ar" onclick="setResultMode('ar')">Aller-retour</button>
@@ -4341,6 +4346,7 @@ function renderResultMode() {
 // stations sur le trajet, lien Maps). ---
 let routeOptionsData = null;    // { rapide: {...}, zero?: {...} }
 let wazeUrlActuel = null;       // lien Waze vers la destination (identique quel que soit l'itinéraire choisi)
+let navWazeVisible = true;      // false pour un trajet à étapes (Waze ne gère pas les points de passage)
 let selectedRouteOption = 'rapide';
 
 const ROUTE_OPTION_META = {
@@ -4348,14 +4354,49 @@ const ROUTE_OPTION_META = {
   zero:   { nom: 'Sans péages', avoid: 'tolls' },
 };
 
+// Boutons Maps/Waze pour un itinéraire donné, intégrés dans sa fiche (sous
+// le prix) : ils suivent ainsi naturellement l'itinéraire choisi au lieu
+// d'être une rangée flottante séparée dont on ne sait plus trop à quoi elle
+// se rapporte une fois qu'il y a deux fiches à l'écran.
+function buildNavInline(routeKey) {
+  const nav = document.createElement('div');
+  nav.className = 'route-nav-inline';
+  const mapsBtn = document.createElement('button');
+  mapsBtn.type = 'button';
+  mapsBtn.className = 'nav-icon-btn maps';
+  mapsBtn.innerHTML = '<img src="logo maps.png" alt=""> Maps';
+  mapsBtn.addEventListener('click', (e) => { e.stopPropagation(); lancerNavigation('maps', routeKey); });
+  nav.appendChild(mapsBtn);
+  if (navWazeVisible) {
+    const wazeBtn = document.createElement('button');
+    wazeBtn.type = 'button';
+    wazeBtn.className = 'nav-icon-btn waze';
+    wazeBtn.innerHTML = '<img src="logo waze.png" alt=""> Waze';
+    wazeBtn.addEventListener('click', (e) => { e.stopPropagation(); lancerNavigation('waze', routeKey); });
+    nav.appendChild(wazeBtn);
+  }
+  return nav;
+}
+
 function renderRouteOptions() {
   const wrap = document.getElementById('routeOptions');
+  const fallback = document.getElementById('routeNavRow');
   if (!wrap) return;
   wrap.textContent = '';
   const opts = routeOptionsData;
   const nbOptions = opts ? Object.keys(opts).length : 0;
   wrap.style.display = nbOptions >= 2 ? 'flex' : 'none';
-  if (nbOptions < 2) return;
+  if (nbOptions < 2) {
+    // Un seul itinéraire : pas de fiche où intégrer Maps/Waze, on garde la
+    // rangée de secours sous le récap.
+    if (fallback) {
+      fallback.textContent = '';
+      if (opts) fallback.appendChild(buildNavInline(selectedRouteOption));
+      fallback.classList.toggle('show', !!opts);
+    }
+    return;
+  }
+  if (fallback) { fallback.classList.remove('show'); fallback.textContent = ''; }
 
   const f = resultMode === 'ar' ? 2 : 1;
   const ref = opts.rapide;
@@ -4366,10 +4407,17 @@ function renderRouteOptions() {
     const meta = ROUTE_OPTION_META[key];
     const total = o.coutA + (o.coutPeage || 0);
 
-    const row = document.createElement('button');
-    row.type = 'button';
+    const row = document.createElement('div');
     row.className = 'route-row' + (key === selectedRouteOption ? ' sel' : '');
+    row.setAttribute('role', 'button');
+    row.tabIndex = 0;
     row.addEventListener('click', () => selectRouteOption(key));
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectRouteOption(key); }
+    });
+
+    const top = document.createElement('div');
+    top.className = 'route-row-top';
 
     const mid = document.createElement('span');
     mid.className = 'route-mid';
@@ -4396,7 +4444,7 @@ function renderRouteOptions() {
       infos.textContent = tTxt + ' · ' + kTxt;
     }
     mid.appendChild(infos);
-    row.appendChild(mid);
+    top.appendChild(mid);
 
     const right = document.createElement('span');
     right.className = 'route-right';
@@ -4421,11 +4469,14 @@ function renderRouteOptions() {
       else { delta.className = 'route-delta ref'; delta.textContent = 'même prix'; }
     }
     right.appendChild(delta);
-    row.appendChild(right);
+    top.appendChild(right);
 
     const radio = document.createElement('span');
     radio.className = 'route-radio';
-    row.appendChild(radio);
+    top.appendChild(radio);
+
+    row.appendChild(top);
+    if (key === selectedRouteOption) row.appendChild(buildNavInline(key));
 
     wrap.appendChild(row);
   }
@@ -4706,12 +4757,11 @@ async function calculer() {
     // que soit l'itinéraire choisi (avec ou sans péages) — Waze calcule sa
     // propre route. Mémorisé ici, utilisé par ouvrirNavigation() au clic.
     wazeUrlActuel = `https://waze.com/ul?ll=${c2[1]},${c2[0]}&navigate=yes`;
-
-    // Rangée Maps/Waze : visible dès qu'un itinéraire est calculé ; Waze en
-    // plus masqué dès qu'il y a une étape (son lien ne gère qu'un point
-    // d'arrivée, jamais de points de passage intermédiaires).
-    document.getElementById('routeNavRow').classList.add('show');
-    document.getElementById('navWazeBtn').style.display = lieux.length > 2 ? 'none' : 'flex';
+    // Waze masqué dès qu'il y a une étape (son lien ne gère qu'un point
+    // d'arrivée, jamais de points de passage intermédiaires). Les boutons
+    // Maps/Waze eux-mêmes sont (re)construits par renderRouteOptions(),
+    // appelé plus bas via applySelectedRoute().
+    navWazeVisible = lieux.length <= 2;
 
     // Station la moins chère à proximité du départ (best-effort, ne bloque rien).
     const carburantType = document.getElementById('carburant').value;
