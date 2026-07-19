@@ -4565,19 +4565,21 @@ function lancerNavigation(cible, quelleRoute) {
 // détour qui reste raisonnable dans l'absolu : un rapport €/h élevé ne
 // suffit pas à justifier un détour de 2h30 que personne ne ferait vraiment.
 // Le plafond de détour est dégressif selon la durée du trajet de référence :
-// 35 % pour un trajet court (≤1h30), 20 % pour un trajet long (≥8h),
-// interpolé linéairement entre les deux — plus le trajet est long, plus un
-// détour donné pèse peu proportionnellement, mais on ne laisse jamais
-// dépasser 20 %.
+// 100 % en dessous d'1h (quasiment aucune limite sur un trajet très court),
+// puis 50 % à 1h pile jusqu'à 25 % pour un trajet long (≥8h), interpolé
+// linéairement entre les deux — plus le trajet est long, plus un détour
+// donné pèse peu proportionnellement, mais on ne laisse jamais dépasser
+// 25 %.
 // Lancé en arrière-plan après l'affichage des résultats, best-effort :
 // un tronçon indéterminable est simplement ignoré. ---
 const SEUIL_RENTABLE_EUR_PAR_H = 15;
-const DETOUR_PCT_COURT = 0.35; // trajet de référence ≤ 1h30
-const DETOUR_PCT_LONG = 0.20;  // trajet de référence ≥ 8h
-const DETOUR_REF_COURT_SEC = 90 * 60;
+const DETOUR_PCT_TRES_COURT = 1.00; // trajet de référence < 1h
+const DETOUR_PCT_COURT = 0.50;      // trajet de référence = 1h
+const DETOUR_PCT_LONG = 0.25;       // trajet de référence ≥ 8h
+const DETOUR_REF_COURT_SEC = 3600;
 const DETOUR_REF_LONG_SEC = 8 * 3600;
 function detourMaxPct(dureeRefSec) {
-  if (dureeRefSec <= DETOUR_REF_COURT_SEC) return DETOUR_PCT_COURT;
+  if (dureeRefSec < DETOUR_REF_COURT_SEC) return DETOUR_PCT_TRES_COURT;
   if (dureeRefSec >= DETOUR_REF_LONG_SEC) return DETOUR_PCT_LONG;
   const t = (dureeRefSec - DETOUR_REF_COURT_SEC) / (DETOUR_REF_LONG_SEC - DETOUR_REF_COURT_SEC);
   return DETOUR_PCT_COURT - t * (DETOUR_PCT_COURT - DETOUR_PCT_LONG);
@@ -4673,7 +4675,7 @@ async function analyserTronconsSansPeage(coords, lieux, apiKey, conso) {
   });
   const note = document.createElement('div');
   note.className = 'leg-advice-note';
-  note.textContent = 'Rentable = au moins ' + SEUIL_RENTABLE_EUR_PAR_H + ' € économisés par heure de détour (péage évité moins le carburant du détour), et un détour d\'au plus 20 à 35 % du temps de trajet selon sa durée. Valeurs en aller simple.';
+  note.textContent = 'Rentable = au moins ' + SEUIL_RENTABLE_EUR_PAR_H + ' € économisés par heure de détour (péage évité moins le carburant du détour), et un détour d\'au plus 25 à 50 % du temps de trajet selon sa durée. Valeurs en aller simple.';
   bloc.appendChild(note);
 }
 
@@ -4731,7 +4733,7 @@ function afficherRentabiliteSimple(routeRapide, routeZero, coutPeage, conso, dep
 
   const note = document.createElement('div');
   note.className = 'leg-advice-note';
-  note.textContent = 'Rentable = au moins ' + SEUIL_RENTABLE_EUR_PAR_H + ' € économisés par heure de détour (péage évité moins le carburant du détour), et un détour d\'au plus 20 à 35 % du temps de trajet selon sa durée.';
+  note.textContent = 'Rentable = au moins ' + SEUIL_RENTABLE_EUR_PAR_H + ' € économisés par heure de détour (péage évité moins le carburant du détour), et un détour d\'au plus 25 à 50 % du temps de trajet selon sa durée.';
   bloc.appendChild(note);
 }
 
