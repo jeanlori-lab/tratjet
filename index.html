@@ -175,7 +175,7 @@
     /* Texte d'aide : masqué tant que l'optimisation est décochée (voir
        setOptimPlein), pour ne pas peser sur l'état par défaut. Ne réapparaît
        qu'une fois cochée, juste au-dessus des curseurs. */
-    .reservoir-hint { font-size: 10.5px; color: #b0bcc9; line-height: 1.4; margin-bottom: 8px; display: none; }
+    .reservoir-hint { font-size: 10.5px; color: #b0bcc9; line-height: 1.4; margin-top: 8px; margin-bottom: 8px; display: none; }
     .reservoir-hint.show { display: block; }
     .niveau-label strong { color: #1976d2; }
     .niveau-slider { width: 100%; accent-color: #1976d2; cursor: pointer; display: block; }
@@ -1595,7 +1595,7 @@
          réservoir, jamais le niveau au départ) sous un nom : il apparaît
          ensuite en puce dans "Mes véhicules" en haut du bloc. Même forme
          que "Enregistrer ce trajet" (lien discret, pas un gros bouton). -->
-    <button type="button" class="link-btn" id="vehSaveBtn" onclick="toggleVehForm(true)">☆ Enregistrer ce véhicule</button>
+    <button type="button" class="link-btn" id="vehSaveBtn" style="display:block;margin-left:auto;" onclick="toggleVehForm(true)">☆ Enregistrer ce véhicule</button>
     <div class="save-form" id="vehSaveForm">
       <input type="text" id="vehNom" placeholder="Nom du véhicule (ex : Clio)" maxlength="30" autocomplete="off">
       <button type="button" class="save-form-btn save-form-ok" onclick="confirmerVehicule()" aria-label="Enregistrer le véhicule">✓</button>
