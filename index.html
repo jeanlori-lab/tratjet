@@ -165,23 +165,21 @@
     .point-row.shift-for-handles { margin-left: 8px; }
     /* Séparations plus marquées entre Carburant / Consommation / Réservoir : plus
        d'espace vertical et un trait un peu plus visible et plus long. */
-    .veh-row, .carburant-row, .conso-row, .reservoir-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
-    .reservoir-row { padding-bottom: 8px; }
-    .niveau-label { font-size: 12px; font-weight: 600; color: #607080; margin-bottom: 4px; }
+    .veh-row, .carburant-row, .conso-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
+    /* Plus discret que les autres lignes du formulaire (véhicule, carburant,
+       consommation) : une option secondaire n'a pas besoin du même poids
+       visuel qu'un réglage principal. */
+    .reservoir-row { padding: 10px 0 8px; border-bottom-color: #eef2f6; border-bottom-width: 1px; }
+    .niveau-label { font-size: 11px; font-weight: 600; color: #90a4ae; margin-bottom: 4px; }
     .niveau-label-depart { margin-top: 10px; }
-    .reservoir-hint { font-size: 11px; color: #90a4ae; line-height: 1.4; margin-bottom: 8px; }
-    .advanced-toggle {
-      display: inline-block; margin-top: 10px;
-      font-size: 11.5px; color: #90a4ae; text-decoration: underline;
-      cursor: pointer; background: none; border: none; font-family: inherit;
-    }
-    .advanced-toggle:hover { color: #607080; }
+    .reservoir-hint { font-size: 10.5px; color: #b0bcc9; line-height: 1.4; margin-bottom: 8px; }
     /* Seul titre du bloc : même police que les libellés Carburant /
        Consommation (.param-label), forcé sur UNE ligne (taille fluide,
-       jamais de retour à la ligne, même sur petit écran). */
+       jamais de retour à la ligne, même sur petit écran) — mais plus
+       discret (poids et couleur réduits) qu'un réglage principal. */
     .optim-title {
-      font-weight: 600; color: #455060; line-height: 1.2;
-      font-size: clamp(12px, 4vw, 15px);
+      font-weight: 600; color: #90a4ae; line-height: 1.2;
+      font-size: clamp(11px, 3.6vw, 13px);
       white-space: nowrap;
       flex: 1;
     }
@@ -490,7 +488,7 @@
       .param-row { flex-wrap: wrap; row-gap: 7px; }
       .param-label { width: auto; flex: none; font-size: 14px; }
       /* Aligné sur .param-label mobile, mais rétrécit si besoin pour tenir sur une ligne. */
-      .optim-title { font-size: clamp(12px, 4vw, 14px); }
+      .optim-title { font-size: clamp(11px, 3.6vw, 13px); }
       .param-input { flex: 1 0 100%; }
       /* Étapes : pas de ligne de libellé (numéro en placeholder), encadré + ✕ sur une ligne */
       .is-stop .param-label { display: none; }
@@ -661,8 +659,8 @@
     .route-row .route-mid { flex: 1; min-width: 0; }
     .route-row .route-nom { font-size: 12px; font-weight: 800; color: #455060; }
     .route-row.sel .route-nom { color: #1565c0; font-size: 13.5px; }
-    .route-row .route-infos { font-size: 10.5px; color: #90a4ae; font-weight: 600; margin-top: 1px; }
-    .route-row.sel .route-infos { font-size: 11.5px; margin-top: 3px; }
+    .route-row .route-infos { font-size: 11.5px; color: #90a4ae; font-weight: 600; margin-top: 1px; }
+    .route-row.sel .route-infos { font-size: 13px; margin-top: 3px; }
     .route-row .route-right { text-align: right; flex-shrink: 0; }
     .route-row .route-prix { font-size: 16px; font-weight: 900; color: #1a2433; }
     .route-row.sel .route-prix { color: #1565c0; font-size: 32px; }
@@ -1602,19 +1600,16 @@
       </div>
     </div>
 
-    <!-- Options avancées repliées par défaut (voir toggleAdvancedOptions) :
-         seule une minorité de trajets a besoin de caler précisément l'arrêt
-         carburant. -->
-    <button type="button" class="advanced-toggle" id="advancedToggle" onclick="toggleAdvancedOptions()">Options avancées (réservoir, optimisation des pleins) ▾</button>
-
     <!-- Réservoir + niveau au départ : servent à conseiller la station la
          moins chère au bon moment du trajet (onglet "Sur le trajet"), quand
          la jauge passera entre ~20 % et ~10 % restants. Bornes du curseur :
          ~25 L (petites citadines) à ~120 L (gros SUV / pick-up).
          Curseurs repliés tant que l'interrupteur est décoché (défaut) — seul
          le texte d'explication reste visible ; l'onglet "Sur le trajet"
-         garde alors son comportement classique. -->
-    <div class="param-row reservoir-row" id="reservoirBloc" style="display:none;">
+         garde alors son comportement classique. Toujours visible (pas
+         replié derrière un bouton), mais discret visuellement (voir
+         .reservoir-row) pour ne pas peser sur le formulaire. -->
+    <div class="param-row reservoir-row" id="reservoirBloc">
       <div class="param-input">
         <div class="optim-switch-row">
           <div class="optim-title">Optionnel : optimisation des pleins</div>
@@ -1654,6 +1649,10 @@
   <!-- Résultats -->
   <div class="card resultats" id="sectionResultats" style="margin-top:14px;">
     <div class="card-title">Résultats</div>
+    <div class="ar-toggle">
+      <button type="button" class="ar-toggle-btn active" data-mode="simple" onclick="setResultMode('simple')">Aller simple</button>
+      <button type="button" class="ar-toggle-btn" data-mode="ar" onclick="setResultMode('ar')">Aller-retour</button>
+    </div>
     <!-- Comparateur des itinéraires Péages / Sans péages (rempli par renderRouteOptions) -->
     <div class="route-options" id="routeOptions"></div>
     <!-- Navigation externe (Maps/Waze) : intégrée dans la fiche de
@@ -1661,11 +1660,12 @@
          renderRouteOptions/buildNavInline) ; cette rangée ne sert que de
          secours quand il n'y a qu'un seul itinéraire (pas de fiche). -->
     <div class="route-nav-row" id="routeNavRow"></div>
-    <div class="ar-toggle">
-      <button type="button" class="ar-toggle-btn active" data-mode="simple" onclick="setResultMode('simple')">Aller simple</button>
-      <button type="button" class="ar-toggle-btn" data-mode="ar" onclick="setResultMode('ar')">Aller-retour</button>
-    </div>
-    <div class="res-trajet-line"><strong id="r-dist">—</strong> · <strong id="r-duree">—</strong> <span class="src-note">hors trafic</span></div>
+    <!-- Distance/durée : visibles en plus gros directement dans les fiches
+         "Avec péages"/"Sans péages" (.route-infos) quand il y en a deux à
+         comparer. Cette ligne ne sert plus que de secours pour le cas d'un
+         seul itinéraire (pas de fiche pour porter cette info) — voir
+         renderResultMode(). -->
+    <div class="res-trajet-line" id="resTrajetLine" style="display:none;"><strong id="r-dist">—</strong> · <strong id="r-duree">—</strong> <span class="src-note">hors trafic</span></div>
 
     <div class="res-section-title">Coût & conso</div>
     <div class="section res-section">
@@ -2475,25 +2475,6 @@ function setCarburantStation(value, btn) {
   document.getElementById('cheapestNoteStation').style.display = 'none';
 }
 
-// Options avancées (réservoir + optimisation des pleins) repliées par
-// défaut derrière un texte dépliable : elles ne concernent qu'une minorité
-// de trajets (calage précis de l'arrêt carburant), pas la peine de les
-// imposer à chaque visite.
-let advancedOptionsOpen = false;
-function updateReservoirBlocVisibility() {
-  const electrique = document.getElementById('carburant').value === 'electrique';
-  const bloc = document.getElementById('reservoirBloc');
-  const toggle = document.getElementById('advancedToggle');
-  if (toggle) toggle.style.display = electrique ? 'none' : 'inline-block';
-  if (bloc) bloc.style.display = (!electrique && advancedOptionsOpen) ? 'flex' : 'none';
-}
-function toggleAdvancedOptions() {
-  advancedOptionsOpen = !advancedOptionsOpen;
-  const toggle = document.getElementById('advancedToggle');
-  if (toggle) toggle.textContent = 'Options avancées (réservoir, optimisation des pleins) ' + (advancedOptionsOpen ? '▴' : '▾');
-  updateReservoirBlocVisibility();
-}
-
 function majUniteConso(keepScope) {
   const type = document.getElementById('carburant').value;
   const electrique = type === 'electrique';
@@ -2504,7 +2485,8 @@ function majUniteConso(keepScope) {
 
   // Réservoir en litres + recommandation d'arrêt : sans objet en électrique
   // (pas de prix comparable entre bornes, capacité en kWh).
-  updateReservoirBlocVisibility();
+  const reservoirBloc = document.getElementById('reservoirBloc');
+  if (reservoirBloc) reservoirBloc.style.display = electrique ? 'none' : 'flex';
 
   // Titre de la section stations des résultats : "faire le plein" n'a pas
   // de sens pour une voiture électrique.
@@ -4613,6 +4595,10 @@ function renderResultMode() {
   const nbOptions = routeOptionsData ? Object.keys(routeOptionsData).length : 0;
   const rCoutRow = document.getElementById('rCoutRow');
   if (rCoutRow) rCoutRow.style.display = nbOptions >= 2 ? 'none' : 'flex';
+  // Distance/durée : idem, déjà visibles dans les fiches d'itinéraire dès
+  // qu'il y en a deux ; sert de secours sinon (pas de fiche pour les porter).
+  const resTrajetLine = document.getElementById('resTrajetLine');
+  if (resTrajetLine) resTrajetLine.style.display = nbOptions >= 2 ? 'none' : 'block';
 }
 
 // --- Comparateur des itinéraires : rapide (tout péage) et zéro péage,
