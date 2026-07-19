@@ -659,6 +659,7 @@
     }
     .leg-badge.ok { background: #e8f5e9; color: #2e7d32; }
     .leg-advice-note { font-size: 10.5px; color: #90a4ae; margin-top: 7px; line-height: 1.4; }
+    .leg-advice-empty { font-size: 12.5px; color: #90a4ae; font-style: italic; }
     .points-wrap { position: relative; }
 
     /* Flèches d'inversion : à droite, chevauchent le coin des encadrés, discrètes */
@@ -4577,6 +4578,7 @@ async function analyserTronconsSansPeage(coords, lieux, apiKey, conso) {
 
   const memeTrace = (a, b) => Math.abs(a.distanceKm - b.distanceKm) < 1 && Math.abs(a.dureeSec - b.dureeSec) < 90;
   const rows = [];
+  let unPeageDetecte = false; // au moins un tronçon avait un péage chiffrable (même si finalement pas rentable)
   // Tronçons analysés l'un après l'autre (pas en parallèle) pour rester
   // gentil avec les quotas du routeur.
   for (let i = 0; i < coords.length - 1; i++) {
@@ -4591,6 +4593,7 @@ async function analyserTronconsSansPeage(coords, lieux, apiKey, conso) {
       const peage = await getTollsVinci(rapide).catch(() => null);
       if (runId !== legAdviceRunId) return;
       if (!peage || typeof peage.cost !== 'number' || peage.cost <= 0) continue;
+      unPeageDetecte = true;
       // Économie nette : péage évité moins le carburant du détour.
       const surcoutCarb = (zero.distanceKm - rapide.distanceKm) * conso / 100 * (prixActuel || 0);
       const economie = peage.cost - surcoutCarb;
@@ -4613,7 +4616,18 @@ async function analyserTronconsSansPeage(coords, lieux, apiKey, conso) {
   }
   if (runId !== legAdviceRunId) return;
 
-  if (!rows.length) { bloc.style.display = 'none'; return; }
+  if (!rows.length) {
+    // Au moins un tronçon avait un péage, mais aucun n'est assez rentable :
+    // on le dit plutôt que de masquer tout le bloc (silence ambigu entre
+    // "pas de péage sur ce trajet" et "péage(s) mais pas rentable à éviter").
+    if (unPeageDetecte) {
+      bloc.innerHTML = '<div class="leg-advice-title">Éviter les péages, tronçon par tronçon ?</div>'
+        + '<div class="leg-advice-empty">Éviter le(s) péage(s) ferait perdre plus de temps que d\'argent économisé sur ce trajet.</div>';
+    } else {
+      bloc.style.display = 'none';
+    }
+    return;
+  }
   bloc.innerHTML = '<div class="leg-advice-title">Éviter les péages, tronçon par tronçon ?</div>';
   rows.forEach(r => {
     const row = document.createElement('div');
@@ -4658,15 +4672,19 @@ function afficherRentabiliteSimple(routeRapide, routeZero, coutPeage, conso, dep
   }
   const surcoutCarb = (routeZero.distanceKm - routeRapide.distanceKm) * conso / 100 * (prixActuel || 0);
   const economie = coutPeage - surcoutCarb;
-  if (economie <= 0.5) { bloc.style.display = 'none'; return; }
   const detourSec = Math.max(0, routeZero.dureeSec - routeRapide.dureeSec);
   const eurParH = detourSec >= 60 ? economie / (detourSec / 3600) : Infinity;
-  // Seuls les évitements vraiment rentables sont proposés (même seuil que
-  // par tronçon) : pas la peine de suggérer un détour qu'on déconseille.
-  if (eurParH < SEUIL_RENTABLE_EUR_PAR_H) { bloc.style.display = 'none'; return; }
-  // Détour trop long dans l'absolu, même si le €/h est bon (voir
-  // détourMaxSec ci-dessus).
-  if (detourSec > detourMaxSec(routeRapide.dureeSec)) { bloc.style.display = 'none'; return; }
+  // Un péage existe mais n'est pas assez rentable à éviter (économie trop
+  // faible, ratio €/h trop bas, ou détour trop long dans l'absolu, voir
+  // détourMaxSec ci-dessus) : on le dit plutôt que de masquer tout le bloc,
+  // pour ne pas laisser croire qu'il n'y a simplement pas de péage.
+  const pasRentable = economie <= 0.5 || eurParH < SEUIL_RENTABLE_EUR_PAR_H || detourSec > detourMaxSec(routeRapide.dureeSec);
+  if (pasRentable) {
+    bloc.style.display = 'block';
+    bloc.innerHTML = '<div class="leg-advice-title">Éviter le péage ?</div>'
+      + '<div class="leg-advice-empty">Éviter le péage ferait perdre plus de temps que d\'argent économisé sur ce trajet.</div>';
+    return;
+  }
 
   bloc.style.display = 'block';
   bloc.innerHTML = '<div class="leg-advice-title">Éviter le péage ?</div>';
