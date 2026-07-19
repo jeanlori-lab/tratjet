@@ -1032,30 +1032,31 @@
        tableau par une seule valeur, qu'on peut basculer d'un mode à
        l'autre (seul le coût carburant garde un rappel de l'autre mode). */
     .ar-toggle {
-      display: flex;
+      display: inline-flex;
       background: #eef2f6;
       border-radius: 999px;
-      padding: 3px;
-      margin-bottom: 12px;
+      padding: 2px;
+      margin-bottom: 10px;
     }
     .ar-toggle-btn {
-      flex: 1;
+      flex: none;
       text-align: center;
-      padding: 7px 0;
-      font-size: 12.5px;
-      font-weight: 700;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
       border-radius: 999px;
       cursor: pointer;
-      color: #607080;
+      color: #90a4ae;
       background: none;
       border: none;
       font-family: inherit;
       transition: background 0.15s, color 0.15s, box-shadow 0.15s;
     }
     .ar-toggle-btn.active {
-      background: #2196f3;
-      color: #fff;
-      box-shadow: 0 2px 6px rgba(33,150,243,0.35);
+      background: #fff;
+      color: #455060;
+      font-weight: 700;
+      box-shadow: 0 1px 2px rgba(15,23,41,0.1);
     }
 
     /* Onglets "Près du départ" / "Sur le trajet", au-dessus des deux
@@ -2993,9 +2994,18 @@ function applyStationTabVisibility() {
     document.getElementById('stationSectionTitle').style.display = 'block';
   }
   // Trajet à étapes : l'onglet "Sur le trajet" n'a jamais de contenu (voir
-  // rechercherStationSurTrajet()), inutile de le proposer.
+  // rechercherStationSurTrajet()) — seul "Près du départ" reste, donc plus
+  // besoin d'onglets du tout : le titre de section fait déjà office de nom.
   const multiEtapes = Array.isArray(lastStationSurTrajet && lastStationSurTrajet.lieux) && lastStationSurTrajet.lieux.length >= 3;
-  document.querySelector('.station-tab-btn[data-tab="trajet"]').style.display = multiEtapes ? 'none' : '';
+  const electrique = document.getElementById('carburant').value === 'electrique';
+  const stationTitle = document.getElementById('stationSectionTitle');
+  if (multiEtapes) {
+    document.getElementById('stationTabs').style.display = 'none';
+    stationTitle.textContent = electrique ? 'Recharger près du départ' : 'Faire le plein près du départ';
+  } else {
+    stationTitle.textContent = electrique ? 'Où recharger' : 'Où faire le plein';
+    document.querySelector('.station-tab-btn[data-tab="trajet"]').style.display = '';
+  }
   // Les cartes Leaflet construites dans un onglet masqué ont une taille
   // nulle : recalcul dès que l'onglet devient visible.
   requestAnimationFrame(refreshStationMaps);
@@ -4334,8 +4344,8 @@ let wazeUrlActuel = null;       // lien Waze vers la destination (identique quel
 let selectedRouteOption = 'rapide';
 
 const ROUTE_OPTION_META = {
-  rapide: { ico: '🛣️', nom: 'Péages',      avoid: null },
-  zero:   { ico: '🆓', nom: 'Sans péages', avoid: 'tolls' },
+  rapide: { nom: 'Avec péages', avoid: null },
+  zero:   { nom: 'Sans péages', avoid: 'tolls' },
 };
 
 function renderRouteOptions() {
@@ -4360,11 +4370,6 @@ function renderRouteOptions() {
     row.type = 'button';
     row.className = 'route-row' + (key === selectedRouteOption ? ' sel' : '');
     row.addEventListener('click', () => selectRouteOption(key));
-
-    const ico = document.createElement('span');
-    ico.className = 'route-ico';
-    ico.textContent = meta.ico;
-    row.appendChild(ico);
 
     const mid = document.createElement('span');
     mid.className = 'route-mid';
@@ -4543,7 +4548,7 @@ async function analyserTronconsSansPeage(coords, lieux, apiKey, conso) {
     row.appendChild(mid);
     const badge = document.createElement('span');
     badge.className = 'leg-badge ok';
-    badge.textContent = '👍 Rentable';
+    badge.textContent = 'Rentable';
     row.appendChild(badge);
     bloc.appendChild(row);
   });
@@ -4594,7 +4599,7 @@ function afficherRentabiliteSimple(routeRapide, routeZero, coutPeage, conso, dep
   row.appendChild(mid);
   const badge = document.createElement('span');
   badge.className = 'leg-badge ok';
-  badge.textContent = '👍 Rentable';
+  badge.textContent = 'Rentable';
   row.appendChild(badge);
   bloc.appendChild(row);
 
