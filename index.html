@@ -1170,37 +1170,19 @@
       pointer-events: none;
     }
 
-    /* Bascule principale Coût carburant / Station la moins chère, en haut de
-       page. Classes dédiées (pas .ar-toggle-btn) pour ne pas être affectées
-       par le toggle Aller simple/Aller-retour, qui recible tous les
-       .ar-toggle-btn de la page. */
-    .main-toggle {
-      display: flex;
-      background: #e2e8ee;
-      border-radius: 999px;
-      padding: 3px;
-      margin-bottom: 16px;
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.06);
+    /* Accès à "Station la moins chère" (sans trajet) : une simple icône à
+       côté du bouton compte plutôt qu'un onglet de même poids que "Coût du
+       trajet" — c'est une fonction secondaire. */
+    .station-icon-btn {
+      position: absolute; top: 0; right: 40px;
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 1.5px solid #d5e0ee; background: #fff;
+      font-size: 15px; line-height: 1; cursor: pointer;
+      box-shadow: 0 2px 6px rgba(15,23,41,0.08);
+      transition: box-shadow 0.15s, border-color 0.15s;
     }
-    .main-toggle-btn {
-      flex: 1;
-      text-align: center;
-      padding: 10px 0;
-      font-size: 13px;
-      font-weight: 700;
-      border-radius: 999px;
-      cursor: pointer;
-      color: #607080;
-      background: none;
-      border: none;
-      font-family: inherit;
-      transition: background 0.15s, color 0.15s, box-shadow 0.15s;
-    }
-    .main-toggle-btn.active {
-      background: #0d47a1;
-      color: #fff;
-      box-shadow: 0 3px 10px rgba(13,71,161,0.35);
-    }
+    .station-icon-btn:hover { border-color: #9dc2ee; }
+    .station-back-btn { display: block; margin: 0 2px 10px; }
 
     #r-cout { text-align: right; }
 
@@ -1435,6 +1417,9 @@
   <div class="header">
     <!-- Compte (Supabase) : bouton masqué tant que la config n'est pas renseignée -->
     <button type="button" class="account-btn" id="accountBtn" style="display:none;" onclick="toggleAccountCard()" aria-label="Mon compte">👤</button>
+    <!-- Station la moins chère sans trajet : fonction secondaire, accès en
+         icône plutôt qu'un onglet de même poids que "Coût du trajet". -->
+    <button type="button" class="station-icon-btn" onclick="setMainMode('station')" aria-label="Station la moins chère sans trajet" title="Station la moins chère sans trajet">⛽</button>
     <h1>T<span class="rat-emphasis">rat</span>jet</h1>
     <div class="tagline">Quelle est la station la moins chère sur votre trajet ? Est-ce rentable d'éviter les péages ? On vous répond en un calcul, en plus du coût exact de votre trajet en voiture !</div>
   </div>
@@ -1458,12 +1443,6 @@
   </div>
 
   <input type="hidden" id="apiKey" value="eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY1NjRiM2M4Yjc0OTQ0ZDlhNmNjM2FiOWQzNjFhNTE2IiwiaCI6Im11cm11cjY0In0=">
-
-  <!-- Bascule Coût carburant (trajet) / Station la moins chère (près de moi) -->
-  <div class="main-toggle">
-    <button type="button" class="main-toggle-btn active" data-main-mode="cout" onclick="setMainMode('cout')">Coût du trajet</button>
-    <button type="button" class="main-toggle-btn" data-main-mode="station" onclick="setMainMode('station')">Station la moins chère</button>
-  </div>
 
   <div id="modeCout">
   <!-- Paramètres -->
@@ -1657,6 +1636,7 @@
 
   <!-- Station la moins chère près de chez moi, indépendamment de tout trajet -->
   <div id="modeStation" style="display:none;">
+    <button type="button" class="link-btn station-back-btn" onclick="setMainMode('cout')">← Coût du trajet</button>
     <div class="card">
       <div class="card-title" id="stationModeTitle">Station la moins chère près de chez moi</div>
 
@@ -2468,7 +2448,6 @@ function resetResultat(keepScope) {
 // Bascule principale : Coût carburant (trajet complet) / Station la moins
 // chère (recherche indépendante autour d'une position donnée).
 function setMainMode(mode, updateHash) {
-  document.querySelectorAll('.main-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.mainMode === mode));
   document.getElementById('modeCout').style.display = mode === 'cout' ? '' : 'none';
   document.getElementById('modeStation').style.display = mode === 'station' ? '' : 'none';
   // Lien distinct par onglet (#cout / #station), pour pouvoir le partager ou
