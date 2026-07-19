@@ -4115,6 +4115,15 @@ async function getTollsVinci(route) {
     const legs = await legsResp.json();
     if (!Array.isArray(legs) || legs.length < 2) return null;
 
+    // Une même gare de péage peut apparaître sur plusieurs Placemarks
+    // consécutifs du tracé KML (plusieurs points échantillonnés dans sa
+    // zone) : sans déduplication, on demandait un tarif pour chaque
+    // occurrence et on les additionnait toutes, gonflant artificiellement
+    // le prix total (observé : ~54 € calculés pour un trajet réellement à
+    // ~15 € côté Vinci/ViaMichelin). Un tracé rapide direct ne repasse
+    // normalement jamais par la même gare deux fois, donc on ne garde que
+    // la première occurrence de chaque code.
+    const codesVus = new Set();
     const gates = legs
       .map(l => {
         const tags = l && l.Placemark && l.Placemark.Tags;
@@ -4130,7 +4139,12 @@ async function getTollsVinci(route) {
         const abscissa = parseFloat(absBrute);
         return { code, abscissa: isNaN(abscissa) ? null : abscissa };
       })
-      .filter(Boolean);
+      .filter(Boolean)
+      .filter(g => {
+        if (codesVus.has(g.code)) return false;
+        codesVus.add(g.code);
+        return true;
+      });
     if (gates.length < 2) return null;
 
     // Dates de passage estimées. Vinci calcule le tarif selon l'heure réelle
