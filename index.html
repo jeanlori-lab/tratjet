@@ -99,37 +99,13 @@
       color: #e2971a;
       font-weight: 800;
     }
-    /* Intro réduite à une ligne : l'ancien paragraphe complet reste
-       accessible au clic ("En savoir plus"), replié par défaut pour ne
-       plus prendre de place à chaque visite. */
     .header .tagline {
-      font-size: 12px;
-      color: #90a4ae;
-      margin-top: 4px;
-    }
-    .header .intro-toggle {
-      display: inline-block;
-      margin-top: 3px;
-      font-size: 11px;
-      color: #90a4ae;
-      text-decoration: underline;
-      cursor: pointer;
-      background: none;
-      border: none;
-      font-family: inherit;
-    }
-    .header p {
-      display: none;
-      font-size: 12.5px;
+      font-size: 13px;
       color: #607080;
-      margin-top: 10px;
+      margin-top: 8px;
       line-height: 1.5;
       padding: 0 12px;
-      text-align: left;
     }
-    .header p.open { display: block; }
-    .header p .intro-bonus { display: inline-block; margin-top: 4px; }
-    .header p .intro-bonus-label { color: #e2971a; font-weight: 800; }
 
     /* Carte */
     .card {
@@ -1460,9 +1436,7 @@
     <!-- Compte (Supabase) : bouton masqué tant que la config n'est pas renseignée -->
     <button type="button" class="account-btn" id="accountBtn" style="display:none;" onclick="toggleAccountCard()" aria-label="Mon compte">👤</button>
     <h1>T<span class="rat-emphasis">rat</span>jet</h1>
-    <div class="tagline">Carburant, péages, et la station la moins chère — en un calcul.</div>
-    <button type="button" class="intro-toggle" onclick="this.nextElementSibling.classList.toggle('open')">En savoir plus</button>
-    <p>Entrez votre trajet, on s'occupe des calculs : carburant ou électricité, prix des péages, et comparaison avec l'itinéraire sans péages pour savoir s'il est rentable. <br><span class="intro-bonus"><span class="intro-bonus-label">En bonus</span> : la station la moins chère près de votre départ et sur votre trajet, et vos véhicules et trajets favoris synchronisés sur tous vos appareils !</span></p>
+    <div class="tagline">Quelle est la station la moins chère sur votre trajet ? Est-ce rentable d'éviter les péages ? On vous répond en un calcul, en plus du coût exact de votre trajet en voiture !</div>
   </div>
 
   <!-- Mon compte : connexion par lien magique (e-mail, sans mot de passe) et
