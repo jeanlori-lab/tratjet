@@ -545,8 +545,13 @@
       background: #e8f4ff; color: #1976d2; border: none; border-radius: 14px;
       padding: 5px 10px; font-size: 11.5px; font-weight: 600;
       cursor: pointer; font-family: inherit; max-width: 100%;
+      opacity: 0.6; transition: opacity 0.15s ease;
     }
     .saved-chip:hover { background: #bbdefb; }
+    /* Trajet/véhicule actuellement appliqué : ressort par rapport aux
+       autres chips, redevient normal dès qu'un paramètre change (voir
+       resetResultat()). */
+    .saved-chip.selected { opacity: 1; }
     .saved-chip .chip-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .saved-chip-x { color: #90a4ae; font-weight: 700; padding: 0 2px; flex-shrink: 0; }
     .saved-chip-x:hover { color: #e53935; }
@@ -2094,7 +2099,7 @@ function makeSavedChip(icone, texte, titre, onApply, onDelete) {
   x.title = 'Supprimer';
   x.addEventListener('click', e => { e.stopPropagation(); onDelete(); });
   chip.appendChild(x);
-  chip.addEventListener('click', onApply);
+  chip.addEventListener('click', () => onApply(chip));
   return chip;
 }
 
@@ -2110,7 +2115,7 @@ function renderVehChips() {
   vehs.forEach((v, i) => {
     const titre = `${CARB_LABELS_VEH[v.type] || v.type} · ${v.conso} ${v.type === 'electrique' ? 'kWh' : 'L'}/100 km` + (v.capacite && v.type !== 'electrique' ? ` · réservoir ${v.capacite} L` : '');
     wrap.appendChild(makeSavedChip('🚗', v.nom, titre,
-      () => appliquerVehicule(v),
+      (chip) => appliquerVehicule(v, chip),
       () => { const arr = loadStore(VEHICULES_KEY); arr.splice(i, 1); saveStore(VEHICULES_KEY, arr); renderVehChips(); }));
   });
 }
@@ -2135,7 +2140,7 @@ function confirmerVehicule() {
   toggleVehForm(false);
   renderVehChips();
 }
-function appliquerVehicule(v) {
+function appliquerVehicule(v, chip) {
   const btn = document.querySelector(`#carbChoices .carb-choice[data-value="${v.type}"]`);
   if (btn) setCarburant(v.type, btn);
   // Après setCarburant : majUniteConso peut avoir remis une conso par défaut.
@@ -2146,6 +2151,9 @@ function appliquerVehicule(v) {
     document.getElementById('reservoirCapaciteVal').textContent = Math.round(v.capacite) + ' L';
   }
   resetResultat();
+  // Après resetResultat() (qui efface toute sélection précédente) : marque
+  // ce véhicule comme actuellement appliqué.
+  if (chip) chip.classList.add('selected');
 }
 
 // -- Trajets favoris --
@@ -2156,7 +2164,7 @@ function renderTrajetChips() {
   loadStore(TRAJETS_KEY).forEach((t, i) => {
     const titre = t.points.join(' → ');
     wrap.appendChild(makeSavedChip('', t.nom, titre,
-      () => appliquerTrajet(t),
+      (chip) => appliquerTrajet(t, chip),
       () => { const arr = loadStore(TRAJETS_KEY); arr.splice(i, 1); saveStore(TRAJETS_KEY, arr); renderTrajetChips(); }));
   });
 }
@@ -2191,12 +2199,15 @@ function confirmerTrajet() {
   toggleTrajetForm(false);
   renderTrajetChips();
 }
-function appliquerTrajet(t) {
+function appliquerTrajet(t, chip) {
   const container = pointsEl();
   container.textContent = '';
   t.points.forEach(p => container.appendChild(makePointRow(p)));
   refreshPoints();
   resetResultat();
+  // Après resetResultat() (qui efface toute sélection précédente) : marque
+  // ce trajet comme actuellement appliqué.
+  if (chip) chip.classList.add('selected');
 }
 
 renderVehChips();
@@ -2414,7 +2425,14 @@ function setLoading(on) {
   document.getElementById('calcBtn').disabled = on;
   document.getElementById('calcBtnWrap').classList.toggle('loading', on); // fait rouler la voiture-rat au-dessus du bouton
 }
-function resetResultat() { document.getElementById('sectionResultats').style.display='none'; hideError(); }
+function resetResultat() {
+  document.getElementById('sectionResultats').style.display = 'none';
+  hideError();
+  // Un paramètre a changé : le trajet/véhicule éventuellement mis en avant
+  // (voir appliquerVehicule/appliquerTrajet) ne correspond plus forcément
+  // à l'état actuel, retour à l'affichage normal.
+  document.querySelectorAll('.saved-chip.selected').forEach(c => c.classList.remove('selected'));
+}
 
 // Bascule principale : Coût carburant (trajet complet) / Station la moins
 // chère (recherche indépendante autour d'une position donnée).
