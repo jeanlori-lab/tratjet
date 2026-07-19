@@ -667,6 +667,14 @@
     }
     .leg-badge.ok { background: #e8f5e9; color: #2e7d32; }
     .leg-advice-note { font-size: 10.5px; color: #90a4ae; margin-top: 7px; line-height: 1.4; }
+    .leg-advice-info { margin-top: 7px; }
+    .leg-advice-toggle {
+      background: none; border: none; padding: 0; margin: 0;
+      font-size: 10.5px; color: #90a4ae; text-decoration: underline;
+      cursor: pointer; font-family: inherit;
+    }
+    .leg-advice-toggle:hover { color: #607080; }
+    .leg-advice-info .leg-advice-note { margin-top: 5px; }
     .leg-advice-empty { font-size: 12.5px; color: #90a4ae; font-style: italic; }
     .points-wrap { position: relative; }
 
@@ -4748,6 +4756,31 @@ function detourMaxPct(dureeRefSec) {
   return DETOUR_PCT_COURT - t * (DETOUR_PCT_COURT - DETOUR_PCT_LONG);
 }
 function detourMaxSec(dureeRefSec) { return dureeRefSec * detourMaxPct(dureeRefSec); }
+
+// Explication du critère "rentable", repliée par défaut derrière un texte
+// souligné discret : la version dépliée en une seule phrase dense était
+// illisible directement dans le bloc.
+function buildRentabiliteInfo(mentionAllerSimple) {
+  const wrap = document.createElement('div');
+  wrap.className = 'leg-advice-info';
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'leg-advice-toggle';
+  toggle.textContent = 'Qu\'est-ce qu\'on entend par « rentable » ?';
+  const texte = document.createElement('div');
+  texte.className = 'leg-advice-note';
+  texte.style.display = 'none';
+  texte.textContent = 'On considère qu\'éviter un péage vaut le coup s\'il fait économiser au moins '
+    + SEUIL_RENTABLE_EUR_PAR_H + ' € par heure de détour (le péage évité, moins le carburant en plus à cause du détour). '
+    + 'Le détour doit aussi rester raisonnable par rapport à la durée du trajet : jusqu\'à 50 % de temps en plus toléré sur un trajet court, seulement 25 % sur un trajet long.'
+    + (mentionAllerSimple ? ' Valeurs en aller simple.' : '');
+  toggle.addEventListener('click', () => {
+    texte.style.display = texte.style.display === 'none' ? 'block' : 'none';
+  });
+  wrap.appendChild(toggle);
+  wrap.appendChild(texte);
+  return wrap;
+}
 let legAdviceRunId = 0; // invalide l'analyse en cours si un nouveau calcul démarre
 
 async function analyserTronconsSansPeage(coords, lieux, apiKey, conso) {
@@ -4836,10 +4869,7 @@ async function analyserTronconsSansPeage(coords, lieux, apiKey, conso) {
     row.appendChild(badge);
     bloc.appendChild(row);
   });
-  const note = document.createElement('div');
-  note.className = 'leg-advice-note';
-  note.textContent = 'Rentable = au moins ' + SEUIL_RENTABLE_EUR_PAR_H + ' € économisés par heure de détour (péage évité moins le carburant du détour), et un détour d\'au plus 25 à 50 % du temps de trajet selon sa durée. Valeurs en aller simple.';
-  bloc.appendChild(note);
+  bloc.appendChild(buildRentabiliteInfo(true));
 }
 
 // --- Même verdict de rentabilité, pour un trajet simple (départ → arrivée
@@ -4894,10 +4924,7 @@ function afficherRentabiliteSimple(routeRapide, routeZero, coutPeage, conso, dep
   row.appendChild(badge);
   bloc.appendChild(row);
 
-  const note = document.createElement('div');
-  note.className = 'leg-advice-note';
-  note.textContent = 'Rentable = au moins ' + SEUIL_RENTABLE_EUR_PAR_H + ' € économisés par heure de détour (péage évité moins le carburant du détour), et un détour d\'au plus 25 à 50 % du temps de trajet selon sa durée.';
-  bloc.appendChild(note);
+  bloc.appendChild(buildRentabiliteInfo(false));
 }
 
 async function calculer() {
