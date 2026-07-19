@@ -4115,6 +4115,15 @@ async function getTollsVinci(route) {
     const legs = await legsResp.json();
     if (!Array.isArray(legs) || legs.length < 2) return null;
 
+    // Une même gare de péage peut apparaître sur plusieurs Placemarks
+    // consécutifs du tracé KML (plusieurs points échantillonnés dans sa
+    // zone) : sans déduplication, on demandait un tarif pour chaque
+    // occurrence et on les additionnait toutes, gonflant artificiellement
+    // le prix total (observé : ~54 € calculés pour un trajet réellement à
+    // ~15 € côté Vinci/ViaMichelin). Un tracé rapide direct ne repasse
+    // normalement jamais par la même gare deux fois, donc on ne garde que
+    // la première occurrence de chaque code.
+    const codesVus = new Set();
     const gates = legs
       .map(l => {
         const tags = l && l.Placemark && l.Placemark.Tags;
@@ -4130,7 +4139,12 @@ async function getTollsVinci(route) {
         const abscissa = parseFloat(absBrute);
         return { code, abscissa: isNaN(abscissa) ? null : abscissa };
       })
-      .filter(Boolean);
+      .filter(Boolean)
+      .filter(g => {
+        if (codesVus.has(g.code)) return false;
+        codesVus.add(g.code);
+        return true;
+      });
     if (gates.length < 2) return null;
 
     // Dates de passage estimées. Vinci calcule le tarif selon l'heure réelle
@@ -4528,10 +4542,28 @@ function lancerNavigation(cible, quelleRoute) {
 // compare l'itinéraire rapide (avec péages, prix Vinci sur son tracé) à
 // l'itinéraire sans péage, et signale ceux où l'évitement est rentable.
 // "Rentable" = au moins SEUIL_RENTABLE_EUR_PAR_H d'économie nette (péage
-// évité moins le surcoût de carburant du détour) par heure de détour.
+// évité moins le surcoût de carburant du détour) par heure de détour, ET un
+// détour qui reste raisonnable dans l'absolu : un rapport €/h élevé ne
+// suffit pas à justifier un détour de 2h30 que personne ne ferait vraiment.
+// Le plafond de détour est dégressif selon la durée du trajet de référence :
+// 35 % pour un trajet court (≤1h30), 20 % pour un trajet long (≥8h),
+// interpolé linéairement entre les deux — plus le trajet est long, plus un
+// détour donné pèse peu proportionnellement, mais on ne laisse jamais
+// dépasser 20 %.
 // Lancé en arrière-plan après l'affichage des résultats, best-effort :
 // un tronçon indéterminable est simplement ignoré. ---
 const SEUIL_RENTABLE_EUR_PAR_H = 18;
+const DETOUR_PCT_COURT = 0.35; // trajet de référence ≤ 1h30
+const DETOUR_PCT_LONG = 0.20;  // trajet de référence ≥ 8h
+const DETOUR_REF_COURT_SEC = 90 * 60;
+const DETOUR_REF_LONG_SEC = 8 * 3600;
+function detourMaxPct(dureeRefSec) {
+  if (dureeRefSec <= DETOUR_REF_COURT_SEC) return DETOUR_PCT_COURT;
+  if (dureeRefSec >= DETOUR_REF_LONG_SEC) return DETOUR_PCT_LONG;
+  const t = (dureeRefSec - DETOUR_REF_COURT_SEC) / (DETOUR_REF_LONG_SEC - DETOUR_REF_COURT_SEC);
+  return DETOUR_PCT_COURT - t * (DETOUR_PCT_COURT - DETOUR_PCT_LONG);
+}
+function detourMaxSec(dureeRefSec) { return dureeRefSec * detourMaxPct(dureeRefSec); }
 let legAdviceRunId = 0; // invalide l'analyse en cours si un nouveau calcul démarre
 
 async function analyserTronconsSansPeage(coords, lieux, apiKey, conso) {
@@ -4568,6 +4600,10 @@ async function analyserTronconsSansPeage(coords, lieux, apiKey, conso) {
       // Seuls les tronçons vraiment rentables sont proposés : pas la peine
       // d'encombrer les résultats avec des évitements qu'on déconseille.
       if (eurParH < SEUIL_RENTABLE_EUR_PAR_H) continue;
+      // Détour trop long dans l'absolu, même si le €/h est bon (voir
+      // détourMaxSec ci-dessus) : personne ne ferait 2h30 de plus juste
+      // parce que le ratio horaire est favorable.
+      if (detourSec > detourMaxSec(rapide.dureeSec)) continue;
       rows.push({
         de: (lieux[i] || '').split(',')[0].trim(),
         a: (lieux[i + 1] || '').split(',')[0].trim(),
@@ -4605,7 +4641,7 @@ async function analyserTronconsSansPeage(coords, lieux, apiKey, conso) {
   });
   const note = document.createElement('div');
   note.className = 'leg-advice-note';
-  note.textContent = 'Rentable = au moins ' + SEUIL_RENTABLE_EUR_PAR_H + ' € économisés par heure de détour (péage évité moins le carburant du détour). Valeurs en aller simple.';
+  note.textContent = 'Rentable = au moins ' + SEUIL_RENTABLE_EUR_PAR_H + ' € économisés par heure de détour (péage évité moins le carburant du détour), et un détour d\'au plus 20 à 35 % du temps de trajet selon sa durée. Valeurs en aller simple.';
   bloc.appendChild(note);
 }
 
@@ -4628,6 +4664,9 @@ function afficherRentabiliteSimple(routeRapide, routeZero, coutPeage, conso, dep
   // Seuls les évitements vraiment rentables sont proposés (même seuil que
   // par tronçon) : pas la peine de suggérer un détour qu'on déconseille.
   if (eurParH < SEUIL_RENTABLE_EUR_PAR_H) { bloc.style.display = 'none'; return; }
+  // Détour trop long dans l'absolu, même si le €/h est bon (voir
+  // détourMaxSec ci-dessus).
+  if (detourSec > detourMaxSec(routeRapide.dureeSec)) { bloc.style.display = 'none'; return; }
 
   bloc.style.display = 'block';
   bloc.innerHTML = '<div class="leg-advice-title">Éviter le péage ?</div>';
@@ -4656,7 +4695,7 @@ function afficherRentabiliteSimple(routeRapide, routeZero, coutPeage, conso, dep
 
   const note = document.createElement('div');
   note.className = 'leg-advice-note';
-  note.textContent = 'Rentable = au moins ' + SEUIL_RENTABLE_EUR_PAR_H + ' € économisés par heure de détour (péage évité moins le carburant du détour).';
+  note.textContent = 'Rentable = au moins ' + SEUIL_RENTABLE_EUR_PAR_H + ' € économisés par heure de détour (péage évité moins le carburant du détour), et un détour d\'au plus 20 à 35 % du temps de trajet selon sa durée.';
   bloc.appendChild(note);
 }
 
