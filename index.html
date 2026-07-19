@@ -1032,30 +1032,31 @@
        tableau par une seule valeur, qu'on peut basculer d'un mode à
        l'autre (seul le coût carburant garde un rappel de l'autre mode). */
     .ar-toggle {
-      display: flex;
+      display: inline-flex;
       background: #eef2f6;
       border-radius: 999px;
-      padding: 3px;
-      margin-bottom: 12px;
+      padding: 2px;
+      margin-bottom: 10px;
     }
     .ar-toggle-btn {
-      flex: 1;
+      flex: none;
       text-align: center;
-      padding: 7px 0;
-      font-size: 12.5px;
-      font-weight: 700;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
       border-radius: 999px;
       cursor: pointer;
-      color: #607080;
+      color: #90a4ae;
       background: none;
       border: none;
       font-family: inherit;
       transition: background 0.15s, color 0.15s, box-shadow 0.15s;
     }
     .ar-toggle-btn.active {
-      background: #2196f3;
-      color: #fff;
-      box-shadow: 0 2px 6px rgba(33,150,243,0.35);
+      background: #fff;
+      color: #455060;
+      font-weight: 700;
+      box-shadow: 0 1px 2px rgba(15,23,41,0.1);
     }
 
     /* Onglets "Près du départ" / "Sur le trajet", au-dessus des deux
@@ -2945,7 +2946,6 @@ function buildEcoBadge(prixStation, litres) {
   if (gain < 0.05) return null;
   const badge = document.createElement('div');
   badge.className = 'eco-badge';
-  badge.appendChild(document.createTextNode('💰'));
   const txt = document.createElement('span');
   const strong = document.createElement('strong');
   strong.textContent = '−' + fmtEur(gain);
@@ -2993,9 +2993,18 @@ function applyStationTabVisibility() {
     document.getElementById('stationSectionTitle').style.display = 'block';
   }
   // Trajet à étapes : l'onglet "Sur le trajet" n'a jamais de contenu (voir
-  // rechercherStationSurTrajet()), inutile de le proposer.
+  // rechercherStationSurTrajet()) — seul "Près du départ" reste, donc plus
+  // besoin d'onglets du tout : le titre de section fait déjà office de nom.
   const multiEtapes = Array.isArray(lastStationSurTrajet && lastStationSurTrajet.lieux) && lastStationSurTrajet.lieux.length >= 3;
-  document.querySelector('.station-tab-btn[data-tab="trajet"]').style.display = multiEtapes ? 'none' : '';
+  const electrique = document.getElementById('carburant').value === 'electrique';
+  const stationTitle = document.getElementById('stationSectionTitle');
+  if (multiEtapes) {
+    document.getElementById('stationTabs').style.display = 'none';
+    stationTitle.textContent = electrique ? 'Recharger près du départ' : 'Faire le plein près du départ';
+  } else {
+    stationTitle.textContent = electrique ? 'Où recharger' : 'Où faire le plein';
+    document.querySelector('.station-tab-btn[data-tab="trajet"]').style.display = '';
+  }
   // Les cartes Leaflet construites dans un onglet masqué ont une taille
   // nulle : recalcul dès que l'onglet devient visible.
   requestAnimationFrame(refreshStationMaps);
@@ -3014,10 +3023,6 @@ async function rechercherStationMoinsChere() {
 
   const header = document.createElement('div');
   header.className = 'cheapest-header';
-  const icon = document.createElement('span');
-  icon.className = 'cheapest-icon';
-  icon.textContent = '🐀';
-  header.appendChild(icon);
   const title = document.createElement('span');
   title.className = 'cheapest-title';
   title.style.fontSize = '0.9em';
@@ -3277,10 +3282,10 @@ function renderArrets(note, arrets, type, depart, arrivee) {
       fn.textContent = a.customNote;
     } else if (a.urgent) {
       fn.textContent = idx === 0
-        ? '⚠️ Niveau très bas au départ : arrêt conseillé dès le début du trajet.'
-        : '⚠️ Niveau très bas à cette étape : arrêt conseillé au plus vite.';
+        ? 'Niveau très bas au départ : arrêt conseillé dès le début du trajet.'
+        : 'Niveau très bas à cette étape : arrêt conseillé au plus vite.';
     } else if (a.horsZone) {
-      fn.textContent = `⛽ Aucune station dans la zone idéale pour cet arrêt : un peu plus tôt sur le trajet, votre jauge sera de ~${a.pctArrivee} %.`;
+      fn.textContent = `Aucune station dans la zone idéale pour cet arrêt : un peu plus tôt sur le trajet, votre jauge sera de ~${a.pctArrivee} %.`;
     } else {
       fn.textContent = `Station la plus futée. À ce moment de votre trajet, votre réservoir sera de ~${a.pctArrivee} %.`;
     }
@@ -3297,7 +3302,7 @@ function renderArrets(note, arrets, type, depart, arrivee) {
     link.className = 'cheapest-link';
     link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${encodeURIComponent(depart)}&destination=${encodeURIComponent(arrivee)}&waypoints=${a.station.lat},${a.station.lon}`;
     link.target = '_blank';
-    link.textContent = '📍 Ajouter cette station à mon trajet';
+    link.textContent = 'Ajouter cette station à mon trajet';
     btnRow.appendChild(link);
     contentWrap.appendChild(btnRow);
 
@@ -3363,7 +3368,7 @@ async function rechercherStationSurTrajet() {
           litresPlein = reservoir.capacite * (1 - reservoir.niveau / 100);
           arrets = [{
             station, pctArrivee: null, urgent: false, horsZone: false, litresPlein,
-            customNote: `⛽ Pas d'arrêt indispensable : vous arriveriez avec ~${arriveePct} % de réservoir. Voici quand même la station la moins chère sur le trajet.`,
+            customNote: `Pas d'arrêt indispensable : vous arriveriez avec ~${arriveePct} % de réservoir. Voici quand même la station la moins chère sur le trajet.`,
           }];
         }
       }
@@ -3381,10 +3386,6 @@ async function rechercherStationSurTrajet() {
 
   const header = document.createElement('div');
   header.className = 'cheapest-header';
-  const icon = document.createElement('span');
-  icon.className = 'cheapest-icon';
-  icon.textContent = '🐀';
-  header.appendChild(icon);
   const title = document.createElement('span');
   title.className = 'cheapest-title';
   title.style.fontSize = '0.9em';
@@ -3420,7 +3421,7 @@ async function rechercherStationSurTrajet() {
     const destination = encodeURIComponent(arrivee);
     link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}&waypoints=${station.lat},${station.lon}`;
     link.target = '_blank';
-    link.textContent = '📍 Ajouter cette station à mon trajet';
+    link.textContent = 'Ajouter cette station à mon trajet';
     btnRow.appendChild(link);
     note.appendChild(btnRow);
   } else {
@@ -4334,8 +4335,8 @@ let wazeUrlActuel = null;       // lien Waze vers la destination (identique quel
 let selectedRouteOption = 'rapide';
 
 const ROUTE_OPTION_META = {
-  rapide: { ico: '🛣️', nom: 'Péages',      avoid: null },
-  zero:   { ico: '🆓', nom: 'Sans péages', avoid: 'tolls' },
+  rapide: { nom: 'Avec péages', avoid: null },
+  zero:   { nom: 'Sans péages', avoid: 'tolls' },
 };
 
 function renderRouteOptions() {
@@ -4360,11 +4361,6 @@ function renderRouteOptions() {
     row.type = 'button';
     row.className = 'route-row' + (key === selectedRouteOption ? ' sel' : '');
     row.addEventListener('click', () => selectRouteOption(key));
-
-    const ico = document.createElement('span');
-    ico.className = 'route-ico';
-    ico.textContent = meta.ico;
-    row.appendChild(ico);
 
     const mid = document.createElement('span');
     mid.className = 'route-mid';
@@ -4543,7 +4539,7 @@ async function analyserTronconsSansPeage(coords, lieux, apiKey, conso) {
     row.appendChild(mid);
     const badge = document.createElement('span');
     badge.className = 'leg-badge ok';
-    badge.textContent = '👍 Rentable';
+    badge.textContent = 'Rentable';
     row.appendChild(badge);
     bloc.appendChild(row);
   });
@@ -4594,7 +4590,7 @@ function afficherRentabiliteSimple(routeRapide, routeZero, coutPeage, conso, dep
   row.appendChild(mid);
   const badge = document.createElement('span');
   badge.className = 'leg-badge ok';
-  badge.textContent = '👍 Rentable';
+  badge.textContent = 'Rentable';
   row.appendChild(badge);
   bloc.appendChild(row);
 
