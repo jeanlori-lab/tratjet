@@ -85,7 +85,7 @@
     .account-logout:hover { border-color: #c62828; color: #c62828; }
     .header h1 {
       font-family: 'Sora', 'Segoe UI', Arial, sans-serif;
-      font-size: 34px;
+      font-size: 26px;
       font-weight: 700;
       letter-spacing: -0.02em;
       display: inline-block;
@@ -99,13 +99,35 @@
       color: #e2971a;
       font-weight: 800;
     }
+    /* Intro réduite à une ligne : l'ancien paragraphe complet reste
+       accessible au clic ("En savoir plus"), replié par défaut pour ne
+       plus prendre de place à chaque visite. */
+    .header .tagline {
+      font-size: 12px;
+      color: #90a4ae;
+      margin-top: 4px;
+    }
+    .header .intro-toggle {
+      display: inline-block;
+      margin-top: 3px;
+      font-size: 11px;
+      color: #90a4ae;
+      text-decoration: underline;
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: inherit;
+    }
     .header p {
-      font-size: 13px;
+      display: none;
+      font-size: 12.5px;
       color: #607080;
-      margin-top: 12px;
+      margin-top: 10px;
       line-height: 1.5;
       padding: 0 12px;
+      text-align: left;
     }
+    .header p.open { display: block; }
     .header p .intro-bonus { display: inline-block; margin-top: 4px; }
     .header p .intro-bonus-label { color: #e2971a; font-weight: 800; }
 
@@ -143,17 +165,21 @@
     .point-row.shift-for-handles { margin-left: 8px; }
     /* Séparations plus marquées entre Carburant / Consommation / Réservoir : plus
        d'espace vertical et un trait un peu plus visible et plus long. */
-    .veh-row, .carburant-row, .conso-row, .reservoir-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
-    .reservoir-row { padding-bottom: 8px; }
-    .niveau-label { font-size: 12px; font-weight: 600; color: #607080; margin-bottom: 4px; }
+    .veh-row, .carburant-row, .conso-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
+    /* Plus discret que les autres lignes du formulaire (véhicule, carburant,
+       consommation) : une option secondaire n'a pas besoin du même poids
+       visuel qu'un réglage principal. */
+    .reservoir-row { padding: 10px 0 8px; border-bottom-color: #eef2f6; border-bottom-width: 1px; }
+    .niveau-label { font-size: 11px; font-weight: 600; color: #90a4ae; margin-bottom: 4px; }
     .niveau-label-depart { margin-top: 10px; }
-    .reservoir-hint { font-size: 11px; color: #90a4ae; line-height: 1.4; margin-bottom: 8px; }
+    .reservoir-hint { font-size: 10.5px; color: #b0bcc9; line-height: 1.4; margin-bottom: 8px; }
     /* Seul titre du bloc : même police que les libellés Carburant /
        Consommation (.param-label), forcé sur UNE ligne (taille fluide,
-       jamais de retour à la ligne, même sur petit écran). */
+       jamais de retour à la ligne, même sur petit écran) — mais plus
+       discret (poids et couleur réduits) qu'un réglage principal. */
     .optim-title {
-      font-weight: 600; color: #455060; line-height: 1.2;
-      font-size: clamp(12px, 4vw, 15px);
+      font-weight: 600; color: #90a4ae; line-height: 1.2;
+      font-size: clamp(11px, 3.6vw, 13px);
       white-space: nowrap;
       flex: 1;
     }
@@ -462,7 +488,7 @@
       .param-row { flex-wrap: wrap; row-gap: 7px; }
       .param-label { width: auto; flex: none; font-size: 14px; }
       /* Aligné sur .param-label mobile, mais rétrécit si besoin pour tenir sur une ligne. */
-      .optim-title { font-size: clamp(12px, 4vw, 14px); }
+      .optim-title { font-size: clamp(11px, 3.6vw, 13px); }
       .param-input { flex: 1 0 100%; }
       /* Étapes : pas de ligne de libellé (numéro en placeholder), encadré + ✕ sur une ligne */
       .is-stop .param-label { display: none; }
@@ -618,17 +644,28 @@
       transition: border-color 0.15s, background 0.15s;
       width: 100%;
     }
-    .route-row.sel { border-color: #1976d2; border-width: 2px; padding: 8.5px 11.5px; background: #f4f9ff; box-shadow: 0 4px 12px rgba(25,118,210,0.14); }
+    /* Variante A : la fiche sélectionnée domine nettement (c'est LA réponse
+       à la question posée), l'autre option est réduite à une ligne fine et
+       discrète — plus la peine de comparer deux fiches de même poids visuel
+       pour trouver laquelle est la bonne. */
+    .route-row.sel {
+      border-color: #1976d2; border-width: 2px; padding: 16px;
+      background: linear-gradient(180deg, #f4f9ff, #fff);
+      box-shadow: 0 6px 18px rgba(25,118,210,0.18);
+    }
+    .route-row:not(.sel) { padding: 7px 12px; opacity: 0.75; }
     .route-row-top { display: flex; align-items: center; gap: 10px; width: 100%; }
     .route-row .route-ico { font-size: 17px; flex-shrink: 0; }
     .route-row .route-mid { flex: 1; min-width: 0; }
     .route-row .route-nom { font-size: 12px; font-weight: 800; color: #455060; }
-    .route-row.sel .route-nom { color: #1565c0; }
-    .route-row .route-infos { font-size: 10.5px; color: #90a4ae; font-weight: 600; margin-top: 1px; }
+    .route-row.sel .route-nom { color: #1565c0; font-size: 13.5px; }
+    .route-row .route-infos { font-size: 11.5px; color: #90a4ae; font-weight: 600; margin-top: 1px; }
+    .route-row.sel .route-infos { font-size: 13px; margin-top: 3px; }
     .route-row .route-right { text-align: right; flex-shrink: 0; }
     .route-row .route-prix { font-size: 16px; font-weight: 900; color: #1a2433; }
-    .route-row.sel .route-prix { color: #1565c0; }
+    .route-row.sel .route-prix { color: #1565c0; font-size: 32px; }
     .route-row .route-delta { font-size: 9.5px; font-weight: 700; }
+    .route-row.sel .route-delta { font-size: 11px; }
     .route-row .route-delta.eco { color: #2e7d32; }
     .route-row .route-delta.plus { color: #c77700; }
     .route-row .route-delta.ref { color: #90a4ae; font-weight: 600; }
@@ -1090,7 +1127,7 @@
       font-size: 14px;
       font-weight: 700;
       color: #455060;
-      margin-top: 26px;
+      margin-top: 10px;
       margin-bottom: 8px;
     }
     .station-tabs {
@@ -1395,7 +1432,7 @@
 
     .maps-wrap {
       text-align: center;
-      padding-top: 22px;
+      padding-top: 6px;
     }
     .maps-link {
       display: inline-flex;
@@ -1457,6 +1494,8 @@
     <!-- Compte (Supabase) : bouton masqué tant que la config n'est pas renseignée -->
     <button type="button" class="account-btn" id="accountBtn" style="display:none;" onclick="toggleAccountCard()" aria-label="Mon compte">👤</button>
     <h1>T<span class="rat-emphasis">rat</span>jet</h1>
+    <div class="tagline">Carburant, péages, et la station la moins chère — en un calcul.</div>
+    <button type="button" class="intro-toggle" onclick="this.nextElementSibling.classList.toggle('open')">En savoir plus</button>
     <p>Entrez votre trajet, on s'occupe des calculs : carburant ou électricité, prix des péages, et comparaison avec l'itinéraire sans péages pour savoir s'il est rentable. <br><span class="intro-bonus"><span class="intro-bonus-label">En bonus</span> : la station la moins chère près de votre départ et sur votre trajet, et vos véhicules et trajets favoris synchronisés sur tous vos appareils !</span></p>
   </div>
 
@@ -1567,7 +1606,9 @@
          ~25 L (petites citadines) à ~120 L (gros SUV / pick-up).
          Curseurs repliés tant que l'interrupteur est décoché (défaut) — seul
          le texte d'explication reste visible ; l'onglet "Sur le trajet"
-         garde alors son comportement classique. -->
+         garde alors son comportement classique. Toujours visible (pas
+         replié derrière un bouton), mais discret visuellement (voir
+         .reservoir-row) pour ne pas peser sur le formulaire. -->
     <div class="param-row reservoir-row" id="reservoirBloc">
       <div class="param-input">
         <div class="optim-switch-row">
@@ -1608,6 +1649,10 @@
   <!-- Résultats -->
   <div class="card resultats" id="sectionResultats" style="margin-top:14px;">
     <div class="card-title">Résultats</div>
+    <div class="ar-toggle">
+      <button type="button" class="ar-toggle-btn active" data-mode="simple" onclick="setResultMode('simple')">Aller simple</button>
+      <button type="button" class="ar-toggle-btn" data-mode="ar" onclick="setResultMode('ar')">Aller-retour</button>
+    </div>
     <!-- Comparateur des itinéraires Péages / Sans péages (rempli par renderRouteOptions) -->
     <div class="route-options" id="routeOptions"></div>
     <!-- Navigation externe (Maps/Waze) : intégrée dans la fiche de
@@ -1615,11 +1660,12 @@
          renderRouteOptions/buildNavInline) ; cette rangée ne sert que de
          secours quand il n'y a qu'un seul itinéraire (pas de fiche). -->
     <div class="route-nav-row" id="routeNavRow"></div>
-    <div class="ar-toggle">
-      <button type="button" class="ar-toggle-btn active" data-mode="simple" onclick="setResultMode('simple')">Aller simple</button>
-      <button type="button" class="ar-toggle-btn" data-mode="ar" onclick="setResultMode('ar')">Aller-retour</button>
-    </div>
-    <div class="res-trajet-line"><strong id="r-dist">—</strong> · <strong id="r-duree">—</strong> <span class="src-note">hors trafic</span></div>
+    <!-- Distance/durée : visibles en plus gros directement dans les fiches
+         "Avec péages"/"Sans péages" (.route-infos) quand il y en a deux à
+         comparer. Cette ligne ne sert plus que de secours pour le cas d'un
+         seul itinéraire (pas de fiche pour porter cette info) — voir
+         renderResultMode(). -->
+    <div class="res-trajet-line" id="resTrajetLine" style="display:none;"><strong id="r-dist">—</strong> · <strong id="r-duree">—</strong> <span class="src-note">hors trafic</span></div>
 
     <div class="res-section-title">Coût & conso</div>
     <div class="section res-section">
@@ -1633,7 +1679,7 @@
           <span class="cost-chip-value" id="r-cout-peage">—</span>
         </div>
       </div>
-      <div class="res-row">
+      <div class="res-row" id="rCoutRow">
         <span class="res-label">Coût total</span>
         <span class="res-value res-value-big" id="r-cout">—</span>
       </div>
@@ -4542,6 +4588,17 @@ function renderResultMode() {
 
   const rCout = document.getElementById('r-cout');
   rCout.textContent = fmtEur(coutTotalAffiche);
+  // Quand deux itinéraires sont comparés, la fiche sélectionnée affiche déjà
+  // ce même total en gros : pas la peine de le répéter une seconde fois
+  // juste en dessous. Ne reste alors que la répartition carburant/péages
+  // (chips) et les litres, qui eux ne sont montrés nulle part ailleurs.
+  const nbOptions = routeOptionsData ? Object.keys(routeOptionsData).length : 0;
+  const rCoutRow = document.getElementById('rCoutRow');
+  if (rCoutRow) rCoutRow.style.display = nbOptions >= 2 ? 'none' : 'flex';
+  // Distance/durée : idem, déjà visibles dans les fiches d'itinéraire dès
+  // qu'il y en a deux ; sert de secours sinon (pas de fiche pour les porter).
+  const resTrajetLine = document.getElementById('resTrajetLine');
+  if (resTrajetLine) resTrajetLine.style.display = nbOptions >= 2 ? 'none' : 'block';
 }
 
 // --- Comparateur des itinéraires : rapide (tout péage) et zéro péage,
