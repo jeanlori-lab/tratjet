@@ -549,9 +549,12 @@
     }
     .saved-chip:hover { background: #bbdefb; }
     /* Trajet/véhicule actuellement appliqué : ressort par rapport aux
-       autres chips, redevient normal dès qu'un paramètre change (voir
+       autres chips (fond plein foncé, plus seulement l'opacité qui était
+       trop subtile), redevient normal dès qu'un paramètre change (voir
        resetResultat()). */
-    .saved-chip.selected { opacity: 1; }
+    .saved-chip.selected { opacity: 1; background: #1976d2; color: #fff; }
+    .saved-chip.selected .saved-chip-x { color: #cfe3fb; }
+    .saved-chip.selected .saved-chip-x:hover { color: #fff; }
     .saved-chip .chip-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .saved-chip-x { color: #90a4ae; font-weight: 700; padding: 0 2px; flex-shrink: 0; }
     .saved-chip-x:hover { color: #e53935; }
@@ -2141,18 +2144,21 @@ function confirmerVehicule() {
   renderVehChips();
 }
 function appliquerVehicule(v, chip) {
+  // '#trajetChips' préservé partout : appliquer un véhicule ne doit pas
+  // effacer un trajet déjà mis en avant — les deux peuvent être actifs
+  // en même temps.
   const btn = document.querySelector(`#carbChoices .carb-choice[data-value="${v.type}"]`);
-  if (btn) setCarburant(v.type, btn);
+  if (btn) setCarburant(v.type, btn, '#trajetChips');
   // Après setCarburant : majUniteConso peut avoir remis une conso par défaut.
-  if (isFinite(v.conso)) consoSet(v.conso, true);
+  if (isFinite(v.conso)) consoSet(v.conso, '#trajetChips');
   if (v.capacite && v.type !== 'electrique') {
     const cap = document.getElementById('reservoirCapacite');
     cap.value = v.capacite;
     document.getElementById('reservoirCapaciteVal').textContent = Math.round(v.capacite) + ' L';
   }
-  resetResultat();
-  // Après resetResultat() (qui efface toute sélection précédente) : marque
-  // ce véhicule comme actuellement appliqué.
+  resetResultat('#trajetChips');
+  // Après resetResultat() (qui efface toute sélection précédente sauf le
+  // trajet) : marque ce véhicule comme actuellement appliqué.
   if (chip) chip.classList.add('selected');
 }
 
@@ -2200,13 +2206,16 @@ function confirmerTrajet() {
   renderTrajetChips();
 }
 function appliquerTrajet(t, chip) {
+  // '#vehChips' préservé : appliquer un trajet ne doit pas effacer un
+  // véhicule déjà mis en avant — voir le commentaire équivalent dans
+  // appliquerVehicule().
   const container = pointsEl();
   container.textContent = '';
   t.points.forEach(p => container.appendChild(makePointRow(p)));
   refreshPoints();
-  resetResultat();
-  // Après resetResultat() (qui efface toute sélection précédente) : marque
-  // ce trajet comme actuellement appliqué.
+  resetResultat('#vehChips');
+  // Après resetResultat() (qui efface toute sélection précédente sauf le
+  // véhicule) : marque ce trajet comme actuellement appliqué.
   if (chip) chip.classList.add('selected');
 }
 
@@ -2370,12 +2379,12 @@ let carburantTypePrecedent = null;
 // Choix du carburant par pastilles (remplace l'ancien menu déroulant) : met
 // à jour la valeur cachée + l'état visuel, puis déclenche les mêmes mises à
 // jour que l'ancien onchange du <select>.
-function setCarburant(value, btn) {
+function setCarburant(value, btn, keepScope) {
   document.getElementById('carburant').value = value;
   document.querySelectorAll('#carbChoices .carb-choice').forEach(b => b.classList.toggle('active', b === btn));
-  resetResultat();
+  resetResultat(keepScope);
   chargerPrix();
-  majUniteConso();
+  majUniteConso(keepScope);
 }
 function setCarburantStation(value, btn) {
   document.getElementById('carburantStation').value = value;
@@ -2391,7 +2400,7 @@ function setCarburantStation(value, btn) {
   document.getElementById('cheapestNoteStation').style.display = 'none';
 }
 
-function majUniteConso() {
+function majUniteConso(keepScope) {
   const type = document.getElementById('carburant').value;
   const electrique = type === 'electrique';
   const unitLabel = document.getElementById('consoUnitLabel');
@@ -2411,9 +2420,9 @@ function majUniteConso() {
 
   const etaitElectrique = carburantTypePrecedent === 'electrique';
   if (electrique && !etaitElectrique) {
-    consoSet(CONSO_ELECTRIQUE_DEFAUT, true);
+    consoSet(CONSO_ELECTRIQUE_DEFAUT, keepScope || true);
   } else if (!electrique && etaitElectrique) {
-    consoSet(CONSO_THERMIQUE_DEFAUT, true);
+    consoSet(CONSO_THERMIQUE_DEFAUT, keepScope || true);
   }
   carburantTypePrecedent = type;
 }
@@ -2425,13 +2434,21 @@ function setLoading(on) {
   document.getElementById('calcBtn').disabled = on;
   document.getElementById('calcBtnWrap').classList.toggle('loading', on); // fait rouler la voiture-rat au-dessus du bouton
 }
-function resetResultat() {
+// keepScope : sélecteur d'un groupe de chips (ex. '#vehChips') à laisser
+// tel quel — utilisé par appliquerVehicule/appliquerTrajet, qui appellent
+// resetResultat() pour masquer d'anciens résultats sans effacer la
+// sélection de l'AUTRE catégorie (on doit pouvoir avoir un trajet ET un
+// véhicule tous les deux mis en avant en même temps). Sans keepScope
+// (changement de n'importe quel autre paramètre), les deux catégories sont
+// réinitialisées : plus rien ne garantit alors qu'elles correspondent
+// encore à l'état actuel.
+function resetResultat(keepScope) {
   document.getElementById('sectionResultats').style.display = 'none';
   hideError();
-  // Un paramètre a changé : le trajet/véhicule éventuellement mis en avant
-  // (voir appliquerVehicule/appliquerTrajet) ne correspond plus forcément
-  // à l'état actuel, retour à l'affichage normal.
-  document.querySelectorAll('.saved-chip.selected').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.saved-chip.selected').forEach(c => {
+    if (keepScope && c.closest(keepScope)) return;
+    c.classList.remove('selected');
+  });
 }
 
 // Bascule principale : Coût carburant (trajet complet) / Station la moins
@@ -2505,7 +2522,7 @@ function consoSet(v, doReset) {
   }
   const slider = document.getElementById('consoRoulette');
   if (slider) slider.setAttribute('aria-valuenow', v);
-  if (doReset) resetResultat();
+  if (doReset) resetResultat(typeof doReset === 'string' ? doReset : undefined);
 }
 function consoInit() {
   const track = document.getElementById('rouletteTrack');
