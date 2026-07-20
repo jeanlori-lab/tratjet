@@ -782,8 +782,11 @@
     @media (hover: hover) and (pointer: fine) {
       .swap-btn:hover::after, .swap-btn:focus-visible::after { opacity: 1; }
     }
-    /* Effet sympa : survoler les flèches éclaire les deux encadrés */
-    .points-wrap:has(.swap-btn:hover) .point-input {
+    /* Effet sympa : survoler les flèches éclaire les deux encadrés. La
+       classe est posée en JS au survol (voir swapBtn) plutôt que par un
+       sélecteur :has(), peu fiable sur iOS Safari - ici sans conséquence
+       (survol = ordinateur uniquement), mais autant rester cohérent. */
+    .points-wrap.swap-hover .point-input {
       border-color: #93b8e6;
       box-shadow: 0 0 0 3px rgba(33,150,243,0.12);
     }
@@ -1403,7 +1406,10 @@
       transition: background 0.15s;
     }
     .cheapest-link:hover { background: #bbdefb; }
-    .cheapest-btn-row:has(.cheapest-link + .cheapest-link) .cheapest-link {
+    /* Deux liens côte à côte : largeur égale. La classe est posée en JS
+       (finaliserBtnRow) plutôt que par un sélecteur :has(), peu fiable sur
+       iOS Safari. */
+    .cheapest-btn-row.two-links .cheapest-link {
       flex: 1 1 0;
       justify-content: center;
     }
@@ -2513,6 +2519,16 @@ function appliquerTrajet(t, chip) {
 
 renderVehChips();
 renderTrajetChips();
+// Survol des flèches d'inversion : éclaire les deux encadrés (remplace le
+// sélecteur CSS :has(.swap-btn:hover), voir .points-wrap.swap-hover).
+(function initSwapHover() {
+  const swap = document.getElementById('swapBtn');
+  if (!swap) return;
+  const wrap = swap.closest('.points-wrap');
+  if (!wrap) return;
+  swap.addEventListener('mouseenter', () => wrap.classList.add('swap-hover'));
+  swap.addEventListener('mouseleave', () => wrap.classList.remove('swap-hover'));
+})();
 // Entrée dans un champ de nom = valider (sans déclencher le calcul global).
 document.getElementById('vehNom').addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.stopPropagation(); confirmerVehicule(); }
@@ -3321,6 +3337,14 @@ function buildStationDetail(station, type, lat, lon, big) {
 // Badge "économie" : ce qu'on gagne en faisant le plein à cette station par
 // rapport au prix moyen national du même carburant. litres = taille estimée
 // du plein. null si données manquantes ou économie négligeable (< 5 centimes).
+// Marque une ligne de boutons qui contient au moins deux liens, pour leur
+// donner une largeur égale (voir .cheapest-btn-row.two-links). Remplace un
+// ancien sélecteur CSS :has() peu fiable sur iOS. À appeler une fois les
+// liens ajoutés à la ligne.
+function finaliserBtnRow(btnRow) {
+  if (btnRow.querySelectorAll('.cheapest-link').length >= 2) btnRow.classList.add('two-links');
+}
+
 function buildEcoBadge(prixStation, litres) {
   if (typeof prixActuel !== 'number' || !isFinite(prixStation) || !isFinite(litres) || litres <= 0) return null;
   const gain = (prixActuel - prixStation) * litres;
@@ -3511,6 +3535,7 @@ async function calculerStationsParTroncon() {
     link.target = '_blank';
     link.textContent = '📍 Ajouter cette station à mon trajet';
     btnRow.appendChild(link);
+    finaliserBtnRow(btnRow);
     contentWrap.appendChild(btnRow);
     refreshStationMaps();
   }
@@ -3599,6 +3624,7 @@ async function rechercherStationMoinsChere() {
       linkDirect.appendChild(document.createTextNode(electrique ? 'Itinéraire vers cette borne' : 'Itinéraire vers cette station'));
       btnRow.appendChild(linkDirect);
 
+      finaliserBtnRow(btnRow);
       cheapestNote.appendChild(btnRow);
     }
   } else {
@@ -3835,6 +3861,7 @@ function renderArrets(note, arrets, type, depart, arrivee) {
     link.target = '_blank';
     link.textContent = '📍 Ajouter cette station à mon trajet';
     btnRow.appendChild(link);
+    finaliserBtnRow(btnRow);
     contentWrap.appendChild(btnRow);
 
     refreshStationMaps();
@@ -3958,6 +3985,7 @@ async function rechercherStationSurTrajet() {
     link.target = '_blank';
     link.textContent = '📍 Ajouter cette station à mon trajet';
     btnRow.appendChild(link);
+    finaliserBtnRow(btnRow);
     note.appendChild(btnRow);
   } else {
     const empty = document.createElement('div');
@@ -4151,6 +4179,7 @@ async function afficherStationStandalone() {
       backRow.appendChild(backBtn);
     }
 
+    finaliserBtnRow(backRow);
     cheapestNote.appendChild(backRow);
     return;
   }
@@ -4207,6 +4236,7 @@ async function afficherStationStandalone() {
     };
     btnRow.appendChild(noLimitBtn);
 
+    finaliserBtnRow(btnRow);
     cheapestNote.appendChild(btnRow);
   }
 }
