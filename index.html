@@ -155,6 +155,11 @@
     .reservoir-hint.show { display: block; }
     .niveau-label strong { color: #1976d2; }
     .niveau-slider { width: 100%; accent-color: #1976d2; cursor: pointer; display: block; }
+    /* Curseur de contenance : emoji moto (petit réservoir) à gauche,
+       SUV (gros réservoir) à droite. */
+    .slider-emoji-row { display: flex; align-items: center; gap: 8px; }
+    .slider-emoji-row .niveau-slider { flex: 1; min-width: 0; }
+    .slider-emoji { font-size: 15px; line-height: 1; flex-shrink: 0; }
     /* Case à cocher minimaliste (pas un gros interrupteur) : toute la ligne
        est le bouton, pour un état décoché qui se fait discret parmi les
        réglages du formulaire. */
@@ -1554,7 +1559,7 @@
     <!-- Réservoir + niveau au départ : servent à conseiller la station la
          moins chère au bon moment du trajet (onglet "Sur le trajet"), quand
          la jauge passera entre ~20 % et ~10 % restants. Bornes du curseur :
-         ~25 L (petites citadines) à ~120 L (gros SUV / pick-up).
+         5 L (motos) à ~120 L (gros SUV / pick-up).
          Curseurs repliés tant que l'interrupteur est décoché (défaut) - seul
          le texte d'explication reste visible ; l'onglet "Sur le trajet"
          garde alors son comportement classique. Toujours visible (pas
@@ -1569,7 +1574,11 @@
         <div class="reservoir-hint" id="reservoirHint">On vous trouve la station la moins chère sur votre trajet, à l'endroit où il vous restera 10 à 20 % de carburant.</div>
         <div id="reservoirPanel" class="reservoir-inactive">
           <div class="niveau-label">Contenance du réservoir : <strong id="reservoirCapaciteVal">50 L</strong></div>
-          <input type="range" id="reservoirCapacite" class="niveau-slider" min="25" max="120" step="5" value="50" disabled aria-label="Contenance du réservoir en litres">
+          <div class="slider-emoji-row">
+            <span class="slider-emoji" aria-hidden="true">🏍️</span>
+            <input type="range" id="reservoirCapacite" class="niveau-slider" min="5" max="120" step="5" value="50" disabled aria-label="Contenance du réservoir en litres">
+            <span class="slider-emoji" aria-hidden="true">🚙</span>
+          </div>
           <div class="niveau-label niveau-label-depart">Niveau de carburant au départ : <strong id="niveauDepartVal">50 %</strong></div>
           <input type="range" id="niveauDepart" class="niveau-slider" min="5" max="100" step="5" value="50" disabled aria-label="Niveau de carburant au départ, en pourcentage">
         </div>
