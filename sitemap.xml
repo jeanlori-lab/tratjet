@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://jeanlori-lab.github.io/tratjet/</loc><changefreq>weekly</changefreq></url>
+  <url><loc>https://jeanlori-lab.github.io/tratjet/accueil.html</loc><changefreq>monthly</changefreq></url>
   <url><loc>https://jeanlori-lab.github.io/tratjet/trajets/paris-lyon.html</loc><changefreq>weekly</changefreq></url>
   <url><loc>https://jeanlori-lab.github.io/tratjet/trajets/paris-marseille.html</loc><changefreq>weekly</changefreq></url>
   <url><loc>https://jeanlori-lab.github.io/tratjet/trajets/paris-bordeaux.html</loc><changefreq>weekly</changefreq></url>

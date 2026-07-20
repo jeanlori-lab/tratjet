@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tratjet — Le coût réel de votre trajet en voiture, gratuit et sans compte</title>
+  <meta name="description" content="Combien coûte vraiment votre trajet en voiture ? Carburant au prix du jour, péages officiels, station la moins chère sur la route, et verdict : éviter les péages est-il rentable ? Gratuit, sans compte.">
+  <link rel="icon" href="logo trajet rat.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Tratjet",
+    "url": "https://jeanlori-lab.github.io/tratjet/",
+    "applicationCategory": "TravelApplication",
+    "operatingSystem": "Web",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+    "description": "Calculateur du coût réel d'un trajet en voiture : carburant au prix du jour, péages, comparaison avec/sans autoroute et station la moins chère sur le trajet."
+  }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #eef2f7;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #263238;
+      -webkit-font-smoothing: antialiased;
+    }
+    .page { max-width: 430px; margin: 0 auto; padding: 0 20px 40px; }
+    .titre { font-family: 'Sora', 'Segoe UI', Arial, sans-serif; font-weight: 700; }
+    .rat { color: #e2971a; font-weight: 800; }
+
+    /* --- En-tête --- */
+    .topbar { display: flex; align-items: center; gap: 12px; padding: 22px 0 6px; }
+    .topbar img { width: 46px; height: 46px; border-radius: 12px; }
+    .topbar .nom { font-size: 24px; }
+    .topbar a { margin-left: auto; color: #1976d2; font-size: 12.5px; font-weight: 700; text-decoration: none; }
+    .topbar a:hover { text-decoration: underline; }
+
+    /* --- Héros : les trois questions --- */
+    .hero { padding: 22px 0 6px; }
+    .q {
+      font-family: 'Sora', sans-serif;
+      font-size: 20px; font-weight: 700; line-height: 1.32;
+      margin: 0 0 10px;
+    }
+    .q .hl-bleu { color: #1976d2; }
+    .q .hl-vert { color: #2e7d32; }
+    .q .hl-orange { color: #e2971a; }
+    .rep { font-size: 14px; color: #607080; line-height: 1.55; margin: 16px 0 18px; }
+    .rep b { color: #263238; }
+    .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #eaf6ec; color: #2e7d32; border-radius: 999px;
+      padding: 5px 12px; font-size: 11.5px; font-weight: 700;
+    }
+    .badge.bleu { background: #e8f2ff; color: #1976d2; }
+    .cta {
+      display: block; width: 100%; text-align: center; text-decoration: none;
+      background: linear-gradient(180deg, #2196f3, #1976d2); color: #fff;
+      border: none; border-radius: 14px; padding: 15px;
+      font-size: 16px; font-weight: 800; font-family: inherit; cursor: pointer;
+      box-shadow: 0 6px 18px rgba(25,118,210,0.35);
+    }
+    .cta:active { transform: translateY(1px); }
+
+    /* --- Comment ça marche --- */
+    .section { margin-top: 34px; }
+    .section h2 {
+      font-family: 'Sora', sans-serif;
+      font-size: 17px; font-weight: 700; color: #263238; margin: 0 0 14px;
+    }
+    .steps { display: flex; flex-direction: column; gap: 10px; }
+    .step { display: flex; gap: 12px; align-items: flex-start; }
+    .num {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: #1976d2; color: #fff; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; margin-top: 1px;
+    }
+    .step div { font-size: 13px; color: #455060; line-height: 1.5; }
+    .step b { color: #263238; }
+
+    /* --- Cartes fonctionnalités --- */
+    .feats { display: flex; flex-direction: column; gap: 10px; }
+    .feat {
+      background: #fff; border-radius: 16px; padding: 14px 16px;
+      box-shadow: 0 3px 10px rgba(15,23,41,0.05);
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+    .feat .ico { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+    .feat b { display: block; font-size: 13.5px; color: #263238; margin-bottom: 3px; }
+    .feat p { margin: 0; font-size: 12.5px; color: #607080; line-height: 1.5; }
+
+    /* --- ADN --- */
+    .adn {
+      background: #fdf8ec; border: 1px solid #f0e2c2; border-radius: 16px;
+      padding: 16px 18px; margin-top: 34px;
+    }
+    .adn h2 { font-family: 'Sora', sans-serif; font-size: 16px; margin: 0 0 10px; }
+    .adn p { font-size: 13px; color: #6b5d3f; line-height: 1.6; margin: 0 0 10px; }
+    .adn p:last-child { margin-bottom: 0; }
+    .adn b { color: #263238; }
+
+    /* --- FAQ --- */
+    .faq details {
+      background: #fff; border-radius: 14px; padding: 12px 16px;
+      box-shadow: 0 3px 10px rgba(15,23,41,0.05); margin-bottom: 8px;
+    }
+    .faq summary {
+      font-size: 13.5px; font-weight: 700; color: #263238;
+      cursor: pointer; list-style: none; position: relative; padding-right: 22px;
+    }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary::after {
+      content: '+'; position: absolute; right: 2px; top: -2px;
+      font-size: 17px; color: #90a4ae; font-weight: 600;
+    }
+    .faq details[open] summary::after { content: '–'; }
+    .faq details p { font-size: 12.5px; color: #607080; line-height: 1.55; margin: 10px 0 2px; }
+
+    /* --- Fin de page --- */
+    .final { text-align: center; margin-top: 38px; }
+    .final .accroche { font-family: 'Sora', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 14px; }
+    footer {
+      margin-top: 30px; padding-top: 18px; border-top: 1px solid #dfe6ef;
+      font-size: 11.5px; color: #90a4ae; text-align: center; line-height: 1.7;
+    }
+    footer a { color: #1976d2; text-decoration: none; font-weight: 600; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <div class="topbar">
+      <img src="logo trajet rat.png" alt="Logo Tratjet">
+      <div class="nom titre">T<span class="rat">rat</span>jet</div>
+      <a href="./">Ouvrir l'appli →</a>
+    </div>
+
+    <div class="hero">
+      <p class="q">« Combien va <span class="hl-bleu">vraiment coûter</span> ce trajet&nbsp;? »</p>
+      <p class="q">« Ça vaut le coup d'<span class="hl-vert">éviter les péages</span>&nbsp;? »</p>
+      <p class="q">« Quelle est la <span class="hl-orange">station la moins chère</span> sur mon trajet&nbsp;? »</p>
+      <p class="rep">Trois questions que tout conducteur se pose avant de partir. <b>Une seule réponse chiffrée</b>, en quelques secondes, à partir de données réelles et à jour.</p>
+      <div class="badges">
+        <span class="badge">✓ 100 % gratuit</span>
+        <span class="badge">✓ Sans compte</span>
+        <span class="badge">✓ Sans pub</span>
+        <span class="badge bleu">Prix carburant du jour</span>
+      </div>
+      <a class="cta" href="./">Calculer mon trajet</a>
+    </div>
+
+    <div class="section">
+      <h2>Comment ça marche</h2>
+      <div class="steps">
+        <div class="step"><span class="num">1</span><div><b>Entrez votre trajet</b> — départ, arrivée, étapes éventuelles — et votre consommation (ou choisissez un véhicule enregistré).</div></div>
+        <div class="step"><span class="num">2</span><div><b>On calcule tout</b> : carburant au prix moyen du jour, péages au tarif officiel, avec et sans autoroute.</div></div>
+        <div class="step"><span class="num">3</span><div><b>Vous partez informé</b> : le vrai budget, le verdict péages, et la station la moins chère sur votre route.</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Ce que vous obtenez</h2>
+      <div class="feats">
+        <div class="feat"><span class="ico">💶</span><div><b>Le coût réel, pas une estimation vague</b><p>Prix moyen du carburant mis à jour chaque jour (données publiques data.gouv.fr), tarifs officiels des péages, votre consommation réelle. Le budget affiché est celui que vous paierez à l'arrivée.</p></div></div>
+        <div class="feat"><span class="ico">🛣️</span><div><b>Éviter les péages : on tranche pour vous</b><p>Les deux itinéraires sont comparés automatiquement. On ne vous laisse pas avec deux chiffres côte à côte : on vous dit si l'économie vaut le temps passé en plus sur la route.</p></div></div>
+        <div class="feat"><span class="ico">⛽</span><div><b>La station la moins chère, sur votre route</b><p>Pas celle à 20 km de l'autoroute : celle qui est vraiment sur votre itinéraire. Et pour les longs trajets à étapes, le détail tronçon par tronçon.</p></div></div>
+        <div class="feat"><span class="ico">🛢️</span><div><b>Faites le plein au bon moment</b><p>Indiquez la taille de votre réservoir et votre niveau au départ : on vous dit où vous arrêter quand la jauge approchera de la réserve — à la station la moins chère de cette zone.</p></div></div>
+        <div class="feat"><span class="ico">🔌</span><div><b>Électrique aussi</b><p>Bornes de recharge rapides sur le trajet (base nationale IRVE) et estimation réaliste du coût d'une recharge publique sur autoroute.</p></div></div>
+        <div class="feat"><span class="ico">⭐</span><div><b>Vos véhicules et trajets favoris</b><p>Enregistrez vos véhicules (carburant, consommation) et vos trajets habituels : ils restent sur votre appareil. Et si vous voulez les retrouver partout, une synchronisation optionnelle existe — par simple code e-mail, sans mot de passe.</p></div></div>
+      </div>
+    </div>
+
+    <div class="adn">
+      <h2>🐀 Notre ADN : un outil, pas une usine à gaz</h2>
+      <p>Tratjet fait <b>une chose</b> : répondre honnêtement à la question du coût d'un trajet en voiture. Pas de blog envahissant, pas de compte obligatoire, pas de publicité, pas de suggestions touristiques.</p>
+      <p>Les calculs s'appuient sur des <b>données publiques et officielles</b> : prix des carburants publiés chaque jour par l'État, tarifs des sociétés d'autoroutes, base nationale des bornes de recharge. Quand une donnée est une estimation, on vous le dit.</p>
+      <p>Et c'est <b>gratuit, sans piège</b> : pas de version premium, pas de revente de données. Vos favoris restent dans votre navigateur tant que vous n'activez pas la synchronisation.</p>
+    </div>
+
+    <div class="section faq">
+      <h2>Questions fréquentes</h2>
+      <details>
+        <summary>D'où viennent les prix affichés ?</summary>
+        <p>Le prix du carburant est la moyenne France du jour, publiée en données ouvertes par l'État (data.gouv.fr) — et les prix des stations proposées sont ceux déclarés par chaque station. Les péages viennent des tarifs officiels des sociétés d'autoroutes.</p>
+      </details>
+      <details>
+        <summary>Faut-il créer un compte ?</summary>
+        <p>Non. Tout fonctionne sans compte, immédiatement. Le compte (facultatif) sert uniquement à synchroniser vos véhicules et trajets favoris entre plusieurs appareils — il se crée avec votre e-mail et un code à recopier, sans mot de passe.</p>
+      </details>
+      <details>
+        <summary>C'est gratuit… où est le piège ?</summary>
+        <p>Il n'y en a pas : pas de pub, pas de version payante, pas de revente de données. Le site s'appuie sur des données publiques et des services gratuits.</p>
+      </details>
+      <details>
+        <summary>Comment savez-vous si éviter les péages est « rentable » ?</summary>
+        <p>On compare l'économie de péage au temps supplémentaire passé sur la route (en incluant le carburant du détour). Si l'économie ne vaut pas le temps perdu, on vous le dit clairement, chiffres à l'appui.</p>
+      </details>
+      <details>
+        <summary>Ça marche sur téléphone ?</summary>
+        <p>Oui, le site est pensé d'abord pour mobile. Vous pouvez aussi l'ajouter à votre écran d'accueil pour l'utiliser comme une appli.</p>
+      </details>
+    </div>
+
+    <div class="final">
+      <p class="accroche titre">Prêt à connaître le vrai prix de votre trajet&nbsp;?</p>
+      <a class="cta" href="./">Calculer mon trajet</a>
+    </div>
+
+    <footer>
+      <a href="./">Le calculateur</a> · <a href="trajets/">Coûts des trajets populaires</a><br>
+      Tratjet — gratuit, sans compte, sans pub.
+    </footer>
+
+  </div>
+</body>
+</html>
