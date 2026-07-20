@@ -63,6 +63,34 @@
       margin: 0 auto;
     }
 
+    /* Desktop : colonne de paramètres fixe à gauche (toujours visible en
+       défilant les résultats), résultats à droite. #modeCout n'a pas de
+       présence visuelle propre (display:contents) : ses enfants (carte
+       paramètres, bouton, loader/erreur, résultats) rejoignent directement
+       la grille de .page, chacun placé explicitement par numéro de ligne
+       (robuste, indépendant de l'ordre dans le DOM). #modeStation (mode
+       "station seule", sans paramètres de trajet à séparer) reste un
+       panneau unique centré, sans colonne dédiée. */
+    @media (min-width: 1040px) {
+      .page {
+        max-width: 1180px;
+        display: grid;
+        grid-template-columns: 460px 1fr;
+        column-gap: 32px;
+        align-items: start;
+      }
+      .header { grid-column: 1 / -1; grid-row: 1; }
+      #accountCard { grid-column: 1 / -1; grid-row: 2; }
+      #modeCout { display: contents; }
+      #paramsCard { grid-column: 1; grid-row: 3; }
+      #calcBtnWrap { grid-column: 1; grid-row: 4; }
+      #loader { grid-column: 1; grid-row: 5; }
+      #error { grid-column: 1; grid-row: 6; }
+      #sectionResultats { grid-column: 2; grid-row: 3 / 7; margin-top: 0 !important; }
+      #modeStation { grid-column: 1 / -1; grid-row: 3 / 7; max-width: 640px; margin: 0 auto; }
+      .page-footer { grid-column: 1 / -1; grid-row: 8; }
+    }
+
     /* En-tête */
     .header {
       text-align: center;
@@ -1499,7 +1527,7 @@
 
   <div id="modeCout">
   <!-- Paramètres -->
-  <div class="card">
+  <div class="card" id="paramsCard">
     <div class="card-title">Paramètres du trajet</div>
 
     <!-- Bloc Départ / Destination -->
