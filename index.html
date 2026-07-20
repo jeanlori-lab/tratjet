@@ -1128,19 +1128,19 @@
     /* Liste déroulante des tronçons (station la moins chère par tronçon,
        trajets à étapes) : volontairement différente des pastilles d'arrêt
        ci-dessus, pour ne pas laisser croire qu'il s'agit de la même chose. */
-    /* Bouton "voir par tronçon" (trajets à étapes) : plein et coloré (pas
-       en pointillés comme les autres CTA secondaires) pour bien se voir
-       comme un vrai bouton cliquable. */
+    /* Bouton "voir par tronçon" (trajets à étapes) : reste visiblement
+       cliquable (fond + bordure), mais discret — pas un gros CTA en
+       dégradé, juste une option secondaire parmi d'autres. */
     .troncon-cta {
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      width: 100%; padding: 12px 10px; margin-top: 14px;
-      background: linear-gradient(135deg, #43a047, #2e7d32); border: none; border-radius: 12px;
-      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      width: 100%; padding: 8px 10px; margin-top: 12px;
+      background: #fff; border: 1.5px solid #bcd9bc; border-radius: 10px;
+      color: #2e7d32; font-size: 12px; font-weight: 700; cursor: pointer;
       font-family: inherit; line-height: 1.3;
-      box-shadow: 0 4px 12px rgba(46,125,50,0.3);
     }
+    .troncon-cta:hover { background: #f3faf3; }
     .troncon-cta:active { transform: scale(0.98); }
-    .troncon-cta-icon { font-size: 16px; }
+    .troncon-cta-icon { font-size: 13px; }
     .troncon-select-wrap { position: relative; margin-bottom: 10px; }
     .troncon-select {
       display: block;
