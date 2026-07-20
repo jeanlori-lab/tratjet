@@ -1,26 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<!-- Diagnostic (activé par ?debug=1) : capte très tôt toute erreur JS et le
-     fait que le script principal ait fini de s'exécuter, pour comprendre
-     un cas où les favoris n'apparaissent pas. Inerte sans ?debug=1. -->
-<script>
-  // Capté ici, tôt : chargerRechercheDepuisLien() efface location.search
-  // en fin de script, avant que le bandeau de diagnostic ne le lise. On
-  // mémorise le flag en sessionStorage pour qu'il survive aux rechargements
-  // (ce sont justement les rechargements qui échouent qu'on veut observer) ;
-  // ?debug=0 le désactive, fermer l'onglet aussi.
-  try {
-    var m = /[?&]debug=([01])/.exec(location.search);
-    if (m) sessionStorage.setItem('tratjetDebug', m[1]);
-  } catch (e) {}
-  var dbg = false;
-  try { dbg = sessionStorage.getItem('tratjetDebug') === '1'; } catch (e) {}
-  window.__diag = { errors: [], scriptEnd: false, t0: Date.now(), debug: dbg };
-  window.addEventListener('error', function (e) {
-    window.__diag.errors.push((e.message || String(e.error || e)) + (e.filename ? ' @' + e.lineno : ''));
-  });
-</script>
 <link rel="icon" type="image/png" href="logo trajet rat.png">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -5465,54 +5445,6 @@ async function calculer() {
 }
 
 document.addEventListener('keydown', e => { if (e.key === 'Enter') calculer(); });
-
-// Marqueur : le script principal a été exécuté jusqu'au bout (voir __diag).
-window.__diag.scriptEnd = true;
-
-// Bandeau de diagnostic (seulement avec ?debug=1). Montre en direct : le
-// nombre de trajets/véhicules en mémoire (localStorage), le nombre rendu à
-// l'écran, si le script principal a fini, et les erreurs JS captées. Se met
-// à jour immédiatement puis à 0,5s / 1,5s / 3s (pour voir si un favori
-// affiché disparaît ensuite, ou l'inverse).
-if (window.__diag.debug) {
-  const box = document.createElement('div');
-  box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#1a2433;color:#fff;font:11px/1.4 monospace;padding:8px 10px;white-space:pre-wrap;word-break:break-word;';
-  document.body.appendChild(box);
-  // "peint" = réellement visible à l'écran (dans le flux, hauteur > 0) et
-  // pas seulement présent dans le DOM (rendus compte aussi les éléments
-  // cachés). Un écart rendus>peints = les chips existent mais ne s'affichent
-  // pas : bug de rendu/CSS. rendus=0 = ils n'ont pas été créés.
-  const compter = (sel) => {
-    const els = Array.from(document.querySelectorAll(sel));
-    let peints = 0;
-    els.forEach(el => { if (el.offsetParent !== null && el.getBoundingClientRect().height > 0) peints++; });
-    return { rendus: els.length, peints };
-  };
-  const noms = () => {
-    try { return JSON.parse(localStorage.getItem('tratjetTrajets') || '[]').filter(t => !t.del).map(t => t.nom).join(', ') || '(vide)'; }
-    catch (e) { return '(illisible)'; }
-  };
-  const maj = () => {
-    let localTraj = '?', localVeh = '?';
-    try { localTraj = JSON.parse(localStorage.getItem('tratjetTrajets') || '[]').filter(t => !t.del).length; } catch (e) {}
-    try { localVeh = JSON.parse(localStorage.getItem('tratjetVehicules') || '[]').filter(v => !v.del).length; } catch (e) {}
-    const cT = compter('#trajetChips .saved-chip');
-    const cV = compter('#vehChips .saved-chip');
-    const wrap = document.querySelector('.trajet-chips-wrap');
-    const wrapVis = wrap ? getComputedStyle(wrap).display : 'ABSENT';
-    box.textContent =
-      'DIAG  t+' + (Date.now() - window.__diag.t0) + 'ms  scriptFini=' + window.__diag.scriptEnd + '\n' +
-      'trajets: mémoire=' + localTraj + ' DOM=' + cT.rendus + ' PEINTS=' + cT.peints + ' wrap=' + wrapVis + '\n' +
-      'noms: ' + noms() + '\n' +
-      'véhicules: mémoire=' + localVeh + ' DOM=' + cV.rendus + ' PEINTS=' + cV.peints + '\n' +
-      'sync: ' + (typeof sbUser !== 'undefined' && sbUser ? 'connecté' : 'non connecté') +
-        '  Leaflet=' + (typeof L !== 'undefined') + '  Supabase=' + (typeof supabase !== 'undefined') + '\n' +
-      'erreurs JS: ' + (window.__diag.errors.length ? window.__diag.errors.join(' | ') : 'aucune');
-  };
-  maj();
-  [200, 500, 1500, 3000, 5000].forEach(ms => setTimeout(maj, ms));
-  setInterval(maj, 1000);
-}
 </script>
 </body>
 </html>
