@@ -31,16 +31,35 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+  <!-- media="print" + onload : charge les feuilles de style externes sans
+       bloquer l'affichage du reste de la page pendant leur téléchargement
+       (un <link rel=stylesheet> classique est bloquant par défaut). Sur un
+       réseau mobile lent, ce blocage pouvait retarder l'affichage de toute
+       la page de plusieurs secondes - donnant l'impression que les
+       favoris avaient disparu, alors qu'ils n'avaient simplement pas
+       encore eu la chance de s'afficher. <noscript> en repli si JS
+       désactivé (onload ne se déclenche jamais). -->
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&display=swap" rel="stylesheet"></noscript>
   <!-- Leaflet : cartes des stations avec marqueur + position de l'utilisateur
        (boule bleue). Si le CDN ne charge pas, buildStationMap() retombe sur
        l'ancienne iframe OpenStreetMap (sans la position). -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""></noscript>
+  <!-- defer sur les deux scripts CDN ci-dessous : sans ça, ils bloquent
+       l'affichage de toute la page (formulaire, favoris...) le temps de
+       leur chargement - sur un réseau mobile lent ou instable, ça peut
+       prendre plusieurs secondes, pendant lesquelles la page reste
+       blanche. On donnait l'impression que les trajets favoris avaient
+       disparu, alors que la page n'avait simplement pas fini de charger.
+       Ni L (Leaflet) ni supabase ne sont utilisés avant que l'utilisateur
+       interagisse (carte affichée après un calcul, compte initialisé à
+       DOMContentLoaded ci-dessous) : le defer ne retarde rien d'utile. -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
   <!-- Supabase : comptes (lien magique) + synchronisation des véhicules et
        trajets favoris. Configuration dans TRATJET_SUPABASE plus bas ; si le
        CDN ne charge pas, le bouton compte reste simplement masqué. -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="" defer></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -2271,7 +2290,16 @@ async function syncVersCloud() {
   } catch (e) { /* best-effort : le local reste la référence */ }
 }
 
-initCompte();
+// Attend DOMContentLoaded : le script Supabase est chargé en `defer` (voir
+// plus haut), donc pas encore exécuté si on appelait initCompte() ici
+// directement - `supabase` ne serait pas encore défini. Les scripts
+// deferred s'exécutent toujours avant DOMContentLoaded, donc à ce
+// moment-là il est garanti disponible (si le CDN a fini de charger).
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initCompte);
+} else {
+  initCompte();
+}
 
 // Mini popup "Supprimer « X » ? Supprimer / Annuler" avant de supprimer un
 // trajet/véhicule favori, plutôt qu'une suppression immédiate au clic sur
