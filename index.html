@@ -155,11 +155,6 @@
     .reservoir-hint.show { display: block; }
     .niveau-label strong { color: #1976d2; }
     .niveau-slider { width: 100%; accent-color: #1976d2; cursor: pointer; display: block; }
-    /* Curseur de contenance : emoji moto (petit réservoir) à gauche,
-       SUV (gros réservoir) à droite. */
-    .slider-emoji-row { display: flex; align-items: center; gap: 8px; }
-    .slider-emoji-row .niveau-slider { flex: 1; min-width: 0; }
-    .slider-emoji { font-size: 15px; line-height: 1; flex-shrink: 0; }
     /* Case à cocher minimaliste (pas un gros interrupteur) : toute la ligne
        est le bouton, pour un état décoché qui se fait discret parmi les
        réglages du formulaire. */
@@ -1574,11 +1569,7 @@
         <div class="reservoir-hint" id="reservoirHint">On vous trouve la station la moins chère sur votre trajet, à l'endroit où il vous restera 10 à 20 % de carburant.</div>
         <div id="reservoirPanel" class="reservoir-inactive">
           <div class="niveau-label">Contenance du réservoir : <strong id="reservoirCapaciteVal">50 L</strong></div>
-          <div class="slider-emoji-row">
-            <span class="slider-emoji" aria-hidden="true">🏍️</span>
-            <input type="range" id="reservoirCapacite" class="niveau-slider" min="5" max="120" step="5" value="50" disabled aria-label="Contenance du réservoir en litres">
-            <span class="slider-emoji" aria-hidden="true">🚙</span>
-          </div>
+          <input type="range" id="reservoirCapacite" class="niveau-slider" min="5" max="120" step="5" value="50" disabled aria-label="Contenance du réservoir en litres">
           <div class="niveau-label niveau-label-depart">Niveau de carburant au départ : <strong id="niveauDepartVal">50 %</strong></div>
           <input type="range" id="niveauDepart" class="niveau-slider" min="5" max="100" step="5" value="50" disabled aria-label="Niveau de carburant au départ, en pourcentage">
         </div>
@@ -2788,12 +2779,41 @@ function setOptimPlein(on) {
 // Réservoir / niveau au départ : libellés des curseurs en direct, et
 // rafraîchissement de la recommandation "Sur le trajet" quand ces
 // paramètres changent après un calcul.
+// Équivalent véhicule affiché en direct pendant le réglage de la contenance,
+// dans une bulle flottante au-dessus du pouce du curseur (même style que le
+// "Non mais tu vas où comme ça ?" du glisser-déposer des étapes).
+function equivalentReservoir(litres) {
+  if (litres <= 5) return 'un scooter';
+  if (litres <= 15) return 'une moto';
+  if (litres <= 25) return 'une grosse moto';
+  if (litres <= 35) return 'une petite 3 portes';
+  if (litres <= 45) return 'une citadine';
+  if (litres <= 55) return 'une berline';
+  if (litres <= 70) return 'un SUV';
+  if (litres <= 85) return 'un van';
+  if (litres <= 100) return 'une camionnette';
+  return 'un gros 4x4';
+}
 (function initReservoir() {
   const cap = document.getElementById('reservoirCapacite');
   const niv = document.getElementById('niveauDepart');
   if (!cap || !niv) return;
+  let equivTimer = null;
+  function showEquiv() {
+    const msg = ensureDragOutsideMsg();
+    msg.textContent = 'Comme ' + equivalentReservoir(parseFloat(cap.value)) + ' !';
+    // Position au-dessus du pouce du curseur (approx. : fraction de la piste).
+    const rect = cap.getBoundingClientRect();
+    const pct = (cap.value - cap.min) / (cap.max - cap.min);
+    msg.style.left = (rect.left + pct * rect.width) + 'px';
+    msg.style.top = (rect.top - 10) + 'px';
+    msg.classList.add('show');
+    clearTimeout(equivTimer);
+    equivTimer = setTimeout(() => msg.classList.remove('show'), 1200);
+  }
   cap.addEventListener('input', () => {
     document.getElementById('reservoirCapaciteVal').textContent = cap.value + ' L';
+    showEquiv();
   });
   niv.addEventListener('input', () => {
     document.getElementById('niveauDepartVal').textContent = niv.value + ' %';
@@ -4211,6 +4231,7 @@ function onDragMove(e) {
     if (outside) {
       // Centré horizontalement (pas sur le curseur) : sur mobile, suivre le
       // doigt peut coller le message contre le bord de l'écran et le tronquer.
+      msg.textContent = 'Non mais tu vas où comme ça ?';
       msg.style.left = '50%';
       msg.style.top = (e.clientY - 34) + 'px';
       msg.classList.add('show');
