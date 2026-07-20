@@ -790,13 +790,25 @@
     }
     .fav-hint.show { opacity: 1; transform: translateY(0); }
 
-    /* Petit texte d'info qui apparaît brièvement quand on supprime un
-       trajet/véhicule favori (voir showDeleteHint()). */
-    .delete-hint {
-      font-size: 11px; color: #90a4ae; margin-top: 6px;
-      opacity: 0; transition: opacity 0.2s;
+    /* Mini popup de confirmation avant de supprimer un trajet/véhicule
+       favori (voir confirmDelete()). */
+    .delete-confirm {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      margin-top: 8px; font-size: 11.5px; color: #455060;
+      opacity: 0; transition: opacity 0.15s;
     }
-    .delete-hint.show { opacity: 1; }
+    .delete-confirm.show { opacity: 1; }
+    .delete-confirm-yes {
+      background: #fdecea; color: #c62828; border: none; border-radius: 8px;
+      padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer;
+      font-family: inherit;
+    }
+    .delete-confirm-yes:hover { background: #f8d7d5; }
+    .delete-confirm-no {
+      background: none; border: none; color: #90a4ae; font-size: 11px;
+      font-weight: 600; text-decoration: underline; cursor: pointer;
+      font-family: inherit; padding: 4px 0;
+    }
 
     /* Poignée sortie du flux : centrée dans la marge à gauche de l'emoji. */
     .drag-handle {
@@ -2086,20 +2098,41 @@ async function syncVersCloud() {
 
 initCompte();
 
-// Petit message transitoire confirmant la suppression d'un trajet/véhicule
-// favori, juste sous les puces (même principe que showFavHint() pour les
-// lieux favoris) : insérée après wrap plutôt qu'à l'intérieur, pour
-// survivre au prochain renderVehChips()/renderTrajetChips() qui vide wrap.
-function showDeleteHint(wrap, texte) {
-  const hint = document.createElement('div');
-  hint.className = 'delete-hint';
-  hint.textContent = texte;
-  wrap.insertAdjacentElement('afterend', hint);
-  requestAnimationFrame(() => hint.classList.add('show'));
+// Mini popup "Supprimer « X » ? Supprimer / Annuler" avant de supprimer un
+// trajet/véhicule favori, plutôt qu'une suppression immédiate au clic sur
+// le ✕. Inséré après wrap (pas dedans) pour survivre au prochain
+// renderVehChips()/renderTrajetChips() qui vide wrap.
+function confirmDelete(wrap, texte, onConfirm) {
+  const existing = wrap.parentNode.querySelector('.delete-confirm');
+  if (existing) existing.remove();
+
+  const box = document.createElement('div');
+  box.className = 'delete-confirm';
+  const txt = document.createElement('span');
+  txt.textContent = texte;
+  box.appendChild(txt);
+  const btnYes = document.createElement('button');
+  btnYes.type = 'button';
+  btnYes.className = 'delete-confirm-yes';
+  btnYes.textContent = 'Supprimer';
+  btnYes.addEventListener('click', () => { box.remove(); onConfirm(); });
+  box.appendChild(btnYes);
+  const btnNo = document.createElement('button');
+  btnNo.type = 'button';
+  btnNo.className = 'delete-confirm-no';
+  btnNo.textContent = 'Annuler';
+  btnNo.addEventListener('click', () => box.remove());
+  box.appendChild(btnNo);
+
+  wrap.insertAdjacentElement('afterend', box);
+  requestAnimationFrame(() => box.classList.add('show'));
+
+  // Un clic ailleurs sur la page annule, comme un clic sur "Annuler".
   setTimeout(() => {
-    hint.classList.remove('show');
-    setTimeout(() => hint.remove(), 250);
-  }, 2000);
+    document.addEventListener('click', function onOutside(e) {
+      if (!box.contains(e.target)) { box.remove(); document.removeEventListener('click', onOutside); }
+    }, { once: true });
+  }, 0);
 }
 
 function makeSavedChip(icone, texte, titre, onApply, onDelete) {
@@ -2134,13 +2167,12 @@ function renderVehChips() {
     const titre = `${CARB_LABELS_VEH[v.type] || v.type} · ${v.conso} ${v.type === 'electrique' ? 'kWh' : 'L'}/100 km` + (v.capacite && v.type !== 'electrique' ? ` · réservoir ${v.capacite} L` : '');
     wrap.appendChild(makeSavedChip('', v.nom, titre,
       (chip) => appliquerVehicule(v, chip),
-      () => {
+      () => confirmDelete(document.getElementById('vehChips'), `Supprimer le véhicule « ${v.nom} » ?`, () => {
         const arr = loadStore(VEHICULES_KEY);
         arr.splice(i, 1);
         saveStore(VEHICULES_KEY, arr);
         renderVehChips();
-        showDeleteHint(document.getElementById('vehChips'), `Véhicule « ${v.nom} » supprimé.`);
-      }));
+      })));
   });
 }
 function toggleVehForm(open) {
@@ -2192,13 +2224,12 @@ function renderTrajetChips() {
     const titre = t.points.join(' → ');
     wrap.appendChild(makeSavedChip('', t.nom, titre,
       (chip) => appliquerTrajet(t, chip),
-      () => {
+      () => confirmDelete(document.getElementById('trajetChips'), `Supprimer le trajet « ${t.nom} » ?`, () => {
         const arr = loadStore(TRAJETS_KEY);
         arr.splice(i, 1);
         saveStore(TRAJETS_KEY, arr);
         renderTrajetChips();
-        showDeleteHint(document.getElementById('trajetChips'), `Trajet « ${t.nom} » supprimé.`);
-      }));
+      })));
   });
 }
 function toggleTrajetForm(open) {
