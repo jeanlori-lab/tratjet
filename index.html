@@ -4089,6 +4089,16 @@ function refreshPoints() {
   // Les flèches d'inversion n'ont de sens que sans étape (départ + destination).
   const swap = document.getElementById('swapBtn');
   if (swap) swap.style.display = (rows.length === 2) ? 'flex' : 'none';
+  // "Optimiser mes pleins" ne concerne que la station la moins chère "sur le
+  // trajet" (un seul segment) : sans objet dès qu'il y a une étape, où le
+  // calcul passe en tronçon par tronçon. On masque l'option et on la
+  // désactive si elle était en cours (retour au comportement classique).
+  const reservoirBloc = document.getElementById('reservoirBloc');
+  if (reservoirBloc) {
+    const multiEtapes = rows.length > 2;
+    reservoirBloc.style.display = multiEtapes ? 'none' : '';
+    if (multiEtapes && optimPleinActive) setOptimPlein(false);
+  }
 }
 
 function getPoints() {
