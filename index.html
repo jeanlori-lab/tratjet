@@ -3176,8 +3176,6 @@ async function calculerStationsParTroncon() {
   const { coords, lieux, apiKey, type } = lastStationSurTrajet;
   btn.disabled = true;
   btn.textContent = 'Calcul en cours…';
-  note.classList.add('loading');
-  note.style.display = 'block';
 
   const troncons = [];
   for (let i = 0; i < coords.length - 1; i++) {
@@ -3189,7 +3187,6 @@ async function calculerStationsParTroncon() {
     } catch (e) { /* tronçon ignoré, best-effort */ }
   }
 
-  note.classList.remove('loading');
   note.textContent = '';
   note.dataset.ready = '1';
   btn.style.display = 'none';
