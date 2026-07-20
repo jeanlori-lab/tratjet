@@ -790,6 +790,14 @@
     }
     .fav-hint.show { opacity: 1; transform: translateY(0); }
 
+    /* Petit texte d'info qui apparaît brièvement quand on supprime un
+       trajet/véhicule favori (voir showDeleteHint()). */
+    .delete-hint {
+      font-size: 11px; color: #90a4ae; margin-top: 6px;
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .delete-hint.show { opacity: 1; }
+
     /* Poignée sortie du flux : centrée dans la marge à gauche de l'emoji. */
     .drag-handle {
       position: absolute;
@@ -2078,6 +2086,22 @@ async function syncVersCloud() {
 
 initCompte();
 
+// Petit message transitoire confirmant la suppression d'un trajet/véhicule
+// favori, juste sous les puces (même principe que showFavHint() pour les
+// lieux favoris) : insérée après wrap plutôt qu'à l'intérieur, pour
+// survivre au prochain renderVehChips()/renderTrajetChips() qui vide wrap.
+function showDeleteHint(wrap, texte) {
+  const hint = document.createElement('div');
+  hint.className = 'delete-hint';
+  hint.textContent = texte;
+  wrap.insertAdjacentElement('afterend', hint);
+  requestAnimationFrame(() => hint.classList.add('show'));
+  setTimeout(() => {
+    hint.classList.remove('show');
+    setTimeout(() => hint.remove(), 250);
+  }, 2000);
+}
+
 function makeSavedChip(icone, texte, titre, onApply, onDelete) {
   const chip = document.createElement('button');
   chip.type = 'button';
@@ -2110,7 +2134,13 @@ function renderVehChips() {
     const titre = `${CARB_LABELS_VEH[v.type] || v.type} · ${v.conso} ${v.type === 'electrique' ? 'kWh' : 'L'}/100 km` + (v.capacite && v.type !== 'electrique' ? ` · réservoir ${v.capacite} L` : '');
     wrap.appendChild(makeSavedChip('', v.nom, titre,
       (chip) => appliquerVehicule(v, chip),
-      () => { const arr = loadStore(VEHICULES_KEY); arr.splice(i, 1); saveStore(VEHICULES_KEY, arr); renderVehChips(); }));
+      () => {
+        const arr = loadStore(VEHICULES_KEY);
+        arr.splice(i, 1);
+        saveStore(VEHICULES_KEY, arr);
+        renderVehChips();
+        showDeleteHint(document.getElementById('vehChips'), `Véhicule « ${v.nom} » supprimé.`);
+      }));
   });
 }
 function toggleVehForm(open) {
@@ -2162,7 +2192,13 @@ function renderTrajetChips() {
     const titre = t.points.join(' → ');
     wrap.appendChild(makeSavedChip('', t.nom, titre,
       (chip) => appliquerTrajet(t, chip),
-      () => { const arr = loadStore(TRAJETS_KEY); arr.splice(i, 1); saveStore(TRAJETS_KEY, arr); renderTrajetChips(); }));
+      () => {
+        const arr = loadStore(TRAJETS_KEY);
+        arr.splice(i, 1);
+        saveStore(TRAJETS_KEY, arr);
+        renderTrajetChips();
+        showDeleteHint(document.getElementById('trajetChips'), `Trajet « ${t.nom} » supprimé.`);
+      }));
   });
 }
 function toggleTrajetForm(open) {
