@@ -14,12 +14,12 @@
  * reverse-engineered depuis l'onglet Réseau des sites officiels (clé Vinci
  * "Ocp-Apim-Subscription-Key" trouvée dans le JS public du site ; ViaMichelin
  * n'a pas de clé, juste un contrôle Origin/Referer usurpé ici). Peuvent
- * casser sans prévenir si le site change — ce sont des replis best-effort,
+ * casser sans prévenir si le site change - ce sont des replis best-effort,
  * pas une garantie. ViaMichelin bloque d'ailleurs systématiquement (403)
  * depuis le Worker Cloudflare au 10/07/2026, probablement un blocage par IP
- * indépendant des en-têtes — gardé en second essai au cas où ça se débloque.
+ * indépendant des en-têtes - gardé en second essai au cas où ça se débloque.
  *
- * TollGuru (utilisé un temps comme dernier repli) a été retiré — le code est
+ * TollGuru (utilisé un temps comme dernier repli) a été retiré - le code est
  * conservé dans archive/tollguru.md au cas où on voudrait le réintégrer.
  *
  * Déploiement : Cloudflare → Workers & Pages → ton Worker → Edit code →
@@ -107,7 +107,7 @@ async function handleVinciRate(body, env) {
 // usurpés ici pour passer le contrôle CORS/anti-bot basique du site.
 // carId fixe (Renault Clio V essence) : les péages dépendent de la catégorie
 // du véhicule (léger), pas du modèle exact, donc une voiture "standard"
-// suffit — Tratjet ne s'en sert que pour le tarif péages, jamais pour le
+// suffit - Tratjet ne s'en sert que pour le tarif péages, jamais pour le
 // carburant (déjà calculé par Tratjet lui-même avec la conso réelle saisie).
 const VIAMICHELIN_CAR_ID = '29074';
 const VIAMICHELIN_QUERY = `query SearchItinerary($input: SearchItineraryInput!) {
