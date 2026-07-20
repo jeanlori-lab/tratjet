@@ -2197,8 +2197,24 @@ async function seDeconnecter() {
 // connexion, au chargement d'une session existante, au retour sur l'onglet
 // et après chaque modification locale : les ajouts ET les suppressions
 // circulent entre appareils.
+//
+// syncDepuisCloud() est sérialisée (jamais deux exécutions en même temps) :
+// sur un réseau mobile lent, un aller-retour peut prendre plusieurs
+// secondes, largement plus que le délai de 1,5 s entre deux déclencheurs
+// (ex. deux modifications rapprochées, ou le retour sur l'onglet pendant
+// que la sync d'ouverture de page tourne encore). Deux appels se
+// chevauchant liraient chacun un instantané local différent, et celui qui
+// écrit en dernier écraserait ce que l'autre venait juste d'ajouter -
+// c'est ce qui faisait disparaître des favoris de façon intermittente. La
+// chaîne de promesses ci-dessous fait attendre chaque appel que le
+// précédent soit terminé avant de lire le cloud à son tour.
 let dernierSyncMs = 0;
-async function syncDepuisCloud() {
+let chaineSyncDepuisCloud = Promise.resolve();
+function syncDepuisCloud() {
+  chaineSyncDepuisCloud = chaineSyncDepuisCloud.then(syncDepuisCloudInterne, syncDepuisCloudInterne);
+  return chaineSyncDepuisCloud;
+}
+async function syncDepuisCloudInterne() {
   if (!sbClient || !sbUser) return;
   const statusEl = document.getElementById('syncStatus');
   try {
