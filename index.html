@@ -1086,12 +1086,19 @@
        encadrés station la moins chère (résultat de trajet). Classes
        dédiées (pas .ar-toggle-btn) pour rester indépendantes de la
        bascule Aller simple/Aller-retour. */
+    /* Ligne titre + bouton "Voir tronçon par tronçon" (trajets à étapes). */
+    .station-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 10px;
+      margin-bottom: 8px;
+    }
     .station-section-title {
       font-size: 14px;
       font-weight: 700;
       color: #455060;
-      margin-top: 10px;
-      margin-bottom: 8px;
     }
     .station-tabs {
       display: flex;
@@ -1153,9 +1160,9 @@
        cliquable, contrairement à un simple lien souligné. */
     .troncon-cta {
       display: flex; align-items: center; gap: 4px;
-      width: fit-content; margin: 12px auto 0;
+      flex-shrink: 0; margin: 0;
       font-size: 11px; font-weight: 600; color: #2e7d32; text-decoration: none;
-      background: #fff; padding: 5px 12px; border-radius: 8px;
+      background: #fff; padding: 4px 10px; border-radius: 8px;
       border: 1px solid #cfe0cf; cursor: pointer; font-family: inherit;
       transition: background 0.15s;
     }
@@ -1636,17 +1643,22 @@
           Voir le prix des péages
       </a>
     </div>
-    <div class="station-section-title" id="stationSectionTitle" style="display:none;">Où faire le plein</div>
+    <!-- Titre + bouton "Voir tronçon par tronçon" (trajets à étapes) sur la
+         même ligne. Le bouton lance un calcul optionnel (une requête par
+         tronçon, donc pas automatique) ; une fois le résultat prêt, la
+         section bascule en onglets "Près du départ" / "Tronçon par tronçon"
+         comme la version sans étapes. -->
+    <div class="station-section-head" id="stationSectionHead" style="display:none;">
+      <div class="station-section-title" id="stationSectionTitle">Où faire le plein</div>
+      <button type="button" class="troncon-cta" id="tronconCtaBtn" style="display:none;" onclick="calculerStationsParTroncon()">Voir tronçon par tronçon</button>
+    </div>
     <div class="station-tabs" id="stationTabs" style="display:none;">
       <button type="button" class="station-tab-btn active" data-tab="trajet" onclick="setStationTab('trajet')">Sur le trajet</button>
       <button type="button" class="station-tab-btn" data-tab="depart" onclick="setStationTab('depart')">Près du départ</button>
+      <button type="button" class="station-tab-btn" data-tab="troncons" style="display:none;" onclick="setStationTab('troncons')">Tronçon par tronçon</button>
     </div>
     <div class="cheapest-note" id="cheapestNote" style="display:none;"></div>
     <div class="cheapest-note" id="cheapestNoteTrajet" style="display:none;"></div>
-    <!-- Trajet à étapes : bouton optionnel pour calculer la station la moins
-         chère de chaque tronçon (coûteux en requêtes, donc pas automatique
-         contrairement à "près du départ"). -->
-    <button type="button" class="troncon-cta" id="tronconCtaBtn" style="display:none;" onclick="calculerStationsParTroncon()">Voir tronçon par tronçon</button>
     <div class="cheapest-note" id="cheapestNoteTroncons" style="display:none;"></div>
   </div>
   </div>
@@ -3091,45 +3103,60 @@ function applyStationTabVisibility() {
   const noteTrajet = document.getElementById('cheapestNoteTrajet');
   const tronconBtn = document.getElementById('tronconCtaBtn');
   const tronconNote = document.getElementById('cheapestNoteTroncons');
+  const head = document.getElementById('stationSectionHead');
+  const tabs = document.getElementById('stationTabs');
   // Trajet trop court : la section entière reste masquée, quel que soit
   // l'état des recherches (best-effort, lancées ou non en arrière-plan).
   if (typeof lastTripDistanceKm === 'number' && lastTripDistanceKm < TRAJET_MIN_KM_STATIONS) {
-    document.getElementById('stationSectionTitle').style.display = 'none';
-    document.getElementById('stationTabs').style.display = 'none';
+    head.style.display = 'none';
+    tabs.style.display = 'none';
     noteDepart.style.display = 'none';
     noteTrajet.style.display = 'none';
     tronconBtn.style.display = 'none';
     tronconNote.style.display = 'none';
     return;
   }
+  const tronconsReady = tronconNote.dataset.ready === '1';
   if (noteDepart.dataset.ready === '1') noteDepart.style.display = currentStationTab === 'depart' ? 'block' : 'none';
   if (noteTrajet.dataset.ready === '1') noteTrajet.style.display = currentStationTab === 'trajet' ? 'block' : 'none';
+  if (tronconsReady) tronconNote.style.display = currentStationTab === 'troncons' ? 'block' : 'none';
   if (noteDepart.dataset.ready === '1' || noteTrajet.dataset.ready === '1') {
-    document.getElementById('stationTabs').style.display = 'flex';
-    document.getElementById('stationSectionTitle').style.display = 'block';
+    tabs.style.display = 'flex';
+    head.style.display = 'flex';
   }
   // Trajet à étapes : l'onglet "Sur le trajet" n'a jamais de contenu (voir
-  // rechercherStationSurTrajet()) — seul "Près du départ" reste, donc plus
-  // besoin d'onglets du tout : le titre de section fait déjà office de nom.
+  // rechercherStationSurTrajet()). Tant que le calcul par tronçon n'a pas
+  // été demandé, pas d'onglets du tout (le titre fait office de nom) ; une
+  // fois le résultat prêt, la section bascule en onglets "Près du départ" /
+  // "Tronçon par tronçon", comme la version sans étapes.
   const multiEtapes = Array.isArray(lastStationSurTrajet && lastStationSurTrajet.lieux) && lastStationSurTrajet.lieux.length >= 3;
   const electrique = document.getElementById('carburant').value === 'electrique';
   const stationTitle = document.getElementById('stationSectionTitle');
+  const btnTabTrajet = document.querySelector('.station-tab-btn[data-tab="trajet"]');
+  const btnTabTroncons = document.querySelector('.station-tab-btn[data-tab="troncons"]');
   if (multiEtapes) {
-    document.getElementById('stationTabs').style.display = 'none';
-    stationTitle.textContent = electrique ? 'Recharger près du départ' : 'Faire le plein près du départ';
+    btnTabTrajet.style.display = 'none';
+    btnTabTroncons.style.display = tronconsReady ? '' : 'none';
+    if (tronconsReady) {
+      stationTitle.textContent = electrique ? 'Où recharger' : 'Où faire le plein';
+    } else {
+      tabs.style.display = 'none';
+      stationTitle.textContent = electrique ? 'Recharger près du départ' : 'Faire le plein près du départ';
+    }
   } else {
+    btnTabTroncons.style.display = 'none';
+    btnTabTrajet.style.display = '';
     stationTitle.textContent = electrique ? 'Où recharger' : 'Où faire le plein';
-    document.querySelector('.station-tab-btn[data-tab="trajet"]').style.display = '';
   }
   // Bouton "voir par tronçon" : uniquement pour un trajet à étapes non
   // électrique (pas de prix comparable entre bornes), une fois la station
-  // "près du départ" affichée ; il s'efface au profit du résultat une fois
-  // calculé (voir calculerStationsParTroncon()).
-  if (multiEtapes && !electrique && noteDepart.dataset.ready === '1') {
-    tronconBtn.style.display = tronconNote.dataset.ready === '1' ? 'none' : 'flex';
+  // "près du départ" affichée ; il s'efface au profit de l'onglet une fois
+  // le résultat calculé (voir calculerStationsParTroncon()).
+  if (multiEtapes && !electrique && noteDepart.dataset.ready === '1' && !tronconsReady) {
+    tronconBtn.style.display = 'flex';
   } else {
     tronconBtn.style.display = 'none';
-    if (tronconNote.dataset.ready !== '1') tronconNote.style.display = 'none';
+    if (!tronconsReady) tronconNote.style.display = 'none';
   }
   // Les cartes Leaflet construites dans un onglet masqué ont une taille
   // nulle : recalcul dès que l'onglet devient visible.
@@ -3166,12 +3193,17 @@ async function calculerStationsParTroncon() {
   note.textContent = '';
   note.dataset.ready = '1';
   btn.style.display = 'none';
+  btn.disabled = false;
+  btn.textContent = 'Voir tronçon par tronçon';
 
   if (!troncons.length) {
     const empty = document.createElement('div');
     empty.className = 'cheapest-empty';
     empty.textContent = 'Aucune station trouvée à moins de ~5 min de la route sur les tronçons de ce trajet.';
     note.appendChild(empty);
+    // Bascule quand même sur le nouvel onglet : l'utilisateur voit que le
+    // calcul a tourné et n'a rien trouvé, plutôt qu'un silence ambigu.
+    setStationTab('troncons');
     return;
   }
 
@@ -3245,6 +3277,9 @@ async function calculerStationsParTroncon() {
   }
   note.appendChild(contentWrap);
   renderContent(0);
+  // Résultat prêt : la section passe en onglets (voir
+  // applyStationTabVisibility) et on ouvre directement le nouveau.
+  setStationTab('troncons');
 }
 
 async function rechercherStationMoinsChere() {
@@ -5087,11 +5122,16 @@ async function calculer() {
     lastStationSearch = { lat: c1[1], lon: c1[0], type: carburantType, rayon: STATION_RAYON_KM, depart, arrivee };
     lastStationSurTrajet = { polyline: rapide.polyline, type: carburantType, depart, arrivee, distKm: rapide.distA, conso, coords, lieux, apiKey };
     // Nouveau trajet calculé : un éventuel résultat par tronçon d'un calcul
-    // précédent ne correspond plus à rien, et le bouton doit réapparaître.
+    // précédent ne correspond plus à rien, et le bouton doit réapparaître
+    // dans son état initial (un calcul interrompu l'aurait laissé sur
+    // "Calcul en cours…" désactivé).
     const noteTroncons = document.getElementById('cheapestNoteTroncons');
     noteTroncons.style.display = 'none';
     noteTroncons.dataset.ready = '';
     noteTroncons.textContent = '';
+    const tronconBtnReset = document.getElementById('tronconCtaBtn');
+    tronconBtnReset.disabled = false;
+    tronconBtnReset.textContent = 'Voir tronçon par tronçon';
 
     // Affiche l'itinéraire sélectionné (rapide par défaut) : résultats,
     // fiches comparatives, lien Maps, et lance la recherche de stations.
