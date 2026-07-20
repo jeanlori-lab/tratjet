@@ -1919,16 +1919,42 @@ async function searchPlaces(q, limit) {
 // --- Véhicules enregistrés et trajets favoris : profils mémorisés dans le
 // navigateur (localStorage), appliqués d'un tap via des puces, et
 // synchronisés entre appareils quand un compte est connecté (cf. plus bas). ---
-const VEHICULES_KEY = 'tratjetVehicules'; // [{ nom, type, conso, capacite }]
-const TRAJETS_KEY = 'tratjetTrajets';     // [{ nom, points: [départ, étapes…, arrivée] }]
+// Chaque élément porte un horodatage `maj` (dernière modification). Une
+// suppression ne retire pas l'élément de la liste : elle le marque `del`
+// avec un `maj` frais (pierre tombale). C'est ce qui permet à la
+// synchronisation multi-appareils de propager les suppressions : sans
+// trace datée, l'appareil qui a encore l'élément en local le
+// "ressusciterait" à la fusion suivante.
+const VEHICULES_KEY = 'tratjetVehicules'; // [{ nom, type, conso, capacite, maj, del? }]
+const TRAJETS_KEY = 'tratjetTrajets';     // [{ nom, points: [départ, étapes…, arrivée], maj, del? }]
+const cleVehicule = v => (v && v.nom || '').trim().toLowerCase();
+const cleTrajet = t => (t && Array.isArray(t.points) ? t.points.join('|').toLowerCase() : '');
 function loadStore(key) {
   try { const v = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(v) ? v : []; }
   catch (e) { return []; }
 }
+// Les éléments visibles (sans les pierres tombales) : à utiliser partout où
+// on affiche ou applique un favori.
+function loadActifs(key) { return loadStore(key).filter(x => !x.del); }
 function saveStore(key, arr) {
   try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
-  // Connecté : pousse la modification vers le cloud (débouncé).
+  // Connecté : relit le cloud, fusionne et repousse (débouncé).
   if (key === VEHICULES_KEY || key === TRAJETS_KEY) planifierSync();
+}
+// Fusion de deux listes (locale + cloud) : pour chaque clé, la version la
+// plus récemment modifiée gagne - y compris une pierre tombale, qui efface
+// donc l'élément partout. Les tombales de plus de 90 jours sont purgées
+// (tous les appareils ont eu le temps de voir la suppression).
+function fusionnerListes(a, b, cleFn) {
+  const parCle = new Map();
+  a.concat(b).forEach(x => {
+    const c = cleFn(x);
+    if (!c) return;
+    const prev = parCle.get(c);
+    if (!prev || (x.maj || 0) > (prev.maj || 0)) parCle.set(c, x);
+  });
+  const seuil = Date.now() - 90 * 24 * 3600 * 1000;
+  return Array.from(parCle.values()).filter(x => !x.del || (x.maj || 0) > seuil);
 }
 
 // --- Compte & synchronisation (Supabase) : connexion par lien magique,
@@ -1957,7 +1983,10 @@ function initCompte() {
   sbClient.auth.onAuthStateChange((event, session) => {
     sbUser = (session && session.user) || null;
     majCompteUI();
-    if (event === 'SIGNED_IN') syncDepuisCloud();
+    // INITIAL_SESSION = session restaurée au chargement de la page : il faut
+    // synchroniser là aussi, sinon un appareil déjà connecté ne voit jamais
+    // les ajouts/suppressions faits ailleurs entre deux visites.
+    if (event === 'SIGNED_IN' || (event === 'INITIAL_SESSION' && sbUser)) syncDepuisCloud();
   });
   afficherErreurLienMagique();
 }
@@ -2108,10 +2137,12 @@ async function seDeconnecter() {
   reinitialiserFormulaireCompte();
 }
 
-// Fusionne local + cloud à la connexion (union, dédoublonnée par nom de
-// véhicule / itinéraire de trajet), puis renvoie le résultat au cloud :
-// rien ne se perd, ni ce qui a été fait hors-ligne ni ce qui vient d'un
-// autre appareil.
+// Fusionne local + cloud (par clé, la version la plus récente gagne - voir
+// fusionnerListes) puis renvoie le résultat au cloud. Déclenchée à la
+// connexion, au chargement d'une session existante, au retour sur l'onglet
+// et après chaque modification locale : les ajouts ET les suppressions
+// circulent entre appareils.
+let dernierSyncMs = 0;
 async function syncDepuisCloud() {
   if (!sbClient || !sbUser) return;
   const statusEl = document.getElementById('syncStatus');
@@ -2119,37 +2150,43 @@ async function syncDepuisCloud() {
     const { data, error } = await sbClient.from('user_data')
       .select('vehicules,trajets').eq('user_id', sbUser.id).maybeSingle();
     if (error) throw error;
-    const distants = data || { vehicules: [], trajets: [] };
-    const vehLocaux = loadStore(VEHICULES_KEY);
-    const vusVeh = new Set(vehLocaux.map(v => (v.nom || '').trim().toLowerCase()));
-    (Array.isArray(distants.vehicules) ? distants.vehicules : []).forEach(v => {
-      const cle = (v && v.nom || '').trim().toLowerCase();
-      if (cle && !vusVeh.has(cle)) { vehLocaux.push(v); vusVeh.add(cle); }
-    });
-    const trajLocaux = loadStore(TRAJETS_KEY);
-    const vusTraj = new Set(trajLocaux.map(t => (t.points || []).join('|').toLowerCase()));
-    (Array.isArray(distants.trajets) ? distants.trajets : []).forEach(t => {
-      const cle = (t && Array.isArray(t.points) ? t.points.join('|').toLowerCase() : '');
-      if (cle && !vusTraj.has(cle)) { trajLocaux.push(t); vusTraj.add(cle); }
-    });
+    const distants = data || {};
+    // Fusion par clé, la version la plus récente gagne (tombales comprises,
+    // donc les suppressions faites sur un autre appareil s'appliquent ici).
+    const veh = fusionnerListes(loadStore(VEHICULES_KEY),
+      Array.isArray(distants.vehicules) ? distants.vehicules : [], cleVehicule);
+    const traj = fusionnerListes(loadStore(TRAJETS_KEY),
+      Array.isArray(distants.trajets) ? distants.trajets : [], cleTrajet);
     try {
-      localStorage.setItem(VEHICULES_KEY, JSON.stringify(vehLocaux));
-      localStorage.setItem(TRAJETS_KEY, JSON.stringify(trajLocaux));
+      localStorage.setItem(VEHICULES_KEY, JSON.stringify(veh));
+      localStorage.setItem(TRAJETS_KEY, JSON.stringify(traj));
     } catch (e) {}
     renderVehChips();
     renderTrajetChips();
     await syncVersCloud();
+    dernierSyncMs = Date.now();
     if (statusEl) statusEl.textContent = '✓';
   } catch (e) {
     if (statusEl) statusEl.textContent = '(synchronisation indisponible)';
   }
 }
 
+// Toute modification locale déclenche une synchronisation complète
+// (lecture du cloud, fusion, ré-écriture) plutôt qu'un simple envoi : un
+// envoi aveugle écraserait ce qu'un autre appareil vient d'ajouter.
 function planifierSync() {
   if (!sbClient || !sbUser) return;
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(syncVersCloud, 1500);
+  syncTimer = setTimeout(syncDepuisCloud, 1500);
 }
+
+// Revenir sur l'onglet (ou rouvrir l'appli installée) rafraîchit les
+// favoris depuis le cloud, au plus une fois toutes les 30 s.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && sbUser && Date.now() - dernierSyncMs > 30000) {
+    syncDepuisCloud();
+  }
+});
 
 async function syncVersCloud() {
   if (!sbClient || !sbUser) return;
@@ -2227,16 +2264,18 @@ function renderVehChips() {
   const wrap = document.getElementById('vehChips');
   if (!wrap) return;
   wrap.textContent = '';
-  const vehs = loadStore(VEHICULES_KEY);
+  const vehs = loadActifs(VEHICULES_KEY);
   // La ligne "Mes véhicules" n'apparaît que s'il y a au moins un véhicule.
   document.querySelector('.veh-row').style.display = vehs.length ? 'flex' : 'none';
-  vehs.forEach((v, i) => {
+  vehs.forEach((v) => {
     const titre = `${CARB_LABELS_VEH[v.type] || v.type} · ${v.conso} ${v.type === 'electrique' ? 'kWh' : 'L'}/100 km` + (v.capacite && v.type !== 'electrique' ? ` · réservoir ${v.capacite} L` : '');
     wrap.appendChild(makeSavedChip('', v.nom, titre,
       (chip) => appliquerVehicule(v, chip),
       () => confirmDelete(document.getElementById('vehChips'), `Supprimer le véhicule « ${v.nom} » ?`, () => {
-        const arr = loadStore(VEHICULES_KEY);
-        arr.splice(i, 1);
+        // Suppression = pierre tombale datée (voir VEHICULES_KEY), par clé
+        // et non par index : la liste brute contient aussi des tombales.
+        const arr = loadStore(VEHICULES_KEY).filter(x => cleVehicule(x) !== cleVehicule(v));
+        arr.push(Object.assign({}, v, { del: true, maj: Date.now() }));
         saveStore(VEHICULES_KEY, arr);
         renderVehChips();
       })));
@@ -2257,7 +2296,10 @@ function confirmerVehicule() {
     conso: consoValeur(),
     capacite: parseFloat(document.getElementById('reservoirCapacite').value) || null,
   };
-  const arr = loadStore(VEHICULES_KEY).filter(v => v.nom.trim().toLowerCase() !== nom.toLowerCase());
+  // Retire toute entrée de même nom (y compris une éventuelle pierre
+  // tombale : recréer un véhicule supprimé doit annuler la suppression).
+  const arr = loadStore(VEHICULES_KEY).filter(v => cleVehicule(v) !== nom.toLowerCase());
+  veh.maj = Date.now();
   arr.push(veh);
   saveStore(VEHICULES_KEY, arr);
   toggleVehForm(false);
@@ -2287,13 +2329,14 @@ function renderTrajetChips() {
   const wrap = document.getElementById('trajetChips');
   if (!wrap) return;
   wrap.textContent = '';
-  loadStore(TRAJETS_KEY).forEach((t, i) => {
+  loadActifs(TRAJETS_KEY).forEach((t) => {
     const titre = t.points.join(' → ');
     wrap.appendChild(makeSavedChip('', t.nom, titre,
       (chip) => appliquerTrajet(t, chip),
       () => confirmDelete(document.getElementById('trajetChips'), `Supprimer le trajet « ${t.nom} » ?`, () => {
-        const arr = loadStore(TRAJETS_KEY);
-        arr.splice(i, 1);
+        // Même principe que pour les véhicules : tombale datée, par clé.
+        const arr = loadStore(TRAJETS_KEY).filter(x => cleTrajet(x) !== cleTrajet(t));
+        arr.push(Object.assign({}, t, { del: true, maj: Date.now() }));
         saveStore(TRAJETS_KEY, arr);
         renderTrajetChips();
       })));
@@ -2322,10 +2365,11 @@ function confirmerTrajet() {
   const nom = document.getElementById('trajetNom').value.trim();
   if (!nom) { document.getElementById('trajetNom').focus(); return; }
   const cle = points.join('|').toLowerCase();
-  // Remplace un trajet de même nom ou de même itinéraire (mise à jour).
+  // Remplace un trajet de même nom ou de même itinéraire (mise à jour),
+  // pierre tombale comprise (recréer = annuler la suppression).
   const arr = loadStore(TRAJETS_KEY).filter(t =>
-    t.points.join('|').toLowerCase() !== cle && t.nom.trim().toLowerCase() !== nom.toLowerCase());
-  arr.push({ nom, points });
+    cleTrajet(t) !== cle && (t.nom || '').trim().toLowerCase() !== nom.toLowerCase());
+  arr.push({ nom, points, maj: Date.now() });
   saveStore(TRAJETS_KEY, arr);
   toggleTrajetForm(false);
   renderTrajetChips();
