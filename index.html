@@ -63,6 +63,44 @@
       margin: 0 auto;
     }
 
+    /* Desktop, tant qu'il n'y a pas de résultat (.page sans .has-results) :
+       les paramètres restent centrés en une seule colonne, juste un peu
+       plus large que sur mobile - la mise en page à deux colonnes n'a de
+       sens qu'une fois qu'il y a un résultat à montrer à droite, sinon la
+       carte reste collée à gauche d'un grand vide. */
+    @media (min-width: 1040px) {
+      .page:not(.has-results) { max-width: 640px; }
+    }
+
+    /* Desktop, résultat affiché (.page.has-results) : colonne de paramètres
+       fixe à gauche (toujours visible en défilant les résultats), résultats
+       à droite. #modeCout n'a pas de présence visuelle propre
+       (display:contents) : ses enfants (carte paramètres, bouton,
+       loader/erreur, résultats) rejoignent directement la grille de .page,
+       chacun placé explicitement par numéro de ligne (robuste, indépendant
+       de l'ordre dans le DOM). #modeStation (mode "station seule", sans
+       paramètres de trajet à séparer) reste un panneau unique centré, sans
+       colonne dédiée. */
+    @media (min-width: 1040px) {
+      .page.has-results {
+        max-width: 1180px;
+        display: grid;
+        grid-template-columns: 460px 1fr;
+        column-gap: 32px;
+        align-items: start;
+      }
+      .page.has-results .header { grid-column: 1 / -1; grid-row: 1; }
+      .page.has-results #accountCard { grid-column: 1 / -1; grid-row: 2; }
+      .page.has-results #modeCout { display: contents; }
+      .page.has-results #paramsCard { grid-column: 1; grid-row: 3; }
+      .page.has-results #calcBtnWrap { grid-column: 1; grid-row: 4; }
+      .page.has-results #loader { grid-column: 1; grid-row: 5; }
+      .page.has-results #error { grid-column: 1; grid-row: 6; }
+      .page.has-results #sectionResultats { grid-column: 2; grid-row: 3 / 7; margin-top: 0 !important; }
+      .page.has-results #modeStation { grid-column: 1 / -1; grid-row: 3 / 7; max-width: 640px; margin: 0 auto; }
+      .page.has-results .page-footer { grid-column: 1 / -1; grid-row: 8; }
+    }
+
     /* En-tête */
     .header {
       text-align: center;
@@ -1499,7 +1537,7 @@
 
   <div id="modeCout">
   <!-- Paramètres -->
-  <div class="card">
+  <div class="card" id="paramsCard">
     <div class="card-title">Paramètres du trajet</div>
 
     <!-- Bloc Départ / Destination -->
@@ -2633,8 +2671,13 @@ function setLoading(on) {
 // (changement de n'importe quel autre paramètre), les deux catégories sont
 // réinitialisées : plus rien ne garantit alors qu'elles correspondent
 // encore à l'état actuel.
+// Ne masque plus le résultat : changer un paramètre après un premier calcul
+// laisse l'ancien résultat affiché (devenu simplement obsolète) le temps
+// qu'on relance "Calculer" - plutôt que de le faire disparaître à chaque
+// frappe. Ça évite aussi qu'un réglage touché par erreur ne fasse
+// rebasculer la mise en page desktop au centre (voir .has-results) puis
+// revienne en deux colonnes au calcul suivant.
 function resetResultat(keepScope) {
-  document.getElementById('sectionResultats').style.display = 'none';
   hideError();
   document.querySelectorAll('.saved-chip.selected').forEach(c => {
     if (keepScope && c.closest(keepScope)) return;
@@ -5309,6 +5352,7 @@ async function calculer() {
     }
 
     document.getElementById('sectionResultats').style.display = 'block';
+    document.querySelector('.page').classList.add('has-results');
     document.getElementById('sectionResultats').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } catch(e) {
     showError('⚠️ ' + (e.message || 'Erreur inconnue.'));
