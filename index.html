@@ -2638,9 +2638,10 @@ function majUniteConso(keepScope) {
   if (roulette) roulette.setAttribute('aria-label', electrique ? 'Consommation électrique au 100 km' : 'Consommation au 100 km');
 
   // Réservoir en litres + recommandation d'arrêt : sans objet en électrique
-  // (pas de prix comparable entre bornes, capacité en kWh).
-  const reservoirBloc = document.getElementById('reservoirBloc');
-  if (reservoirBloc) reservoirBloc.style.display = electrique ? 'none' : 'flex';
+  // (pas de prix comparable entre bornes, capacité en kWh) - et sans objet
+  // avec des étapes (voir majAffichageReservoirBloc), un changement de
+  // carburant ne doit donc pas le réafficher sur un trajet à étapes.
+  majAffichageReservoirBloc(electrique);
 
   // Titre de la section stations des résultats : "faire le plein" n'a pas
   // de sens pour une voiture électrique.
@@ -4230,14 +4231,28 @@ function refreshPoints() {
   if (swap) swap.style.display = (rows.length === 2) ? 'flex' : 'none';
   // "Optimiser mes pleins" ne concerne que la station la moins chère "sur le
   // trajet" (un seul segment) : sans objet dès qu'il y a une étape, où le
-  // calcul passe en tronçon par tronçon. On masque l'option et on la
-  // désactive si elle était en cours (retour au comportement classique).
+  // calcul passe en tronçon par tronçon.
+  majAffichageReservoirBloc(document.getElementById('carburant').value === 'electrique', rows.length > 2);
+}
+
+// Seul point qui décide si "Optimiser mes pleins" est visible : sans objet
+// en électrique (pas de prix comparable entre bornes) OU avec une étape
+// (le calcul passe en tronçon par tronçon). Appelé à la fois par un
+// changement de carburant et par un changement du nombre d'étapes, pour
+// qu'aucun des deux ne puisse réafficher le bloc à l'insu de l'autre
+// (ex. appliquer un véhicule sur un trajet à étapes ne doit pas le
+// faire réapparaître juste parce que le carburant change).
+function majAffichageReservoirBloc(electrique, multiEtapesArg) {
   const reservoirBloc = document.getElementById('reservoirBloc');
-  if (reservoirBloc) {
-    const multiEtapes = rows.length > 2;
-    reservoirBloc.style.display = multiEtapes ? 'none' : '';
-    if (multiEtapes && optimPleinActive) setOptimPlein(false);
-  }
+  if (!reservoirBloc) return;
+  // Requête DOM directe (pas pointsEl()) : appelée dès le chargement de la
+  // page par majUniteConso(), avant que la const pointsEl ne soit
+  // initialisée plus bas dans le script.
+  const rows = document.querySelectorAll('#points .point-row');
+  const multiEtapes = typeof multiEtapesArg === 'boolean' ? multiEtapesArg : rows.length > 2;
+  const cache = electrique || multiEtapes;
+  reservoirBloc.style.display = cache ? 'none' : '';
+  if (cache && optimPleinActive) setOptimPlein(false);
 }
 
 function getPoints() {
