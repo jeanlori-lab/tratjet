@@ -1709,7 +1709,7 @@
       <p><strong>Itinéraires, distances et durées</strong> : OpenRouteService (données OpenStreetMap). Les durées sont théoriques, <strong>hors trafic</strong>.</p>
       <p><strong>Prix des carburants</strong> : flux officiel des prix en station (data.gouv.fr), tel que déclaré par les exploitants. Le prix moyen national est recalculé à chaque visite ; le prix d'une station donnée peut dater de quelques jours (la date du relevé est affichée).</p>
       <p><strong>Péages</strong> : tarifs officiels des concessionnaires pour une voiture (classe 1), via Vinci Autoroutes (et ViaMichelin en secours). Quand aucun tarif n'est trouvé, on l'indique plutôt que d'inventer un chiffre.</p>
-      <p><strong>Bornes électriques</strong> : base nationale IRVE (data.gouv.fr). Le prix de l'électricité est une estimation sur la base du tarif réglementé — la tarification réelle varie selon les bornes.</p>
+      <p><strong>Bornes électriques</strong> : base nationale IRVE (data.gouv.fr). Le prix de l'électricité est une estimation représentative d'une recharge publique rapide (route/autoroute) — la tarification réelle varie fortement selon la puissance de la borne et l'opérateur (de ~0,30 à ~0,85 €/kWh).</p>
       <p><strong>Limites</strong> : tous les montants sont des estimations. La consommation réelle dépend de la conduite, du chargement et de la météo ; le trafic n'est pas pris en compte dans les durées.</p>
     </div>
   </div>
@@ -2422,9 +2422,14 @@ const CARB_FIELD = {
   e10:'e10_prix', e85:'e85_prix', gplc:'gplc_prix'
 };
 // Pas de suivi temps réel du prix de l'électricité (l'API data.gouv ne
-// couvre que les carburants vendus en station) : estimation fixe basée sur
-// le tarif réglementé (heures pleines), à défaut de mieux.
-const PRIX_ELECTRIQUE_ESTIME = 0.2516;
+// couvre que les carburants vendus en station) : estimation fixe, à défaut
+// de mieux. Volontairement basée sur la recharge PUBLIQUE (donc rapide, sur
+// autoroute/route), pas sur le tarif domicile heures pleines (~0,25 €/kWh) :
+// ce dernier ne représente pas ce que paie réellement quelqu'un qui recharge
+// en cours de trajet. Fourchette observée en 2026 : ~0,30-0,50 €/kWh pour du
+// ≤22 kW, ~0,50-0,65 €/kWh pour du 50-150 kW, ~0,65-0,85 €/kWh au-delà — on
+// retient une moyenne représentative d'une recharge rapide de trajet.
+const PRIX_ELECTRIQUE_ESTIME = 0.55;
 let prixActuel = null;
 
 // Met à jour l'unité affichée (L ou kWh) selon le carburant choisi, et
@@ -2739,9 +2744,10 @@ async function chargerPrix() {
   document.getElementById('prixAffiche').textContent = 'Chargement…';
   prixActuel = null;
   if (type === 'electrique') {
-    // Pas de donnée temps réel disponible : estimation fixe (tarif réglementé).
+    // Pas de donnée temps réel disponible : estimation fixe, basée sur la
+    // recharge publique rapide (voir PRIX_ELECTRIQUE_ESTIME).
     prixActuel = PRIX_ELECTRIQUE_ESTIME;
-    document.getElementById('prixAffiche').textContent = prixActuel.toFixed(4) + ' €/kWh (estimation)';
+    document.getElementById('prixAffiche').textContent = prixActuel.toFixed(2) + ' €/kWh (estimation recharge publique)';
     return;
   }
   try {
@@ -2950,18 +2956,23 @@ async function fetchStationMoinsChere(lat, lon, type, rayonKm, mode) {
   } catch (e) { return null; }
 }
 
-// Borne de recharge la plus proche (véhicule électrique) : pas de prix
-// comparable d'une borne à l'autre (tarification très variable, souvent
-// absente des données), donc on cherche la plus proche plutôt que la
-// moins chère. Source : base nationale IRVE (Infrastructures de Recharge
-// pour Véhicules Électriques, ODRE/data.gouv.fr), gratuite, sans clé.
+// Borne de recharge (véhicule électrique) : pas de prix comparable d'une
+// borne à l'autre (tarification très variable, souvent absente des
+// données), donc pas de "moins chère". Priorité à la recharge RAPIDE
+// (>= 50 kW, la seule vraiment utile en cours de trajet — une borne 7 kW
+// à 200 m ne sert à rien si on doit repartir dans l'heure) : parmi les
+// bornes rapides à portée, on prend la plus proche ; s'il n'y en a aucune,
+// on se rabat sur la plus proche tout court, quelle que soit sa puissance.
+// Source : base nationale IRVE (Infrastructures de Recharge pour Véhicules
+// Électriques, ODRE/data.gouv.fr), gratuite, sans clé.
+const BORNE_RAPIDE_KW = 50;
 async function fetchBorneRecharge(lat, lon, rayonKm) {
   rayonKm = rayonKm || STATION_RAYON_KM;
   try {
     const url = `https://odre.opendatasoft.com/api/records/1.0/search/?dataset=bornes-irve&geofilter.distance=${lat},${lon},${rayonKm * 1000}`;
     const records = await fetchAllODSRecords(url);
     if (!records.length) return null;
-    let best = null, bestDist = Infinity;
+    const candidats = [];
     for (const rec of records) {
       const f = rec.fields || {};
       const geo = rec.geometry && rec.geometry.coordinates; // [lon, lat]
@@ -2970,20 +2981,20 @@ async function fetchBorneRecharge(lat, lon, rayonKm) {
       if (sLat === null || sLon === null || isNaN(sLat) || isNaN(sLon)) continue;
       const dist = distKm(lat, lon, sLat, sLon);
       if (!isFinite(dist) || dist > rayonKm) continue;
-      if (dist < bestDist) {
-        bestDist = dist;
-        const puissance = parseFloat(f.puissance_nominale);
-        best = {
-          nom: f.nom_station || f.nom_enseigne || '',
-          operateur: f.nom_operateur || f.nom_amenageur || '',
-          ville: f.consolidated_commune || '',
-          puissance: isNaN(puissance) ? null : puissance,
-          gratuit: f.gratuit === true || f.gratuit === 'true' || f.gratuit === 'oui',
-          lat: sLat, lon: sLon,
-        };
-      }
+      const puissance = parseFloat(f.puissance_nominale);
+      candidats.push({
+        nom: f.nom_station || f.nom_enseigne || '',
+        operateur: f.nom_operateur || f.nom_amenageur || '',
+        ville: f.consolidated_commune || '',
+        puissance: isNaN(puissance) ? null : puissance,
+        gratuit: f.gratuit === true || f.gratuit === 'true' || f.gratuit === 'oui',
+        lat: sLat, lon: sLon, dist,
+      });
     }
-    return best;
+    if (!candidats.length) return null;
+    const rapides = candidats.filter(c => c.puissance !== null && c.puissance >= BORNE_RAPIDE_KW);
+    const pool = rapides.length ? rapides : candidats;
+    return pool.reduce((meilleure, c) => (!meilleure || c.dist < meilleure.dist) ? c : meilleure, null);
   } catch (e) { return null; }
 }
 
