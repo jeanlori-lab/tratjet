@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <title>Tratjet — Banc de test péages</title>
+  <title>Tratjet - Banc de test péages</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #eef2f6; color: #1a2433; padding: 24px 16px; }
@@ -135,7 +135,7 @@ async function lancer() {
     }
   }
   document.getElementById('recap').textContent =
-    `Bilan : ${ok} conforme(s) · ${ko} en échec · ${na} indéterminé(s) — les "indéterminés" sont les trous de couverture à combler.`;
+    `Bilan : ${ok} conforme(s) · ${ko} en échec · ${na} indéterminé(s) : les "indéterminés" sont les trous de couverture à combler.`;
   btn.disabled = false;
   btn.textContent = 'Relancer le banc';
 }

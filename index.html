@@ -7,7 +7,7 @@
   <title>Tratjet</title>
   <!-- Aperçu de partage (og/Twitter) : logo Tratjet (URL absolue obligatoire). -->
   <meta property="og:title" content="Tratjet">
-  <meta property="og:description" content="Entrez votre trajet, on s'occupe des calculs : carburant, péages, comparaison avec l'itinéraire sans péages — et la station la moins chère sur votre route.">
+  <meta property="og:description" content="Entrez votre trajet, on s'occupe des calculs : carburant, péages, comparaison avec l'itinéraire sans péages - et la station la moins chère sur votre route.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://jeanlori-lab.github.io/tratjet/logo%20trajet%20rat.png">
   <meta name="twitter:card" content="summary">
@@ -469,7 +469,7 @@
       .is-stop .param-label { display: none; }
       .is-stop .param-input { flex: 1 1 auto; }
       /* Poignées de glisser-déposer : calées sur l'encadré de saisie. Sans ça,
-         elles se centrent sur la hauteur totale de la ligne — or Départ/Arrivée
+         elles se centrent sur la hauteur totale de la ligne - or Départ/Arrivée
          ont leur libellé au-dessus (2 lignes) là où une étape n'en a qu'une,
          donc les poignées ne tombaient pas à la même hauteur. */
       .point-row:not(.is-stop) .drag-handle { top: auto; bottom: 8px; height: 43px; }
@@ -589,7 +589,7 @@
     }
     /* Variante A : la fiche sélectionnée domine nettement (c'est LA réponse
        à la question posée), l'autre option est réduite à une ligne fine et
-       discrète — plus la peine de comparer deux fiches de même poids visuel
+       discrète - plus la peine de comparer deux fiches de même poids visuel
        pour trouver laquelle est la bonne. */
     .route-row.sel {
       border-color: #1976d2; border-width: 2px; padding: 16px;
@@ -964,7 +964,7 @@
     .res-value { font-size: 14.5px; font-weight: 700; color: #1a2433; text-align: right; }
 
     /* Trajet : simple ligne de texte compacte (distance/durée), sans carte
-       ni bordures — l'info est secondaire par rapport au coût. */
+       ni bordures - l'info est secondaire par rapport au coût. */
     .res-trajet-line {
       font-size: 15px;
       font-weight: 400;
@@ -1156,7 +1156,7 @@
        trajets à étapes) : volontairement différente des pastilles d'arrêt
        ci-dessus, pour ne pas laisser croire qu'il s'agit de la même chose. */
     /* Bouton "voir par tronçon" (trajets à étapes) : bouton fantôme, juste
-       une bordure fine sans fond — discret, mais reste visiblement
+       une bordure fine sans fond - discret, mais reste visiblement
        cliquable, contrairement à un simple lien souligné. */
     .troncon-cta {
       display: flex; align-items: center; gap: 4px;
@@ -1199,7 +1199,7 @@
 
     /* Accès à "Station la moins chère" (sans trajet) : une simple icône à
        côté du bouton compte plutôt qu'un onglet de même poids que "Coût du
-       trajet" — c'est une fonction secondaire. */
+       trajet" - c'est une fonction secondaire. */
     .station-icon-btn {
       position: absolute; top: 0; right: 40px;
       width: 34px; height: 34px; border-radius: 50%;
@@ -1483,7 +1483,7 @@
 
     <!-- Bloc Départ / Destination -->
     <div class="section">
-      <!-- Points du trajet (départ, étapes, destination) — réordonnables -->
+      <!-- Points du trajet (départ, étapes, destination) - réordonnables -->
       <div class="points-wrap">
         <div id="points"></div>
         <!-- Inverser départ ↔ destination (visible seulement sans étape) -->
@@ -1555,7 +1555,7 @@
          moins chère au bon moment du trajet (onglet "Sur le trajet"), quand
          la jauge passera entre ~20 % et ~10 % restants. Bornes du curseur :
          ~25 L (petites citadines) à ~120 L (gros SUV / pick-up).
-         Curseurs repliés tant que l'interrupteur est décoché (défaut) — seul
+         Curseurs repliés tant que l'interrupteur est décoché (défaut) - seul
          le texte d'explication reste visible ; l'onglet "Sur le trajet"
          garde alors son comportement classique. Toujours visible (pas
          replié derrière un bouton), mais discret visuellement (voir
@@ -1613,7 +1613,7 @@
     <!-- Distance/durée : visibles en plus gros directement dans les fiches
          "Avec péages"/"Sans péages" (.route-infos) quand il y en a deux à
          comparer. Cette ligne ne sert plus que de secours pour le cas d'un
-         seul itinéraire (pas de fiche pour porter cette info) — voir
+         seul itinéraire (pas de fiche pour porter cette info) - voir
          renderResultMode(). -->
     <div class="res-trajet-line" id="resTrajetLine" style="display:none;"><strong id="r-dist">—</strong> · <strong id="r-duree">—</strong> <span class="src-note">hors trafic</span></div>
 
@@ -1726,7 +1726,7 @@
       <p><strong>Itinéraires, distances et durées</strong> : OpenRouteService (données OpenStreetMap). Les durées sont théoriques, <strong>hors trafic</strong>.</p>
       <p><strong>Prix des carburants</strong> : flux officiel des prix en station (data.gouv.fr), tel que déclaré par les exploitants. Le prix moyen national est recalculé à chaque visite ; le prix d'une station donnée peut dater de quelques jours (la date du relevé est affichée).</p>
       <p><strong>Péages</strong> : tarifs officiels des concessionnaires pour une voiture (classe 1), via Vinci Autoroutes (et ViaMichelin en secours). Quand aucun tarif n'est trouvé, on l'indique plutôt que d'inventer un chiffre.</p>
-      <p><strong>Bornes électriques</strong> : base nationale IRVE (data.gouv.fr). Le prix de l'électricité est une estimation représentative d'une recharge publique rapide (route/autoroute) — la tarification réelle varie fortement selon la puissance de la borne et l'opérateur (de ~0,30 à ~0,85 €/kWh).</p>
+      <p><strong>Bornes électriques</strong> : base nationale IRVE (data.gouv.fr). Le prix de l'électricité est une estimation représentative d'une recharge publique rapide (route/autoroute) : la tarification réelle varie fortement selon la puissance de la borne et l'opérateur (de ~0,30 à ~0,85 €/kWh).</p>
       <p><strong>Limites</strong> : tous les montants sont des estimations. La consommation réelle dépend de la conduite, du chargement et de la météo ; le trafic n'est pas pris en compte dans les durées.</p>
     </div>
   </div>
@@ -1776,7 +1776,7 @@ function photonLabel(p) {
 // Côte-d'Or, Bourgogne-Franche-Comté" -> { dept: "Côte-d'Or", region:
 // "Bourgogne-Franche-Comté" }. Sert à désambiguïser les homonymes (plusieurs
 // communes portent le même nom dans des départements différents), affiché
-// seulement dans la liste — jamais injecté dans la valeur du champ (qui doit
+// seulement dans la liste - jamais injecté dans la valeur du champ (qui doit
 // rester une adresse géocodable telle quelle).
 function banContexte(properties) {
   if (!properties || !properties.context) return null;
@@ -1786,7 +1786,7 @@ function banContexte(properties) {
 
 // Photon indexe aussi les points d'intérêt d'OSM (gares, restaurants, salles
 // de sport, hôtels, commerces, entreprises…) : on les identifie par leur clé
-// OSM pour les proposer aussi en France — où la BAN ne connaît que les
+// OSM pour les proposer aussi en France - où la BAN ne connaît que les
 // adresses et les communes.
 const POI_OSM_KEYS = new Set([
   'amenity', 'shop', 'tourism', 'leisure', 'railway', 'aeroway', 'office',
@@ -1831,8 +1831,8 @@ function poiLabel(p) {
 }
 
 // Recherche de lieux : API Adresse officielle (BAN, data.gouv.fr) en priorité
-// pour la France — exhaustive et bien priorisée sur les adresses françaises
-// (jusqu'au numéro de rue), gratuite et sans clé — complétée par Photon
+// pour la France - exhaustive et bien priorisée sur les adresses françaises
+// (jusqu'au numéro de rue), gratuite et sans clé - complétée par Photon
 // (Komoot) pour les points d'intérêt (gares, restaurants, salles de sport,
 // entreprises… que la BAN ne connaît pas) et pour le reste de l'Europe.
 async function searchPlaces(q, limit) {
@@ -1856,7 +1856,7 @@ async function searchPlaces(q, limit) {
     const ctx = banContexte(f.properties);
     // "Ville, Département, Région" pour les communes/lieux (le libellé n'est
     // alors que le nom de la ville) ; pour une adresse précise, le libellé
-    // BAN contient déjà la ville — on se contente d'un rappel de département
+    // BAN contient déjà la ville - on se contente d'un rappel de département
     // entre parenthèses pour ne pas surcharger la liste.
     const estLieu = f.properties.type === 'municipality' || f.properties.type === 'locality';
     // Paris (et les rares communes dont le nom du département est identique,
@@ -2026,8 +2026,8 @@ async function envoyerLienMagique() {
     status.textContent = 'Envoi impossible : ' + msg;
     // Sur échec réseau (message vide), on sonde le serveur pour situer la panne.
     if (!error.message || error.message === '{}') {
-      status.textContent += ' — diagnostic en cours…';
-      status.textContent = 'Envoi impossible : ' + msg + ' — ' + (await diagnostiquerSupabase(email));
+      status.textContent += ' - diagnostic en cours…';
+      status.textContent = 'Envoi impossible : ' + msg + ' - ' + (await diagnostiquerSupabase(email));
     }
     return;
   }
@@ -2091,7 +2091,7 @@ async function diagnostiquerSupabase(email) {
     });
     let corps = '';
     try { corps = (await r.text()).slice(0, 300); } catch (e) {}
-    return 'diagnostic : le serveur répond HTTP ' + r.status + ' — ' + (corps || '(réponse vide)');
+    return 'diagnostic : le serveur répond HTTP ' + r.status + ' - ' + (corps || '(réponse vide)');
   } catch (e) {
     return 'diagnostic : serveur injoignable depuis cet appareil (' + (e.message || 'échec réseau') + ').';
   }
@@ -2260,7 +2260,7 @@ function confirmerVehicule() {
 }
 function appliquerVehicule(v, chip) {
   // '#trajetChips' préservé partout : appliquer un véhicule ne doit pas
-  // effacer un trajet déjà mis en avant — les deux peuvent être actifs
+  // effacer un trajet déjà mis en avant - les deux peuvent être actifs
   // en même temps.
   const btn = document.querySelector(`#carbChoices .carb-choice[data-value="${v.type}"]`);
   if (btn) setCarburant(v.type, btn, '#trajetChips');
@@ -2327,7 +2327,7 @@ function confirmerTrajet() {
 }
 function appliquerTrajet(t, chip) {
   // '#vehChips' préservé : appliquer un trajet ne doit pas effacer un
-  // véhicule déjà mis en avant — voir le commentaire équivalent dans
+  // véhicule déjà mis en avant - voir le commentaire équivalent dans
   // appliquerVehicule().
   const container = pointsEl();
   container.textContent = '';
@@ -2436,7 +2436,7 @@ async function onAutoComplete(input) {
     // Photon (komoot) au lieu d'ORS pour la saisie live : moteur pensé pour
     // l'autocomplétion, qui pondère fortement la notoriété (population,
     // hiérarchie administrative) et remonte donc les villes connues avant
-    // les hameaux obscurs — contrairement à ORS/Pelias qui matchait parfois
+    // les hameaux obscurs - contrairement à ORS/Pelias qui matchait parfois
     // par simple proximité textuelle (ex. "anger" -> un hameau "Colère").
     // Pas de « , France » forcé : on récupère large puis on remonte les
     // résultats français en tête, sans exclure l'étranger (Berlin reste
@@ -2489,7 +2489,7 @@ const CARB_FIELD = {
 // autoroute/route), pas sur le tarif domicile heures pleines (~0,25 €/kWh) :
 // ce dernier ne représente pas ce que paie réellement quelqu'un qui recharge
 // en cours de trajet. Fourchette observée en 2026 : ~0,30-0,50 €/kWh pour du
-// ≤22 kW, ~0,50-0,65 €/kWh pour du 50-150 kW, ~0,65-0,85 €/kWh au-delà — on
+// ≤22 kW, ~0,50-0,65 €/kWh pour du 50-150 kW, ~0,65-0,85 €/kWh au-delà - on
 // retient une moyenne représentative d'une recharge rapide de trajet.
 const PRIX_ELECTRIQUE_ESTIME = 0.55;
 let prixActuel = null;
@@ -2560,7 +2560,7 @@ function setLoading(on) {
   document.getElementById('calcBtnWrap').classList.toggle('loading', on); // fait rouler la voiture-rat au-dessus du bouton
 }
 // keepScope : sélecteur d'un groupe de chips (ex. '#vehChips') à laisser
-// tel quel — utilisé par appliquerVehicule/appliquerTrajet, qui appellent
+// tel quel - utilisé par appliquerVehicule/appliquerTrajet, qui appellent
 // resetResultat() pour masquer d'anciens résultats sans effacer la
 // sélection de l'AUTRE catégorie (on doit pouvoir avoir un trajet ET un
 // véhicule tous les deux mis en avant en même temps). Sans keepScope
@@ -3021,7 +3021,7 @@ async function fetchStationMoinsChere(lat, lon, type, rayonKm, mode) {
 // Borne de recharge (véhicule électrique) : pas de prix comparable d'une
 // borne à l'autre (tarification très variable, souvent absente des
 // données), donc pas de "moins chère". Priorité à la recharge RAPIDE
-// (>= 50 kW, la seule vraiment utile en cours de trajet — une borne 7 kW
+// (>= 50 kW, la seule vraiment utile en cours de trajet - une borne 7 kW
 // à 200 m ne sert à rien si on doit repartir dans l'heure) : parmi les
 // bornes rapides à portée, on prend la plus proche ; s'il n'y en a aucune,
 // on se rabat sur la plus proche tout court, quelle que soit sa puissance.
@@ -3359,7 +3359,7 @@ async function rechercherStationMoinsChere() {
     // Économie estimée sur un plein ici, vs prix moyen national. Cette
     // station est proche du départ : un plein tout de suite ferait un
     // top-up depuis le niveau au départ (jamais plus que la contenance du
-    // réservoir), ou une taille de réservoir plausible si non renseignée —
+    // réservoir), ou une taille de réservoir plausible si non renseignée -
     // jamais les litres de tout le trajet, qui peuvent largement dépasser
     // la contenance réelle sur un long trajet.
     if (!electrique && lastResultData && isFinite(lastResultData.litresA)) {
@@ -3433,13 +3433,13 @@ async function rechercherStationMoinsChere() {
 
 // --- Station la moins chère SUR le trajet : parmi les stations proches de
 // la route (à vol d'oiseau, approximation de "à ~5 min en voiture"), on
-// cherche la moins chère — complète la recherche "près du départ". ---
+// cherche la moins chère - complète la recherche "près du départ". ---
 // ~5 min en voiture ≈ 4 km à vol d'oiseau (routes locales à ~50 km/h) : une
 // vraie isochrone par station coûterait un appel routage par candidate.
 const RAYON_TRAJET_KM = 4;
 let lastStationSurTrajet = null; // { polyline, type, depart, arrivee, distKm, conso }
 
-// fenetreKm (optionnel) : [minKm, maxKm] le long du trajet — ne considère que
+// fenetreKm (optionnel) : [minKm, maxKm] le long du trajet - ne considère que
 // les stations proches de ce segment (recommandation d'arrêt selon le réservoir).
 async function fetchStationSurTrajet(polyline5, type, fenetreKm) {
   const field = (type === 'sp95') ? 'e10_prix' : CARB_FIELD[type];
@@ -3542,7 +3542,7 @@ const LITRES_PLEIN_MAX_DEFAUT = 50;
 // Calcule les arrêts nécessaires sur tout le trajet selon le réservoir : à
 // chaque étape, on cible le segment où la jauge passera de ~20 % à ~10 %
 // restants, on y cherche la station la moins chère, puis on suppose un plein
-// complet à cet arrêt avant de continuer. Sans limite de nombre — un trajet
+// complet à cet arrêt avant de continuer. Sans limite de nombre - un trajet
 // très long peut demander plusieurs arrêts.
 async function planArretsSurTrajet(polyline, type, distKm, conso, reservoir) {
   const arrets = [];
@@ -3659,7 +3659,7 @@ async function rechercherStationSurTrajet() {
   const note = document.getElementById('cheapestNoteTrajet');
   if (!lastStationSurTrajet) { note.style.display = 'none'; note.dataset.ready = ''; applyStationTabVisibility(); return; }
   const { polyline, type, depart, arrivee, distKm, conso, lieux } = lastStationSurTrajet;
-  // Trajet à étapes : pas de station "sur le trajet" — seul l'onglet
+  // Trajet à étapes : pas de station "sur le trajet" - seul l'onglet
   // "Près du départ" reste pertinent (voir setStationTab dans calculer()).
   if (Array.isArray(lieux) && lieux.length >= 3) {
     note.style.display = 'none';
@@ -4257,7 +4257,7 @@ function chargerRechercheDepuisLien() {
   // On nettoie les paramètres de l'URL (pas de ?q ou ?peage qui persiste
   // après un rafraîchissement), mais on préserve le hash : #station/#cout
   // sont des liens d'onglet partageables, et #access_token/#error sont le
-  // retour du lien magique Supabase (lus de façon asynchrone par le SDK —
+  // retour du lien magique Supabase (lus de façon asynchrone par le SDK -
   // les effacer ici casserait la connexion).
   if (window.location.search) {
     history.replaceState(null, '', window.location.pathname + window.location.hash);
@@ -4330,7 +4330,7 @@ async function getRoute(coords, apiKey, avoid) {
   return { distanceKm: s.distance / 1000, dureeSec: s.duration, polyline };
 }
 
-// URL du relais Cloudflare Worker (ViaMichelin, Vinci-autoroutes — contourne le blocage CORS).
+// URL du relais Cloudflare Worker (ViaMichelin, Vinci-autoroutes - contourne le blocage CORS).
 // ⚠️ Colle ici l'URL de TON Worker, ex : https://peage.toncompte.workers.dev
 const TOLL_PROXY_URL = 'https://peage.jeanlorilleux37.workers.dev/';
 
@@ -4389,7 +4389,7 @@ function encodePolyline(coords, precision) {
 
 // Péages : Vinci-autoroutes en source principale (détail par tronçon
 // numéroté seulement, "Tronçon N"), ViaMichelin en second essai (détail par
-// gare nommée, ex. "Restigné") si Vinci échoue — mais ViaMichelin bloque
+// gare nommée, ex. "Restigné") si Vinci échoue - mais ViaMichelin bloque
 // systématiquement les requêtes depuis le Worker Cloudflare (403, probable
 // blocage anti-bot par IP) depuis le 10/07/2026 : on le garde en second
 // essai best-effort au cas où ça se débloque, sans compter dessus.
@@ -4455,7 +4455,7 @@ async function getTollsVinci(route) {
         // L'abscisse (distance en mètres depuis le départ du tracé) sert à
         // estimer l'heure réelle de passage à CETTE gare précise, plutôt que
         // de caler toutes les gares intermédiaires sur l'heure d'arrivée
-        // (voir plus bas) — le nom du champ n'étant pas garanti stable côté
+        // (voir plus bas) - le nom du champ n'étant pas garanti stable côté
         // Vinci, on essaie plusieurs variantes et on se rabat sur null si
         // aucune n'est présente.
         const absBrute = tags.StartAbscissa ?? tags.startAbscissa ?? tags.START_ABSCISSA;
@@ -4474,7 +4474,7 @@ async function getTollsVinci(route) {
     // de passage à CHAQUE gare (certains tarifs varient jour/nuit, heures
     // pleines/creuses) : on interpole donc la date de chaque gare selon sa
     // position sur le trajet (abscisse / distance totale), au lieu de tout
-    // caler sur l'heure d'arrivée pour les gares après la première — ce qui
+    // caler sur l'heure d'arrivée pour les gares après la première - ce qui
     // donnait une heure de passage fausse dès qu'il y avait plus de 2 gares.
     // Repli : si l'abscisse manque, interpolation linéaire par index (mieux
     // répartie que "tout à l'arrivée", même si moins précise).
@@ -4518,7 +4518,7 @@ async function getTollsVinci(route) {
 
 // Via l'API GraphQL interne (non documentée) de ViaMichelin : un seul appel
 // (pas de chaîne tracé -> gares -> tarif comme pour Vinci), et surtout le
-// nom réel de chaque gare de péage traversée — mieux que le "Tronçon N" de
+// nom réel de chaque gare de péage traversée - mieux que le "Tronçon N" de
 // Vinci en attendant de percer le format de ses réponses. Best-effort comme
 // les autres replis : le moindre souci renvoie simplement null.
 // Renvoie { cost, details: [{label, price}] } ou null.
@@ -4610,7 +4610,7 @@ function renderResultMode() {
   peageChip.classList.toggle('unavailable', !peageConnu);
   peageValEl.textContent = '';
   // La flèche dépliante est ajoutée à la pastille entière (peageChip, pas
-  // peageValEl : positionnement absolu dans le coin) — jamais vidée par le
+  // peageValEl : positionnement absolu dans le coin) - jamais vidée par le
   // textContent ci-dessus, donc chaque recalcul en empilait une nouvelle
   // sans retirer la précédente. On la retire explicitement avant d'en
   // recréer une, sans quoi plusieurs flèches se superposent.
@@ -4882,7 +4882,7 @@ function lancerNavigation(cible, quelleRoute) {
 // Le plafond de détour est dégressif selon la durée du trajet de référence :
 // 100 % en dessous d'1h (quasiment aucune limite sur un trajet très court),
 // puis 50 % à 1h pile jusqu'à 25 % pour un trajet long (≥8h), interpolé
-// linéairement entre les deux — plus le trajet est long, plus un détour
+// linéairement entre les deux - plus le trajet est long, plus un détour
 // donné pèse peu proportionnellement, mais on ne laisse jamais dépasser
 // 25 %.
 // Lancé en arrière-plan après l'affichage des résultats, best-effort :
@@ -5114,7 +5114,7 @@ async function calculer() {
     // Si le trajet le plus rapide et le trajet "zéro péage" sont en fait le
     // même tracé (même distance, même durée), c'est qu'aucune autoroute à
     // péage n'est empruntée : le prix est 0 €, un fait établi par le
-    // routage lui-même — pas la peine d'interroger Vinci/ViaMichelin, et
+    // routage lui-même - pas la peine d'interroger Vinci/ViaMichelin, et
     // surtout pas la peine de proposer un lien de secours qui n'a pas lieu
     // d'être (cas fréquent des petits trajets locaux).
     const memeTrace = (a, b) => Math.abs(a.distanceKm - b.distanceKm) < 1 && Math.abs(a.dureeSec - b.dureeSec) < 90;
@@ -5165,7 +5165,7 @@ async function calculer() {
     // Waze navigue toujours depuis la position GPS actuelle de l'appareil (il
     // n'accepte pas de point de départ personnalisé, ni de points de
     // passage) : seule la destination compte, et le lien est le même quel
-    // que soit l'itinéraire choisi (avec ou sans péages) — Waze calcule sa
+    // que soit l'itinéraire choisi (avec ou sans péages) - Waze calcule sa
     // propre route. Mémorisé ici, utilisé par ouvrirNavigation() au clic.
     wazeUrlActuel = `https://waze.com/ul?ll=${c2[1]},${c2[0]}&navigate=yes`;
     // Waze masqué dès qu'il y a une étape (son lien ne gère qu'un point
@@ -5194,7 +5194,7 @@ async function calculer() {
     // fiches comparatives, lien Maps, et lance la recherche de stations.
     applySelectedRoute();
 
-    // Priorité à "Sur le trajet" à chaque nouveau calcul — sauf en électrique
+    // Priorité à "Sur le trajet" à chaque nouveau calcul - sauf en électrique
     // (pas de prix comparable entre bornes) ou pour un trajet à étapes (cet
     // onglet n'affiche rien dans ce cas, voir rechercherStationSurTrajet()).
     const multiEtapes = lieux.length >= 3;
