@@ -2671,13 +2671,13 @@ function setLoading(on) {
 // (changement de n'importe quel autre paramètre), les deux catégories sont
 // réinitialisées : plus rien ne garantit alors qu'elles correspondent
 // encore à l'état actuel.
+// Ne masque plus le résultat : changer un paramètre après un premier calcul
+// laisse l'ancien résultat affiché (devenu simplement obsolète) le temps
+// qu'on relance "Calculer" - plutôt que de le faire disparaître à chaque
+// frappe. Ça évite aussi qu'un réglage touché par erreur ne fasse
+// rebasculer la mise en page desktop au centre (voir .has-results) puis
+// revienne en deux colonnes au calcul suivant.
 function resetResultat(keepScope) {
-  document.getElementById('sectionResultats').style.display = 'none';
-  // Desktop : tant qu'il n'y a pas de résultat, les paramètres restent
-  // centrés en une seule colonne (voir .has-results) plutôt que collés à
-  // gauche d'un grand vide - la mise en page à deux colonnes n'a de sens
-  // qu'une fois qu'il y a quelque chose à montrer à droite.
-  document.querySelector('.page').classList.remove('has-results');
   hideError();
   document.querySelectorAll('.saved-chip.selected').forEach(c => {
     if (keepScope && c.closest(keepScope)) return;
