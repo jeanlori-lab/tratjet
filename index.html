@@ -1128,19 +1128,18 @@
     /* Liste déroulante des tronçons (station la moins chère par tronçon,
        trajets à étapes) : volontairement différente des pastilles d'arrêt
        ci-dessus, pour ne pas laisser croire qu'il s'agit de la même chose. */
-    /* Bouton "voir par tronçon" (trajets à étapes) : plein et coloré (pas
-       en pointillés comme les autres CTA secondaires) pour bien se voir
-       comme un vrai bouton cliquable. */
+    /* Bouton "voir par tronçon" (trajets à étapes) : bouton fantôme, juste
+       une bordure fine sans fond — discret, mais reste visiblement
+       cliquable, contrairement à un simple lien souligné. */
     .troncon-cta {
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      width: 100%; padding: 12px 10px; margin-top: 14px;
-      background: linear-gradient(135deg, #43a047, #2e7d32); border: none; border-radius: 12px;
-      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
-      font-family: inherit; line-height: 1.3;
-      box-shadow: 0 4px 12px rgba(46,125,50,0.3);
+      display: flex; align-items: center; gap: 4px;
+      width: fit-content; margin: 12px auto 0;
+      font-size: 11px; font-weight: 600; color: #2e7d32; text-decoration: none;
+      background: #fff; padding: 5px 12px; border-radius: 8px;
+      border: 1px solid #cfe0cf; cursor: pointer; font-family: inherit;
+      transition: background 0.15s;
     }
-    .troncon-cta:active { transform: scale(0.98); }
-    .troncon-cta-icon { font-size: 16px; }
+    .troncon-cta:hover { background: #f3faf3; }
     .troncon-select-wrap { position: relative; margin-bottom: 10px; }
     .troncon-select {
       display: block;
@@ -1627,10 +1626,7 @@
     <!-- Trajet à étapes : bouton optionnel pour calculer la station la moins
          chère de chaque tronçon (coûteux en requêtes, donc pas automatique
          contrairement à "près du départ"). -->
-    <button type="button" class="troncon-cta" id="tronconCtaBtn" style="display:none;" onclick="calculerStationsParTroncon()">
-      <span class="troncon-cta-icon">⛽</span>
-      Voir les stations les moins chères, tronçon par tronçon
-    </button>
+    <button type="button" class="troncon-cta" id="tronconCtaBtn" style="display:none;" onclick="calculerStationsParTroncon()">Voir tronçon par tronçon</button>
     <div class="cheapest-note" id="cheapestNoteTroncons" style="display:none;"></div>
   </div>
   </div>
