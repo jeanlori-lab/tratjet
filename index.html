@@ -671,8 +671,10 @@
     }
     .save-form-ok { background: #2e7d32; color: #fff; }
     .save-form-cancel { background: #eceff1; color: #607080; }
-    .trajet-chips-wrap { padding: 2px 0 6px; }
-    .trajet-chips-wrap:has(.saved-chips:empty) { display: none; }
+    /* Masqué par défaut ; renderTrajetChips() l'affiche en JS dès qu'il y a
+       au moins un favori (voir le commentaire là-bas : l'ancien sélecteur
+       :has(:empty) était peu fiable sur iOS Safari). */
+    .trajet-chips-wrap { padding: 2px 0 6px; display: none; }
     /* Comparateur des itinéraires (péages / sans péages), en tête des
        résultats, affiché seulement quand pertinent : une ligne par option,
        la sélection change tout le détail en dessous (coûts, litres,
@@ -2460,7 +2462,8 @@ function renderTrajetChips() {
   const wrap = document.getElementById('trajetChips');
   if (!wrap) return;
   wrap.textContent = '';
-  loadActifs(TRAJETS_KEY).forEach((t) => {
+  const trajets = loadActifs(TRAJETS_KEY);
+  trajets.forEach((t) => {
     const titre = t.points.join(' → ');
     wrap.appendChild(makeSavedChip('', t.nom, titre,
       (chip) => appliquerTrajet(t, chip),
@@ -2472,6 +2475,15 @@ function renderTrajetChips() {
         renderTrajetChips();
       })));
   });
+  // Affiche/masque le conteneur en JS, comme la ligne "Mes véhicules"
+  // (renderVehChips). On n'utilise plus la règle CSS
+  // `.trajet-chips-wrap:has(.saved-chips:empty)` : sur iOS Safari, ce
+  // sélecteur :has(:empty) ne se réévalue pas de façon fiable après l'ajout
+  // dynamique des puces, laissant le conteneur replié - les favoris
+  // existaient alors dans le DOM mais n'étaient pas peints (~1 chargement
+  // sur 4). Le pilotage en JS supprime cette dépendance capricieuse.
+  const wrapEl = document.querySelector('.trajet-chips-wrap');
+  if (wrapEl) wrapEl.style.display = trajets.length ? 'block' : 'none';
 }
 function toggleTrajetForm(open) {
   document.getElementById('trajetSaveForm').classList.toggle('open', open);
