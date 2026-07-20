@@ -1456,11 +1456,16 @@
   <div class="card account-card" id="accountCard" style="display:none;">
     <div class="card-title">Mon compte</div>
     <div id="accountLoggedOut">
-      <p class="account-hint">Synchronisez vos véhicules et trajets favoris entre vos appareils. Entrez votre e-mail : on vous envoie un lien de connexion, pas de mot de passe à retenir.</p>
-      <div class="account-row">
+      <p class="account-hint" id="accountHintText">Synchronisez vos véhicules et trajets favoris entre vos appareils. Entrez votre e-mail : on vous envoie un code de connexion, pas de mot de passe à retenir.</p>
+      <div class="account-row" id="accountEmailRow">
         <input type="email" id="accountEmail" placeholder="votre@email.fr" autocomplete="email">
-        <button type="button" class="account-send" id="accountSendBtn" onclick="envoyerLienMagique()">Recevoir le lien</button>
+        <button type="button" class="account-send" id="accountSendBtn" onclick="envoyerLienMagique()">Recevoir le code</button>
       </div>
+      <div class="account-row" id="accountOtpRow" style="display:none;">
+        <input type="text" id="accountOtp" placeholder="Code reçu par e-mail" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="one-time-code">
+        <button type="button" class="account-send" id="accountVerifyBtn" onclick="validerCodeMagique()">Valider</button>
+      </div>
+      <button type="button" class="link-btn" id="accountRetryBtn" style="display:none; font-size:11.5px; margin-top:6px;" onclick="reinitialiserFormulaireCompte()">← Recevoir un nouveau code</button>
       <div class="account-status" id="accountStatus"></div>
     </div>
     <div id="accountLoggedIn" style="display:none;">
@@ -1991,6 +1996,13 @@ function toggleAccountCard() {
   card.style.display = card.style.display === 'none' ? 'block' : 'none';
 }
 
+// Connexion par code plutôt que par simple clic sur le lien
+// de l'e-mail : sur iPhone, les liens depuis l'appli Gmail (ou tout client
+// mail) s'ouvrent dans le navigateur par défaut (souvent Chrome), jamais
+// dans l'appli installée (toujours Safari sous iOS). La session ouverte
+// par le lien atterrit donc dans le mauvais navigateur et ne rejoint
+// jamais l'appli. Le code se recopie à la main dans l'appli déjà ouverte :
+// aucun changement de navigateur n'est nécessaire, donc aucun risque.
 async function envoyerLienMagique() {
   const email = document.getElementById('accountEmail').value.trim();
   const status = document.getElementById('accountStatus');
@@ -1998,7 +2010,7 @@ async function envoyerLienMagique() {
   const btn = document.getElementById('accountSendBtn');
   btn.disabled = true;
   status.className = 'account-status';
-  status.textContent = 'Envoi du lien…';
+  status.textContent = 'Envoi du code…';
   let error = null;
   try {
     ({ error } = await sbClient.auth.signInWithOtp({
@@ -2017,10 +2029,47 @@ async function envoyerLienMagique() {
       status.textContent += ' — diagnostic en cours…';
       status.textContent = 'Envoi impossible : ' + msg + ' — ' + (await diagnostiquerSupabase(email));
     }
-  } else {
-    status.className = 'account-status ok';
-    status.textContent = '✓ Lien envoyé ! Ouvrez l\'e-mail sur cet appareil et cliquez le lien pour vous connecter.';
+    return;
   }
+  status.className = 'account-status ok';
+  status.textContent = '✓ Code envoyé ! Ouvrez l\'e-mail (même depuis une autre appli) et recopiez le code ci-dessous.';
+  document.getElementById('accountEmailRow').style.display = 'none';
+  document.getElementById('accountHintText').style.display = 'none';
+  document.getElementById('accountOtpRow').style.display = 'flex';
+  document.getElementById('accountRetryBtn').style.display = 'block';
+  document.getElementById('accountOtp').focus();
+}
+
+async function validerCodeMagique() {
+  const email = document.getElementById('accountEmail').value.trim();
+  const code = document.getElementById('accountOtp').value.trim();
+  const status = document.getElementById('accountStatus');
+  if (!code) { status.className = 'account-status err'; status.textContent = 'Entrez le code reçu par e-mail.'; return; }
+  const btn = document.getElementById('accountVerifyBtn');
+  btn.disabled = true;
+  status.className = 'account-status';
+  status.textContent = 'Vérification…';
+  let error = null;
+  try {
+    ({ error } = await sbClient.auth.verifyOtp({ email, token: code, type: 'email' }));
+  } catch (e) { error = e; }
+  btn.disabled = false;
+  if (error) {
+    status.className = 'account-status err';
+    status.textContent = 'Code invalide ou expiré : ' + (error.message || 'réessayez ou redemandez un code.');
+    return;
+  }
+  // onAuthStateChange (SIGNED_IN) bascule vers l'écran connecté juste après.
+}
+
+function reinitialiserFormulaireCompte() {
+  document.getElementById('accountEmailRow').style.display = 'flex';
+  document.getElementById('accountHintText').style.display = 'block';
+  document.getElementById('accountOtpRow').style.display = 'none';
+  document.getElementById('accountRetryBtn').style.display = 'none';
+  document.getElementById('accountOtp').value = '';
+  document.getElementById('accountStatus').className = 'account-status';
+  document.getElementById('accountStatus').textContent = '';
 }
 
 // Rejoue la requête d'envoi à la main (hors SDK) pour voir la réponse
@@ -2051,6 +2100,7 @@ async function diagnostiquerSupabase(email) {
 async function seDeconnecter() {
   try { await sbClient.auth.signOut(); } catch (e) {}
   // Les données locales restent : on perd juste la synchronisation.
+  reinitialiserFormulaireCompte();
 }
 
 // Fusionne local + cloud à la connexion (union, dédoublonnée par nom de
