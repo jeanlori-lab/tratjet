@@ -141,11 +141,18 @@
     .point-row.shift-for-handles { margin-left: 8px; }
     /* Séparations plus marquées entre Carburant / Consommation / Réservoir : plus
        d'espace vertical et un trait un peu plus visible et plus long. */
-    .veh-row, .carburant-row, .conso-row { padding: 15px 0; border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
+    /* Paddings réglés pour un écart visuel identique (15 px) entre chaque
+       trait et l'élément au-dessus / en dessous : les contenus des lignes
+       (chips, ligne de prix absolue, roulette) ne finissent pas tous au même
+       endroit dans leur boîte, d'où des valeurs différentes par ligne. */
+    .veh-row, .carburant-row, .conso-row { border-bottom-color: #cfd8e0; border-bottom-width: 1.5px; }
+    /* Haut resserré (début du bloc jaune), bas aligné sur l'écart commun. */
+    .veh-row { padding: 8px 0 14px; }
+    .conso-row { padding: 15px 0 14px; }
     /* Plus discret que les autres lignes du formulaire (véhicule, carburant,
        consommation) : une option secondaire n'a pas besoin du même poids
        visuel qu'un réglage principal. */
-    .reservoir-row { padding: 10px 0 8px; border-bottom-color: #eef2f6; border-bottom-width: 1px; }
+    .reservoir-row { padding: 15px 0 8px; border-bottom-color: #eef2f6; border-bottom-width: 1px; }
     .niveau-label { font-size: 11px; font-weight: 600; color: #90a4ae; margin-bottom: 4px; }
     .niveau-label-depart { margin-top: 10px; }
     /* Texte d'aide : masqué tant que l'optimisation est décochée (voir
@@ -199,9 +206,6 @@
       font-size: 12px; color: #2e7d32; line-height: 1.45; font-weight: 600;
     }
     .eco-line strong { font-weight: 900; }
-    /* Resserre le bloc en haut, et rapproche les chips véhicule de la ligne
-       Carburant juste en dessous. */
-    .veh-row { padding-top: 8px; padding-bottom: 8px; }
     /* Séparation un peu plus marquée entre le bloc Carburant/Conso et Départ/Destination */
     /* Plus d'air autour du trait pour bien détacher les deux blocs */
     .param-icon {
@@ -312,7 +316,7 @@
     }
     /* Bloc lieu (onglet station) : "position actuelle" à gauche, "France entière" à droite. */
     .lieu-controls { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-    .carburant-row { padding-bottom: 26px; }
+    .carburant-row { padding: 15px 0 33px; }
     .carburant-row .param-input { position: relative; }
     .carburant-row .prix-actuel {
       position: absolute;
