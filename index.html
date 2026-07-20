@@ -2807,7 +2807,7 @@ function equivalentReservoir(litres) {
     const pct = (cap.value - cap.min) / (cap.max - cap.min);
     msg.style.left = (rect.left + pct * rect.width) + 'px';
     // Assez haut pour ne pas recouvrir la ligne "Contenance du réservoir".
-    msg.style.top = (rect.top - 34) + 'px';
+    msg.style.top = (rect.top - 22) + 'px';
     msg.classList.add('show');
     clearTimeout(equivTimer);
     equivTimer = setTimeout(() => msg.classList.remove('show'), 1200);
