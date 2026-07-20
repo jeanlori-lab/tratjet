@@ -199,8 +199,9 @@
       font-size: 12px; color: #2e7d32; line-height: 1.45; font-weight: 600;
     }
     .eco-line strong { font-weight: 900; }
-    /* Resserre le bloc en haut (garde l'espacement entre les lignes). */
-    .veh-row { padding-top: 8px; }
+    /* Resserre le bloc en haut, et rapproche les chips véhicule de la ligne
+       Carburant juste en dessous. */
+    .veh-row { padding-top: 8px; padding-bottom: 8px; }
     /* Séparation un peu plus marquée entre le bloc Carburant/Conso et Départ/Destination */
     /* Plus d'air autour du trait pour bien détacher les deux blocs */
     .param-icon {
@@ -2088,7 +2089,7 @@ function makeSavedChip(icone, texte, titre, onApply, onDelete) {
   chip.title = titre;
   const txt = document.createElement('span');
   txt.className = 'chip-txt';
-  txt.textContent = icone + ' ' + texte;
+  txt.textContent = icone ? icone + ' ' + texte : texte;
   chip.appendChild(txt);
   const x = document.createElement('span');
   x.className = 'saved-chip-x';
@@ -2111,7 +2112,7 @@ function renderVehChips() {
   document.querySelector('.veh-row').style.display = vehs.length ? 'flex' : 'none';
   vehs.forEach((v, i) => {
     const titre = `${CARB_LABELS_VEH[v.type] || v.type} · ${v.conso} ${v.type === 'electrique' ? 'kWh' : 'L'}/100 km` + (v.capacite && v.type !== 'electrique' ? ` · réservoir ${v.capacite} L` : '');
-    wrap.appendChild(makeSavedChip('🚗', v.nom, titre,
+    wrap.appendChild(makeSavedChip('', v.nom, titre,
       (chip) => appliquerVehicule(v, chip),
       () => { const arr = loadStore(VEHICULES_KEY); arr.splice(i, 1); saveStore(VEHICULES_KEY, arr); renderVehChips(); }));
   });
