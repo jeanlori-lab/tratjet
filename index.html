@@ -1462,7 +1462,7 @@
         <button type="button" class="account-send" id="accountSendBtn" onclick="envoyerLienMagique()">Recevoir le code</button>
       </div>
       <div class="account-row" id="accountOtpRow" style="display:none;">
-        <input type="text" id="accountOtp" placeholder="Code à 6 chiffres" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code">
+        <input type="text" id="accountOtp" placeholder="Code reçu par e-mail" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="one-time-code">
         <button type="button" class="account-send" id="accountVerifyBtn" onclick="validerCodeMagique()">Valider</button>
       </div>
       <button type="button" class="link-btn" id="accountRetryBtn" style="display:none; font-size:11.5px; margin-top:6px;" onclick="reinitialiserFormulaireCompte()">← Recevoir un nouveau code</button>
@@ -1996,7 +1996,7 @@ function toggleAccountCard() {
   card.style.display = card.style.display === 'none' ? 'block' : 'none';
 }
 
-// Connexion par code à 6 chiffres plutôt que par simple clic sur le lien
+// Connexion par code plutôt que par simple clic sur le lien
 // de l'e-mail : sur iPhone, les liens depuis l'appli Gmail (ou tout client
 // mail) s'ouvrent dans le navigateur par défaut (souvent Chrome), jamais
 // dans l'appli installée (toujours Safari sous iOS). La session ouverte
@@ -2032,7 +2032,7 @@ async function envoyerLienMagique() {
     return;
   }
   status.className = 'account-status ok';
-  status.textContent = '✓ Code envoyé ! Ouvrez l\'e-mail (même depuis une autre appli) et recopiez le code à 6 chiffres ci-dessous.';
+  status.textContent = '✓ Code envoyé ! Ouvrez l\'e-mail (même depuis une autre appli) et recopiez le code ci-dessous.';
   document.getElementById('accountEmailRow').style.display = 'none';
   document.getElementById('accountHintText').style.display = 'none';
   document.getElementById('accountOtpRow').style.display = 'flex';
