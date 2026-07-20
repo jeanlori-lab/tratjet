@@ -2783,16 +2783,16 @@ function setOptimPlein(on) {
 // dans une bulle flottante au-dessus du pouce du curseur (même style que le
 // "Non mais tu vas où comme ça ?" du glisser-déposer des étapes).
 function equivalentReservoir(litres) {
-  if (litres <= 5) return 'un scooter';
-  if (litres <= 15) return 'une moto';
-  if (litres <= 25) return 'une grosse moto';
-  if (litres <= 35) return 'une petite 3 portes';
-  if (litres <= 45) return 'une citadine';
-  if (litres <= 55) return 'une berline';
-  if (litres <= 70) return 'un SUV';
-  if (litres <= 85) return 'un van';
-  if (litres <= 100) return 'une camionnette';
-  return 'un gros 4x4';
+  if (litres <= 5) return 'Scooter';
+  if (litres <= 15) return 'Moto';
+  if (litres <= 25) return 'Grosse moto';
+  if (litres <= 35) return 'Petite 3 portes';
+  if (litres <= 45) return 'Citadine';
+  if (litres <= 55) return 'Berline';
+  if (litres <= 70) return 'SUV';
+  if (litres <= 85) return 'Van';
+  if (litres <= 100) return 'Camionnette';
+  return 'Gros 4x4';
 }
 (function initReservoir() {
   const cap = document.getElementById('reservoirCapacite');
@@ -2801,7 +2801,7 @@ function equivalentReservoir(litres) {
   let equivTimer = null;
   function showEquiv() {
     const msg = ensureDragOutsideMsg();
-    msg.textContent = 'Comme ' + equivalentReservoir(parseFloat(cap.value)) + ' !';
+    msg.textContent = equivalentReservoir(parseFloat(cap.value));
     // Position au-dessus du pouce du curseur (approx. : fraction de la piste).
     const rect = cap.getBoundingClientRect();
     const pct = (cap.value - cap.min) / (cap.max - cap.min);
