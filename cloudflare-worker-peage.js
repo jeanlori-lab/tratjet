@@ -107,8 +107,8 @@ async function handleVinciRate(body, env) {
 // usurpés ici pour passer le contrôle CORS/anti-bot basique du site.
 // carId fixe (Renault Clio V essence) : les péages dépendent de la catégorie
 // du véhicule (léger), pas du modèle exact, donc une voiture "standard"
-// suffit - Tratjet ne s'en sert que pour le tarif péages, jamais pour le
-// carburant (déjà calculé par Tratjet lui-même avec la conso réelle saisie).
+// suffit - Futéroute ne s'en sert que pour le tarif péages, jamais pour le
+// carburant (déjà calculé par Futéroute lui-même avec la conso réelle saisie).
 const VIAMICHELIN_CAR_ID = '29074';
 const VIAMICHELIN_QUERY = `query SearchItinerary($input: SearchItineraryInput!) {
   searchItinerary(input: $input) {
