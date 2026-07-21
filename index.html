@@ -1369,6 +1369,12 @@
       height: 225px;
       border: none;
     }
+    /* Carte d'itinéraire (Prop A) : nettement plus haute que la petite carte
+       station (surtout utile sur mobile pour un long trajet nord-sud). Pas de
+       commandes Leaflet en surimpression ici, donc la carte remplit toute la
+       hauteur (pas de bande basse masquée). */
+    .cheapest-map-wrap.itmap-tall { height: 360px; }
+    .cheapest-map-wrap.itmap-tall .cheapest-map { height: 100%; }
     /* Bouton "ma position" en bas à droite des cartes : la géoloc n'est
        demandée qu'au clic. z-index au-dessus des couches Leaflet (~1000). */
     .map-locate-btn {
@@ -3267,7 +3273,7 @@ function buildItineraireMap(polyline5, station) {
   }
 
   const wrap = document.createElement('div');
-  wrap.className = 'cheapest-map-wrap';
+  wrap.className = 'cheapest-map-wrap itmap-tall';
   const attrib = document.createElement('div');
   attrib.className = 'cheapest-map-attrib';
   attrib.innerHTML = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a>';
@@ -3306,18 +3312,21 @@ function buildItineraireMap(polyline5, station) {
   const fuelMarker = L.marker([station.lat, station.lon], { icon: fuelIcon }).addTo(map);
   if (isFinite(station.distRoute) && station.distRoute >= 0.1) {
     const km = station.distRoute.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-    fuelMarker.bindTooltip('détour +' + km + ' km', { permanent: true, direction: 'right', offset: [11, 0], className: 'itmap-detour-label' }).openTooltip();
+    // direction 'auto' : l'étiquette bascule à gauche/droite selon la place,
+    // pour ne pas déborder du cadre quand la station est près d'un bord.
+    fuelMarker.bindTooltip('détour +' + km + ' km', { permanent: true, direction: 'auto', offset: [11, 0], className: 'itmap-detour-label' }).openTooltip();
   }
 
-  // Cadre l'ensemble : tout le tracé + la station. Le conteneur fait 225px de
-  // haut mais n'est visible que sur 160px (les 65px du bas sont masqués pour
-  // cacher les commandes Leaflet) : on réserve donc cette bande basse pour que
-  // tout l'itinéraire reste dans la zone réellement visible.
+  // Cadre l'ensemble : tout le tracé + la station. La carte d'itinéraire n'a
+  // ni zoom ni attribution en surimpression (désactivés) : elle remplit tout
+  // son conteneur, on peut donc marger symétriquement.
   const bounds = routeLine.getBounds().extend([station.lat, station.lon]);
   const recadrer = () => {
     try {
       map.invalidateSize();
-      map.fitBounds(bounds, { paddingTopLeft: [22, 22], paddingBottomRight: [22, 87] });
+      // Marge horizontale plus large : réserve de la place pour l'étiquette
+      // « détour +X km » à côté du marqueur, qu'il soit à gauche ou à droite.
+      map.fitBounds(bounds, { padding: [52, 28] });
     } catch (e) { try { map.setView([station.lat, station.lon], 11); } catch (e2) {} }
   };
   map._itFit = recadrer; // rejoué par refreshStationMaps quand la carte redevient visible
