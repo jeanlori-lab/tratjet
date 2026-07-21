@@ -3190,6 +3190,20 @@ const STATION_RAYON_MAX = 100;
 // convention que les radiuses -1 d'OpenRouteService plus bas dans ce fichier.
 const STATION_RAYON_ILLIMITE = -1;
 
+// Fraîcheur des prix : une station dont le relevé date de 2 semaines ou plus
+// n'est pas retenue (le prix affiché doit rester "en direct"). On cherche
+// alors la station récente suivante. Le champ *_maj du flux data.gouv.fr
+// donne la date du relevé pour chaque carburant.
+const PRIX_STATION_MAX_AGE_JOURS = 14;
+function releveTropVieux(maj) {
+  if (!maj) return false; // date inconnue : on ne peut pas juger, on garde
+  // Certaines dates arrivent en "YYYY-MM-DD HH:MM:SS" (espace) que Safari ne
+  // sait pas parser : on normalise en ISO (T) avant new Date.
+  const d = new Date(String(maj).trim().replace(' ', 'T'));
+  if (isNaN(d)) return false; // illisible : on garde plutôt que d'exclure à tort
+  return (Date.now() - d.getTime()) / 86400000 >= PRIX_STATION_MAX_AGE_JOURS;
+}
+
 // Récupère TOUS les enregistrements d'une recherche opendatasoft v1 (l'API
 // plafonne chaque appel à ODS_PAGE_SIZE résultats) en paginant avec "start"
 // jusqu'à épuisement, avec un garde-fou sur le nombre de pages.
@@ -3229,13 +3243,15 @@ async function fetchStationMoinsChere(lat, lon, type, rayonKm, mode) {
       const f = rec.fields || {};
       const prix = parseFloat(f[field]);
       if (isNaN(prix) || prix <= 0) continue;
+      // Date du relevé de ce carburant (champ *_maj du flux) : sert à
+      // l'affichage, et à écarter les prix trop vieux (2 semaines ou plus).
+      const maj = f[field.replace('_prix', '_maj')] || null;
+      if (releveTropVieux(maj)) continue;
       const geo = rec.geometry && rec.geometry.coordinates; // [lon, lat]
       const sLat = geo ? geo[1] : (f.latitude !== undefined ? parseFloat(f.latitude) : null);
       const sLon = geo ? geo[0] : (f.longitude !== undefined ? parseFloat(f.longitude) : null);
       // Filtre client en plus du rayon serveur (sécurité si l'API renvoie plus large).
       if (!illimite && sLat !== null && sLon !== null && distKm(lat, lon, sLat, sLon) > rayonKm) continue;
-      // Date du relevé de ce carburant (champ *_maj du flux), pour affichage.
-      const maj = f[field.replace('_prix', '_maj')] || null;
       if (!best || (veutMax ? prix > best.prix : prix < best.prix)) best = { prix, nom: f.nom || '', ville: f.ville || '', lat: sLat, lon: sLon, maj };
     }
     return best;
@@ -3729,6 +3745,10 @@ async function fetchStationSurTrajet(polyline5, type, fenetreKm) {
       const f = rec.fields || {};
       const prix = parseFloat(f[field]);
       if (isNaN(prix) || prix <= 0) continue;
+      // Écarte les prix trop vieux (relevé de 2 semaines ou plus) : on
+      // cherchera la station récente suivante.
+      const maj = f[field.replace('_prix', '_maj')] || null;
+      if (releveTropVieux(maj)) continue;
       const geo = rec.geometry && rec.geometry.coordinates; // [lon, lat]
       const sLat = geo ? geo[1] : (f.latitude !== undefined ? parseFloat(f.latitude) : null);
       const sLon = geo ? geo[0] : (f.longitude !== undefined ? parseFloat(f.longitude) : null);
@@ -3747,7 +3767,7 @@ async function fetchStationSurTrajet(polyline5, type, fenetreKm) {
       }
       const distRoute = Math.sqrt(d2min);
       if (distRoute > RAYON_TRAJET_KM) continue;
-      best = { prix, nom: f.nom || '', ville: f.ville || '', lat: sLat, lon: sLon, distRoute, kmSurTrajet: echKm[idxMin], maj: f[field.replace('_prix', '_maj')] || null };
+      best = { prix, nom: f.nom || '', ville: f.ville || '', lat: sLat, lon: sLon, distRoute, kmSurTrajet: echKm[idxMin], maj };
     }
     return best;
   } catch (e) { return null; }
