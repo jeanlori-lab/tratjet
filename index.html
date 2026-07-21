@@ -1392,6 +1392,29 @@
       margin-top: 3px;
     }
     .cheapest-map-attrib a { color: #90a4ae; }
+    /* Marqueur station essence sur la carte d'itinéraire (Prop A) : pastille
+       orange ⛽, posée au bout du détour depuis le tracé. */
+    .leaflet-div-icon.itmap-fuel-icon { background: transparent; border: none; }
+    .itmap-fuel-icon span {
+      display: flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: #e2971a; border: 2.5px solid #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.35); font-size: 13px; line-height: 1;
+    }
+    /* Petite légende sous la carte d'itinéraire. */
+    .itmap-legend {
+      display: flex; flex-wrap: wrap; gap: 10px 14px;
+      margin-top: 7px; font-size: 11px; color: #607080; font-weight: 600;
+    }
+    .itmap-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .itmap-legend .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    /* Étiquette « détour +X km » collée au marqueur station sur la carte. */
+    .leaflet-tooltip.itmap-detour-label {
+      background: #fff; color: #c77700; font-weight: 800; font-size: 10.5px;
+      border: 1px solid #f0d9a8; border-radius: 10px; padding: 1px 7px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.18); white-space: nowrap;
+    }
+    .leaflet-tooltip.itmap-detour-label::before { display: none; }
     .cheapest-link {
       display: inline-flex;
       align-items: center;
@@ -1943,12 +1966,28 @@ function poiLabel(p) {
 // (jusqu'au numéro de rue), gratuite et sans clé - complétée par Photon
 // (Komoot) pour les points d'intérêt (gares, restaurants, salles de sport,
 // entreprises… que la BAN ne connaît pas) et pour le reste de l'Europe.
+// fetch d'un géocodeur borné dans le temps : au-delà du délai, on abandonne et
+// on renvoie une liste vide plutôt que de laisser une API lente tout bloquer.
+// L'autocomplétion attend les DEUX géocodeurs (Promise.all) ; sans ce
+// garde-fou, un seul service lent (photon.komoot.io, instance publique gratuite
+// souvent saturée) rendait les suggestions très longues à apparaître.
+function fetchGeoJson(url, timeoutMs) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  return fetch(url, { signal: ctrl.signal })
+    .then(r => r.ok ? r.json() : { features: [] })
+    .catch(() => ({ features: [] }))
+    .finally(() => clearTimeout(t));
+}
+
 async function searchPlaces(q, limit) {
+  // La BAN (adresses françaises) est prioritaire et rapide : on lui laisse un
+  // peu plus de marge. Photon (POI + étranger) est plafonné plus court car
+  // c'est lui qui traîne : s'il dépasse, on affiche les résultats BAN sans
+  // l'attendre (la France, cas principal, reste parfaitement couverte).
   const [banRes, photonRes] = await Promise.all([
-    fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=${limit}&autocomplete=1`)
-      .then(r => r.ok ? r.json() : { features: [] }).catch(() => ({ features: [] })),
-    fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=${limit}&lang=fr`)
-      .then(r => r.ok ? r.json() : { features: [] }).catch(() => ({ features: [] })),
+    fetchGeoJson(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=${limit}&autocomplete=1`, 3500),
+    fetchGeoJson(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=${limit}&lang=fr`, 1500),
   ]);
   let banFeatures = banRes.features || [];
   // Saisie sans numéro = on cherche vraisemblablement une ville/un lieu, pas
@@ -3134,7 +3173,10 @@ function getUserPosition() {
 // taille doit être recalculée quand elles deviennent visibles.
 const stationLeafletMaps = [];
 function refreshStationMaps() {
-  stationLeafletMaps.forEach(m => { try { m.invalidateSize(); } catch (e) {} });
+  // Les cartes d'itinéraire (Prop A) stockent une fonction de recadrage : on
+  // la rejoue quand la carte redevient visible, sinon fitBounds calculé sur un
+  // conteneur de taille nulle laisserait un cadrage faux.
+  stationLeafletMaps.forEach(m => { try { m.invalidateSize(); if (m._itFit) m._itFit(); } catch (e) {} });
 }
 
 function buildStationMap(lat, lon) {
@@ -3209,6 +3251,94 @@ function buildStationMap(lat, lon) {
   const frag = document.createDocumentFragment();
   frag.appendChild(wrap);
   frag.appendChild(attrib);
+  return frag;
+}
+
+// Carte de l'itinéraire complet (départ → arrivée) avec la station recommandée
+// marquée comme un arrêt, reliée au tracé par son détour (Prop A). Situe la
+// station dans le trajet plutôt que de la montrer seule. Repli sur la petite
+// carte station classique si Leaflet ou le tracé manquent.
+function buildItineraireMap(polyline5, station) {
+  let points = null;
+  try { if (typeof polyline5 === 'string') points = decodePolyline(polyline5, 5); } catch (e) {}
+  if (typeof L === 'undefined' || !Array.isArray(points) || points.length < 2
+      || !isFinite(station.lat) || !isFinite(station.lon)) {
+    return buildStationMap(station.lat, station.lon);
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'cheapest-map-wrap';
+  const attrib = document.createElement('div');
+  attrib.className = 'cheapest-map-attrib';
+  attrib.innerHTML = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a>';
+
+  const div = document.createElement('div');
+  div.className = 'cheapest-map';
+  wrap.appendChild(div);
+
+  const map = L.map(div, { attributionControl: false, scrollWheelZoom: false, zoomControl: false });
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+  // Tracé de l'itinéraire.
+  const routeLine = L.polyline(points, { color: '#1976d2', weight: 5, opacity: 0.9 }).addTo(map);
+
+  // Point du tracé le plus proche de la station : origine du détour.
+  let ancre = points[0], d2min = Infinity;
+  const cosLat = Math.cos(station.lat * Math.PI / 180);
+  for (const p of points) {
+    const dLat = (station.lat - p[0]) * 110.57;
+    const dLng = (station.lon - p[1]) * 111.32 * cosLat;
+    const d2 = dLat * dLat + dLng * dLng;
+    if (d2 < d2min) { d2min = d2; ancre = p; }
+  }
+  // Détour en pointillé orange, du tracé jusqu'à la station.
+  L.polyline([ancre, [station.lat, station.lon]], { color: '#e2971a', weight: 3, opacity: 0.95, dashArray: '4 5' }).addTo(map);
+
+  // Départ (vert) et arrivée (rouge) aux extrémités du tracé.
+  L.circleMarker(points[0], { radius: 7, color: '#fff', weight: 2.5, fillColor: '#2e7d32', fillOpacity: 1 }).addTo(map);
+  L.circleMarker(points[points.length - 1], { radius: 7, color: '#fff', weight: 2.5, fillColor: '#d1495b', fillOpacity: 1 }).addTo(map);
+
+  // Marqueur station essence (pastille orange ⛽), au bout du détour. À
+  // l'échelle du trajet entier, un détour de 1-2 km est quasi invisible : on
+  // affiche donc sa longueur dans une petite étiquette « +X km » collée au
+  // marqueur, pour que le détour soit toujours lisible quel que soit le zoom.
+  const fuelIcon = L.divIcon({ className: 'itmap-fuel-icon', html: '<span>⛽</span>', iconSize: [26, 26], iconAnchor: [13, 13] });
+  const fuelMarker = L.marker([station.lat, station.lon], { icon: fuelIcon }).addTo(map);
+  if (isFinite(station.distRoute) && station.distRoute >= 0.1) {
+    const km = station.distRoute.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    fuelMarker.bindTooltip('détour +' + km + ' km', { permanent: true, direction: 'right', offset: [11, 0], className: 'itmap-detour-label' }).openTooltip();
+  }
+
+  // Cadre l'ensemble : tout le tracé + la station. Le conteneur fait 225px de
+  // haut mais n'est visible que sur 160px (les 65px du bas sont masqués pour
+  // cacher les commandes Leaflet) : on réserve donc cette bande basse pour que
+  // tout l'itinéraire reste dans la zone réellement visible.
+  const bounds = routeLine.getBounds().extend([station.lat, station.lon]);
+  const recadrer = () => {
+    try {
+      map.invalidateSize();
+      map.fitBounds(bounds, { paddingTopLeft: [22, 22], paddingBottomRight: [22, 87] });
+    } catch (e) { try { map.setView([station.lat, station.lon], 11); } catch (e2) {} }
+  };
+  map._itFit = recadrer; // rejoué par refreshStationMaps quand la carte redevient visible
+
+  stationLeafletMaps.push(map);
+  while (stationLeafletMaps.length > 6) { try { stationLeafletMaps.shift().remove(); } catch (e) {} }
+  recadrer();
+  requestAnimationFrame(recadrer);
+
+  const frag = document.createDocumentFragment();
+  frag.appendChild(wrap);
+  frag.appendChild(attrib);
+
+  // Légende : départ/arrivée, itinéraire, arrêt essence + détour.
+  const legende = document.createElement('div');
+  legende.className = 'itmap-legend';
+  legende.innerHTML =
+    '<span><span class="dot" style="background:#2e7d32;"></span>Départ</span>'
+    + '<span><span class="dot" style="background:#d1495b;"></span>Arrivée</span>'
+    + '<span><span class="dot" style="background:#e2971a;"></span>Station essence (+ détour)</span>';
+  frag.appendChild(legende);
   return frag;
 }
 
@@ -3905,7 +4035,9 @@ function renderArrets(note, arrets, type, depart, arrivee) {
     const badge = buildEcoBadge(a.station.prix, a.litresPlein);
     if (badge) contentWrap.appendChild(badge);
 
-    contentWrap.appendChild(buildStationMap(a.station.lat, a.station.lon));
+    // Carte de l'itinéraire complet avec cet arrêt marqué + son détour.
+    contentWrap.appendChild(buildItineraireMap(
+      lastStationSurTrajet && lastStationSurTrajet.polyline, a.station));
 
     const btnRow = document.createElement('div');
     btnRow.className = 'cheapest-btn-row';
@@ -4027,7 +4159,8 @@ async function rechercherStationSurTrajet() {
     const badge = buildEcoBadge(station.prix, litresPlein);
     if (badge) note.appendChild(badge);
 
-    note.appendChild(buildStationMap(station.lat, station.lon));
+    // Carte de l'itinéraire complet avec la station en arrêt + son détour.
+    note.appendChild(buildItineraireMap(polyline, station));
 
     const btnRow = document.createElement('div');
     btnRow.className = 'cheapest-btn-row';
