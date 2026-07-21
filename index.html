@@ -1085,6 +1085,10 @@
        le coût total reste visible ici même quand il est déjà répété en
        haut (fiche d'itinéraire sélectionnée), à la demande explicite. */
     #r-cout.res-value-big { font-size: 22px; color: #1565c0; }
+    .res-litres-col { display: flex; flex-direction: column; align-items: flex-end; }
+    /* "X,X pleins" : subtil, discret sous le nombre de litres - visible
+       seulement si "Optimiser mes pleins" est coché (réservoir renseigné). */
+    .res-pleins-note { font-size: 11px; font-weight: 600; color: #90a4ae; margin-top: 1px; }
 
     /* Détail carburant/péages, en petit au-dessus du coût total. */
     .cost-chips-row { display: flex; gap: 8px; padding: 10px 0 8px; }
@@ -1749,7 +1753,10 @@
       </div>
       <div class="res-row">
         <span class="res-label" id="r-litres-label">Litres consommés</span>
-        <span class="res-value res-value-big" id="r-litres">—</span>
+        <span class="res-litres-col">
+          <span class="res-value res-value-big" id="r-litres">—</span>
+          <span class="res-pleins-note" id="r-pleins" style="display:none;"></span>
+        </span>
       </div>
     </div>
     <!-- Préconisations par tronçon (trajets à étapes) : rempli en arrière-plan
@@ -4881,8 +4888,22 @@ function renderResultMode() {
   renderRouteOptions(); // fiches comparatives Péages / Sans péages (suit le mode AR)
   document.getElementById('r-dist').textContent   = fmtKm(isAR ? d.distA * 2 : d.distA);
   document.getElementById('r-duree').textContent  = formatDuree(isAR ? d.dureeSec * 2 : d.dureeSec);
-  document.getElementById('r-litres').textContent = fmtL(isAR ? d.litresA * 2 : d.litresA, d.unit);
+  const litresTotal = isAR ? d.litresA * 2 : d.litresA;
+  document.getElementById('r-litres').textContent = fmtL(litresTotal, d.unit);
   document.getElementById('r-litres-label').textContent = d.unit === 'kWh' ? 'Électricité consommée' : 'Litres consommés';
+
+  // "X,X pleins" : seulement si "Optimiser mes pleins" est coché (réservoir
+  // renseigné) et carburant liquide (pas de "plein" qui tienne pour l'électrique).
+  const pleinsEl = document.getElementById('r-pleins');
+  const reservoirPleins = d.unit !== 'kWh' ? getReservoirInfo() : null;
+  if (reservoirPleins && reservoirPleins.capacite > 0) {
+    const nb = litresTotal / reservoirPleins.capacite;
+    pleinsEl.textContent = nb.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+      + (Math.round(nb * 10) === 10 ? ' plein' : ' pleins');
+    pleinsEl.style.display = 'block';
+  } else {
+    pleinsEl.style.display = 'none';
+  }
 
   // Détail carburant/péages en petit, coût total (carburant + péages) en
   // gros. Les péages sont estimés via l'API Vinci ; s'ils sont indisponibles,
