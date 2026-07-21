@@ -715,11 +715,16 @@
     .cout-detail-line strong.cd-peage { color: #2e7d32; }
     .cout-detail-conso { color: #90a4ae; }
     .cd-vinci { color: #2e7d32; text-decoration: underline; font-weight: 700; }
+    /* "Carburant X" et "Péages Y" : deux blocs espacés (pas de point de
+       séparation textuel) qui passent chacun sur leur propre ligne sur
+       mobile étroit sans laisser de séparateur en trop. */
+    .cout-detail-l1 { display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px; }
     /* Petite flèche dépliante du détail des péages, en ligne (pas absolue
-       comme l'ancienne pastille). */
+       comme l'ancienne pastille). vertical-align:middle pour bien la centrer
+       sur la hauteur du texte qui l'entoure. */
     .cd-peage-btn {
       display: inline-flex; align-items: center; justify-content: center;
-      width: 14px; height: 14px; padding: 0; margin-left: 2px; vertical-align: -2px;
+      width: 14px; height: 14px; padding: 0; margin-left: 2px; vertical-align: middle;
       border: none; background: none; color: #7aa87a; cursor: pointer;
       transition: transform 0.2s, color 0.15s;
     }
@@ -727,7 +732,7 @@
     .cd-peage-btn::before {
       content: ''; width: 6px; height: 6px;
       border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
-      transform: rotate(45deg); margin-top: -3px;
+      transform: rotate(45deg);
     }
     .cd-peage-btn.open { transform: rotate(180deg); }
 
@@ -4949,25 +4954,34 @@ function buildCoutDetail(o, isAR) {
   box.className = 'cout-detail';
   const peageConnu = typeof o.coutPeage === 'number';
 
+  // Rangée flex (avec wrap) : "Carburant X" et "Péages Y" sont deux blocs
+  // indépendants séparés par un simple espacement (gap), pas un point de
+  // séparation textuel - sur mobile étroit, ils passent chacun sur leur
+  // propre ligne sans laisser un "·" qui traîne en bout de ligne.
   const l1 = document.createElement('div');
-  l1.className = 'cout-detail-line';
-  l1.appendChild(document.createTextNode('Carburant '));
+  l1.className = 'cout-detail-line cout-detail-l1';
+  const carbBloc = document.createElement('span');
+  carbBloc.appendChild(document.createTextNode('Carburant '));
   const carb = document.createElement('strong');
   carb.textContent = fmtEur(o.coutA * f);
-  l1.appendChild(carb);
+  carbBloc.appendChild(carb);
+  l1.appendChild(carbBloc);
   if (peageConnu) {
-    l1.appendChild(document.createTextNode(' · Péages '));
+    const peageBloc = document.createElement('span');
+    peageBloc.className = 'cd-peage-bloc';
+    peageBloc.appendChild(document.createTextNode('Péages '));
     const pe = document.createElement('strong');
     pe.className = 'cd-peage';
     pe.textContent = fmtEur(o.coutPeage * f);
-    l1.appendChild(pe);
+    peageBloc.appendChild(pe);
     // Détail par tronçon, dépliable (comme l'ancienne pastille Péages).
+    let lignes = null;
     if (Array.isArray(o.peageDetails) && o.peageDetails.length) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'cd-peage-btn';
       btn.setAttribute('aria-label', 'Détail des péages');
-      const lignes = document.createElement('div');
+      lignes = document.createElement('div');
       lignes.className = 'cost-chip-lines';
       lignes.style.display = 'none';
       o.peageDetails.forEach(t => {
@@ -4993,14 +5007,12 @@ function buildCoutDetail(o, isAR) {
         lignes.style.display = ouvert ? 'none' : '';
         btn.classList.toggle('open', !ouvert);
       });
-      l1.appendChild(btn);
-      box.appendChild(l1);
-      box.appendChild(lignes);
-    } else {
-      box.appendChild(l1);
+      peageBloc.appendChild(btn);
     }
+    l1.appendChild(peageBloc);
+    box.appendChild(l1);
+    if (lignes) box.appendChild(lignes);
   } else if (o.vinciUrl) {
-    l1.appendChild(document.createTextNode(' · '));
     const a = document.createElement('a');
     a.href = o.vinciUrl; a.target = '_blank'; a.rel = 'noopener';
     a.className = 'cd-vinci';
@@ -5009,7 +5021,7 @@ function buildCoutDetail(o, isAR) {
     l1.appendChild(a);
     box.appendChild(l1);
   } else {
-    l1.appendChild(document.createTextNode(' · Péages indisponibles'));
+    l1.appendChild(document.createTextNode('Péages indisponibles'));
     box.appendChild(l1);
   }
 
