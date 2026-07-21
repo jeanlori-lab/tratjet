@@ -4336,13 +4336,13 @@ function refreshPoints() {
     row.querySelector('.drag-handle').style.display = showHandles ? '' : 'none';
     if (i === 0) {
       label.textContent = 'Départ';
-      input.placeholder = 'Adresse de départ'; rm.style.display = 'none';
+      input.placeholder = 'Je pars de...'; rm.style.display = 'none';
       row.classList.remove('is-stop');
       row.classList.add('has-geoloc');
       row.classList.toggle('shift-for-handles', showHandles);
     } else if (i === rows.length - 1) {
       label.textContent = 'Arrivée';
-      input.placeholder = 'Lieu de vacances'; rm.style.display = 'none';
+      input.placeholder = 'J'arrive à...'; rm.style.display = 'none';
       row.classList.remove('is-stop');
       row.classList.remove('has-geoloc');
       row.classList.toggle('shift-for-handles', showHandles);
