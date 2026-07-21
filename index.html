@@ -1966,12 +1966,28 @@ function poiLabel(p) {
 // (jusqu'au numéro de rue), gratuite et sans clé - complétée par Photon
 // (Komoot) pour les points d'intérêt (gares, restaurants, salles de sport,
 // entreprises… que la BAN ne connaît pas) et pour le reste de l'Europe.
+// fetch d'un géocodeur borné dans le temps : au-delà du délai, on abandonne et
+// on renvoie une liste vide plutôt que de laisser une API lente tout bloquer.
+// L'autocomplétion attend les DEUX géocodeurs (Promise.all) ; sans ce
+// garde-fou, un seul service lent (photon.komoot.io, instance publique gratuite
+// souvent saturée) rendait les suggestions très longues à apparaître.
+function fetchGeoJson(url, timeoutMs) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  return fetch(url, { signal: ctrl.signal })
+    .then(r => r.ok ? r.json() : { features: [] })
+    .catch(() => ({ features: [] }))
+    .finally(() => clearTimeout(t));
+}
+
 async function searchPlaces(q, limit) {
+  // La BAN (adresses françaises) est prioritaire et rapide : on lui laisse un
+  // peu plus de marge. Photon (POI + étranger) est plafonné plus court car
+  // c'est lui qui traîne : s'il dépasse, on affiche les résultats BAN sans
+  // l'attendre (la France, cas principal, reste parfaitement couverte).
   const [banRes, photonRes] = await Promise.all([
-    fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=${limit}&autocomplete=1`)
-      .then(r => r.ok ? r.json() : { features: [] }).catch(() => ({ features: [] })),
-    fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=${limit}&lang=fr`)
-      .then(r => r.ok ? r.json() : { features: [] }).catch(() => ({ features: [] })),
+    fetchGeoJson(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=${limit}&autocomplete=1`, 3500),
+    fetchGeoJson(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=${limit}&lang=fr`, 1500),
   ]);
   let banFeatures = banRes.features || [];
   // Saisie sans numéro = on cherche vraisemblablement une ville/un lieu, pas
