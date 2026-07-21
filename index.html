@@ -1369,12 +1369,36 @@
       height: 225px;
       border: none;
     }
-    /* Carte d'itinéraire (Prop A) : nettement plus haute que la petite carte
-       station (surtout utile sur mobile pour un long trajet nord-sud). Pas de
-       commandes Leaflet en surimpression ici, donc la carte remplit toute la
+    /* Carte d'itinéraire (Prop A) : un peu plus haute que la petite carte
+       station par défaut, avec un bouton pour l'agrandir en quasi plein écran.
+       Pas de commandes Leaflet en surimpression, donc la carte remplit toute la
        hauteur (pas de bande basse masquée). */
-    .cheapest-map-wrap.itmap-tall { height: 360px; }
+    .cheapest-map-wrap.itmap-tall { height: 200px; }
     .cheapest-map-wrap.itmap-tall .cheapest-map { height: 100%; }
+    /* Mode quasi plein écran : le conteneur couvre presque tout le viewport. */
+    .cheapest-map-wrap.itmap-fullscreen {
+      position: fixed; inset: 10px; width: auto; height: auto; margin: 0;
+      z-index: 5000; border-radius: 16px;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.4);
+    }
+    body.itmap-noscroll { overflow: hidden; }
+    /* Bouton Agrandir / Réduire, en haut à droite de la carte. */
+    .itmap-expand-btn {
+      position: absolute; top: 10px; right: 10px; z-index: 1100;
+      height: 30px; padding: 0 12px; border-radius: 999px;
+      background: #fff; border: none; cursor: pointer;
+      display: inline-flex; align-items: center;
+      font-family: inherit; font-size: 12px; font-weight: 700; color: #1976d2;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.3);
+      transition: color 0.15s;
+    }
+    .itmap-expand-btn:hover { color: #145ea8; }
+    .itmap-attrib-overlay {
+      position: absolute; bottom: 5px; right: 7px; z-index: 1000;
+      font-size: 10px; color: #607080;
+      background: rgba(255,255,255,0.78); padding: 1px 6px; border-radius: 6px;
+    }
+    .itmap-attrib-overlay a { color: #607080; }
     /* Bouton "ma position" en bas à droite des cartes : la géoloc n'est
        demandée qu'au clic. z-index au-dessus des couches Leaflet (~1000). */
     .map-locate-btn {
@@ -3274,9 +3298,11 @@ function buildItineraireMap(polyline5, station) {
 
   const wrap = document.createElement('div');
   wrap.className = 'cheapest-map-wrap itmap-tall';
+  // Attribution en surimpression (dans la carte) plutôt qu'en dessous : ainsi
+  // elle reste visible aussi en mode plein écran, où le conteneur couvre tout.
   const attrib = document.createElement('div');
-  attrib.className = 'cheapest-map-attrib';
-  attrib.innerHTML = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a>';
+  attrib.className = 'itmap-attrib-overlay';
+  attrib.innerHTML = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
 
   const div = document.createElement('div');
   div.className = 'cheapest-map';
@@ -3336,9 +3362,33 @@ function buildItineraireMap(polyline5, station) {
   recadrer();
   requestAnimationFrame(recadrer);
 
+  // Bouton Agrandir / Réduire : bascule la carte en quasi plein écran (le
+  // conteneur passe en position fixe couvrant presque tout l'écran) puis revient
+  // à sa taille compacte. On recadre après chaque bascule car la taille du
+  // conteneur a changé (invalidateSize + fitBounds via recadrer).
+  const expandBtn = document.createElement('button');
+  expandBtn.type = 'button';
+  expandBtn.className = 'itmap-expand-btn';
+  const majBtn = (full) => {
+    expandBtn.textContent = full ? '✕ Réduire' : '⛶ Agrandir';
+    expandBtn.setAttribute('aria-label', full ? 'Réduire la carte' : 'Agrandir la carte en plein écran');
+  };
+  const onEsc = (e) => { if (e.key === 'Escape') setPleinEcran(false); };
+  function setPleinEcran(full) {
+    wrap.classList.toggle('itmap-fullscreen', full);
+    document.body.classList.toggle('itmap-noscroll', full);
+    majBtn(full);
+    if (full) document.addEventListener('keydown', onEsc);
+    else document.removeEventListener('keydown', onEsc);
+    requestAnimationFrame(() => { recadrer(); requestAnimationFrame(recadrer); });
+  }
+  majBtn(false);
+  expandBtn.addEventListener('click', () => setPleinEcran(!wrap.classList.contains('itmap-fullscreen')));
+  wrap.appendChild(expandBtn);
+  wrap.appendChild(attrib);
+
   const frag = document.createDocumentFragment();
   frag.appendChild(wrap);
-  frag.appendChild(attrib);
 
   // Légende : départ/arrivée, itinéraire, arrêt essence + détour.
   const legende = document.createElement('div');
