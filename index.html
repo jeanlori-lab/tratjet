@@ -3195,11 +3195,11 @@ const STATION_RAYON_MAX = 100;
 // convention que les radiuses -1 d'OpenRouteService plus bas dans ce fichier.
 const STATION_RAYON_ILLIMITE = -1;
 
-// Fraîcheur des prix : une station dont le relevé date de 2 semaines ou plus
+// Fraîcheur des prix : une station dont le relevé date de 10 jours ou plus
 // n'est pas retenue (le prix affiché doit rester "en direct"). On cherche
 // alors la station récente suivante. Le champ *_maj du flux data.gouv.fr
 // donne la date du relevé pour chaque carburant.
-const PRIX_STATION_MAX_AGE_JOURS = 14;
+const PRIX_STATION_MAX_AGE_JOURS = 10;
 function releveTropVieux(maj) {
   if (!maj) return false; // date inconnue : on ne peut pas juger, on garde
   // Certaines dates arrivent en "YYYY-MM-DD HH:MM:SS" (espace) que Safari ne
