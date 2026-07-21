@@ -1081,6 +1081,10 @@
        grand et en gras pour qu'on les repère au premier coup d'œil. */
     .res-value-big { font-size: 29px; font-weight: 900; color: #1565c0; }
     #r-litres.res-value-big { font-size: 22px; color: #1a2433; }
+    /* Même police/graisse/taille que "Litres consommés", mais en bleu :
+       le coût total reste visible ici même quand il est déjà répété en
+       haut (fiche d'itinéraire sélectionnée), à la demande explicite. */
+    #r-cout.res-value-big { font-size: 22px; color: #1565c0; }
 
     /* Détail carburant/péages, en petit au-dessus du coût total. */
     .cost-chips-row { display: flex; gap: 8px; padding: 10px 0 8px; }
@@ -4959,15 +4963,13 @@ function renderResultMode() {
 
   const rCout = document.getElementById('r-cout');
   rCout.textContent = fmtEur(coutTotalAffiche);
-  // Quand deux itinéraires sont comparés, la fiche sélectionnée affiche déjà
-  // ce même total en gros : pas la peine de le répéter une seconde fois
-  // juste en dessous. Ne reste alors que la répartition carburant/péages
-  // (chips) et les litres, qui eux ne sont montrés nulle part ailleurs.
+  // Toujours visible ici (en bleu, même quand deux itinéraires sont comparés
+  // et que ce total est déjà répété en haut dans la fiche sélectionnée) : à
+  // la demande explicite, pour que le coût total reste lisible à côté des
+  // litres consommés sans avoir à remonter à la fiche d'itinéraire.
   const nbOptions = routeOptionsData ? Object.keys(routeOptionsData).length : 0;
-  const rCoutRow = document.getElementById('rCoutRow');
-  if (rCoutRow) rCoutRow.style.display = nbOptions >= 2 ? 'none' : 'flex';
-  // Distance/durée : idem, déjà visibles dans les fiches d'itinéraire dès
-  // qu'il y en a deux ; sert de secours sinon (pas de fiche pour les porter).
+  // Distance/durée : déjà visibles dans les fiches d'itinéraire dès qu'il y
+  // en a deux ; sert de secours sinon (pas de fiche pour les porter).
   const resTrajetLine = document.getElementById('resTrajetLine');
   if (resTrajetLine) resTrajetLine.style.display = nbOptions >= 2 ? 'none' : 'block';
 }
