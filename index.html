@@ -701,6 +701,40 @@
        ainsi naturellement l'itinéraire choisi. */
     .route-nav-inline { display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #dbe7f5; justify-content: flex-end; }
     .route-nav-inline .nav-icon-btn { height: 22px; padding: 0 8px; font-size: 10px; }
+    /* Détail coût/conso intégré dans la fiche sélectionnée (Prop 3) :
+       détail à gauche, Maps/Waze à droite, sur une ligne séparée par un
+       trait fin, sous le total. */
+    .route-detail-row {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      gap: 12px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #dbe7f5;
+    }
+    .route-detail-row .route-nav-inline { margin-top: 0; padding-top: 0; border-top: none; flex-shrink: 0; }
+    .cout-detail { min-width: 0; }
+    .cout-detail-line { font-size: 12px; font-weight: 600; color: #607080; line-height: 1.6; }
+    .cout-detail-line strong { color: #1a2433; font-weight: 800; }
+    .cout-detail-line strong.cd-peage { color: #2e7d32; }
+    .cout-detail-conso { color: #90a4ae; }
+    .cd-vinci { color: #2e7d32; text-decoration: underline; font-weight: 700; }
+    /* "Carburant X" et "Péages Y" : deux blocs espacés (pas de point de
+       séparation textuel) qui passent chacun sur leur propre ligne sur
+       mobile étroit sans laisser de séparateur en trop. */
+    .cout-detail-l1 { display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px; }
+    /* Petite flèche dépliante du détail des péages, en ligne (pas absolue
+       comme l'ancienne pastille). vertical-align:middle pour bien la centrer
+       sur la hauteur du texte qui l'entoure. */
+    .cd-peage-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 14px; height: 14px; padding: 0; margin-left: 2px; vertical-align: middle;
+      border: none; background: none; color: #7aa87a; cursor: pointer;
+      transition: transform 0.2s, color 0.15s;
+    }
+    .cd-peage-btn:hover { color: #2e7d32; }
+    .cd-peage-btn::before {
+      content: ''; width: 6px; height: 6px;
+      border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+      transform: rotate(45deg);
+    }
+    .cd-peage-btn.open { transform: rotate(180deg); }
 
     /* Préconisations par tronçon (trajets à étapes) : pour chaque tronçon à
        péages, ce que coûterait/rapporterait de passer sans péage. */
@@ -1080,57 +1114,11 @@
     /* Coût & conso : les chiffres qui comptent vraiment, mis en avant en
        grand et en gras pour qu'on les repère au premier coup d'œil. */
     .res-value-big { font-size: 29px; font-weight: 900; color: #1565c0; }
-    #r-litres.res-value-big { font-size: 22px; color: #1a2433; }
     /* Même police/graisse/taille que "Litres consommés", mais en bleu :
        le coût total reste visible ici même quand il est déjà répété en
        haut (fiche d'itinéraire sélectionnée), à la demande explicite. */
     #r-cout.res-value-big { font-size: 22px; color: #1565c0; }
-    .res-litres-col { display: flex; flex-direction: column; align-items: flex-end; }
-    /* "X,X pleins" : subtil, discret sous le nombre de litres - visible
-       seulement si "Optimiser mes pleins" est coché (réservoir renseigné). */
-    .res-pleins-note { font-size: 11px; font-weight: 600; color: #90a4ae; margin-top: 1px; }
 
-    /* Détail carburant/péages, en petit au-dessus du coût total. */
-    .cost-chips-row { display: flex; gap: 8px; padding: 10px 0 8px; }
-    .cost-chip {
-      display: flex; flex-direction: column; align-items: center; gap: 1px;
-      background: #f5f8fb; border: 1px solid #dbe7f5; border-radius: 12px;
-      padding: 6px 10px; flex: 1; text-align: center; position: relative;
-    }
-    .cost-chip-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #90a4ae; }
-    .cost-chip-value { font-size: 14px; font-weight: 800; color: #1a2433; }
-    .cost-chip-peage .cost-chip-value { color: #2e7d32; }
-    .cost-chip-peage.unavailable .cost-chip-value { font-size: 10.5px; font-weight: 700; line-height: 1.3; }
-    .cost-chip-peage .cost-chip-value a { color: #2e7d32; text-decoration: underline; }
-    /* Flèche dépliante de la pastille péages (coin haut droit) + lignes de détail par tronçon. */
-    .cost-chip-detail-btn {
-      position: absolute;
-      top: 4px;
-      right: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 16px;
-      height: 16px;
-      padding: 0;
-      border: none;
-      background: none;
-      color: #7aa87a;
-      font-family: inherit;
-      cursor: pointer;
-      transition: transform 0.2s, color 0.15s;
-    }
-    .cost-chip-detail-btn:hover { color: #2e7d32; }
-    .cost-chip-detail-btn::before {
-      content: '';
-      width: 7px;
-      height: 7px;
-      border-right: 2px solid currentColor;
-      border-bottom: 2px solid currentColor;
-      transform: rotate(45deg);
-      margin-top: -3px;
-    }
-    .cost-chip-detail-btn.open { transform: translateY(1px) rotate(180deg); }
     .cost-chip-lines {
       margin-top: 5px;
       padding-top: 5px;
@@ -1740,29 +1728,19 @@
          renderResultMode(). -->
     <div class="res-trajet-line" id="resTrajetLine" style="display:none;"><strong id="r-dist">—</strong> · <strong id="r-duree">—</strong> <span class="src-note">hors trafic</span></div>
 
-    <div class="res-section-title">Coût & conso</div>
-    <div class="section res-section">
-      <div class="cost-chips-row">
-        <div class="cost-chip">
-          <span class="cost-chip-label">Carburant</span>
-          <span class="cost-chip-value" id="r-cout-carburant">—</span>
-        </div>
-        <div class="cost-chip cost-chip-peage" id="costChipPeage">
-          <span class="cost-chip-label" id="r-peage-label">Péages</span>
-          <span class="cost-chip-value" id="r-cout-peage">—</span>
-        </div>
-      </div>
+    <!-- "Coût & conso" : le détail (carburant · péages · litres) est
+         désormais intégré dans la fiche de l'itinéraire sélectionné (voir
+         buildCoutDetail / renderRouteOptions) quand il y a deux itinéraires
+         à comparer - plus de bloc dupliqué. Ce bloc-ci ne sert plus que de
+         secours quand il n'y a qu'un seul itinéraire (pas de fiche pour
+         porter le détail) ; renderResultMode() le montre/masque. -->
+    <div class="res-section-title" id="coutTitre" style="display:none;">Coût &amp; conso</div>
+    <div class="section res-section" id="coutSection" style="display:none;">
       <div class="res-row" id="rCoutRow">
         <span class="res-label">Coût total</span>
         <span class="res-value res-value-big" id="r-cout">—</span>
       </div>
-      <div class="res-row">
-        <span class="res-label" id="r-litres-label">Litres consommés</span>
-        <span class="res-litres-col">
-          <span class="res-value res-value-big" id="r-litres">—</span>
-          <span class="res-pleins-note" id="r-pleins" style="display:none;"></span>
-        </span>
-      </div>
+      <div id="coutDetailStandalone"></div>
     </div>
     <!-- Préconisations par tronçon (trajets à étapes) : rempli en arrière-plan
          par analyserTronconsSansPeage() après l'affichage des résultats. -->
@@ -4893,92 +4871,26 @@ function renderResultMode() {
   renderRouteOptions(); // fiches comparatives Péages / Sans péages (suit le mode AR)
   document.getElementById('r-dist').textContent   = fmtKm(isAR ? d.distA * 2 : d.distA);
   document.getElementById('r-duree').textContent  = formatDuree(isAR ? d.dureeSec * 2 : d.dureeSec);
-  const litresTotal = isAR ? d.litresA * 2 : d.litresA;
-  document.getElementById('r-litres').textContent = fmtL(litresTotal, d.unit);
-  document.getElementById('r-litres-label').textContent = d.unit === 'kWh' ? 'Électricité consommée' : 'Litres consommés';
 
-  // "X,X pleins" : seulement si "Optimiser mes pleins" est coché (réservoir
-  // renseigné) et carburant liquide (pas de "plein" qui tienne pour l'électrique).
-  const pleinsEl = document.getElementById('r-pleins');
-  const reservoirPleins = d.unit !== 'kWh' ? getReservoirInfo() : null;
-  if (reservoirPleins && reservoirPleins.capacite > 0) {
-    const nb = litresTotal / reservoirPleins.capacite;
-    pleinsEl.textContent = nb.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-      + (Math.round(nb * 10) === 10 ? ' plein' : ' pleins');
-    pleinsEl.style.display = 'block';
-  } else {
-    pleinsEl.style.display = 'none';
-  }
-
-  // Détail carburant/péages en petit, coût total (carburant + péages) en
-  // gros. Les péages sont estimés via l'API Vinci ; s'ils sont indisponibles,
-  // le total ne compte que le carburant et la pastille renvoie vers Vinci.
   const coutCarburantAffiche = isAR ? d.coutA * 2 : d.coutA;
   const peageConnu = typeof d.coutPeage === 'number';
   const coutPeageAffiche = peageConnu ? (isAR ? d.coutPeage * 2 : d.coutPeage) : null;
   const coutTotalAffiche = coutCarburantAffiche + (coutPeageAffiche || 0);
+  document.getElementById('r-cout').textContent = fmtEur(coutTotalAffiche);
 
-  document.getElementById('r-cout-carburant').textContent = fmtEur(coutCarburantAffiche);
-  const peageChip = document.getElementById('costChipPeage');
-  const peageValEl = document.getElementById('r-cout-peage');
-  peageChip.classList.toggle('unavailable', !peageConnu);
-  peageValEl.textContent = '';
-  // La flèche dépliante est ajoutée à la pastille entière (peageChip, pas
-  // peageValEl : positionnement absolu dans le coin) - jamais vidée par le
-  // textContent ci-dessus, donc chaque recalcul en empilait une nouvelle
-  // sans retirer la précédente. On la retire explicitement avant d'en
-  // recréer une, sans quoi plusieurs flèches se superposent.
-  const ancienBtn = peageChip.querySelector('.cost-chip-detail-btn');
-  if (ancienBtn) ancienBtn.remove();
+  // Le détail carburant/péages/litres est intégré dans la fiche de
+  // l'itinéraire sélectionné (buildCoutDetail dans renderRouteOptions) dès
+  // qu'il y a deux itinéraires. Le bloc "Coût & conso" séparé ne sert alors
+  // à rien et reste masqué. Quand il n'y a qu'un itinéraire (pas de fiche),
+  // on montre ce bloc avec le total en gros + le détail juste en dessous.
+  const nbOptions = routeOptionsData ? Object.keys(routeOptionsData).length : 0;
+  const unSeul = nbOptions < 2;
+  document.getElementById('coutTitre').style.display = unSeul ? '' : 'none';
+  document.getElementById('coutSection').style.display = unSeul ? '' : 'none';
+  const standalone = document.getElementById('coutDetailStandalone');
+  standalone.textContent = '';
+  if (unSeul) standalone.appendChild(buildCoutDetail(d, isAR));
 
-  if (peageConnu) {
-    peageChip.title = 'Tarifs officiels des concessionnaires, classe 1 (voiture)';
-    peageValEl.appendChild(document.createTextNode(fmtEur(coutPeageAffiche)));
-    // Flèche dépliante : montre le coût par tronçon dans la pastille.
-    if (Array.isArray(d.peageDetails) && d.peageDetails.length) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'cost-chip-detail-btn';
-      btn.setAttribute('aria-label', 'Détail des péages');
-      const lignes = document.createElement('div');
-      lignes.className = 'cost-chip-lines';
-      lignes.style.display = 'none';
-      d.peageDetails.forEach(t => {
-        const ligne = document.createElement('div');
-        ligne.className = 'cost-chip-line';
-        const lbl = document.createElement('span');
-        lbl.textContent = t.label;
-        const val = document.createElement('span');
-        val.className = 'tarif';
-        val.textContent = fmtEur(isAR ? t.price * 2 : t.price);
-        ligne.appendChild(lbl);
-        ligne.appendChild(val);
-        lignes.appendChild(ligne);
-      });
-      const srcLigne = document.createElement('div');
-      srcLigne.className = 'src-note cost-chip-src';
-      srcLigne.textContent = d.peageSource === 'vinci' ? 'Tarifs Vinci Autoroutes · classe 1'
-        : d.peageSource === 'viamichelin' ? 'Source ViaMichelin · classe 1'
-        : 'Tarifs officiels · classe 1';
-      lignes.appendChild(srcLigne);
-      btn.addEventListener('click', () => {
-        const ouvert = lignes.style.display !== 'none';
-        lignes.style.display = ouvert ? 'none' : '';
-        btn.classList.toggle('open', !ouvert);
-      });
-      peageChip.appendChild(btn);
-      peageValEl.appendChild(lignes);
-    }
-  } else if (d.vinciUrl) {
-    // Pas de résultat : le lien Vinci prend la place du prix, en vert.
-    const lien = document.createElement('a');
-    lien.href = d.vinciUrl;
-    lien.target = '_blank';
-    lien.textContent = 'Voir le prix des péages sur Vinci';
-    peageValEl.appendChild(lien);
-  } else {
-    peageValEl.appendChild(document.createTextNode('Prix des péages indisponible'));
-  }
   // Bouton Vinci sous Maps/Waze : seulement quand le prix n'a pas pu être calculé.
   const vinciBtn = document.getElementById('vinciLink');
   if (vinciBtn) {
@@ -4987,17 +4899,10 @@ function renderResultMode() {
     if (montrer) vinciBtn.href = d.vinciUrl;
   }
 
-  const rCout = document.getElementById('r-cout');
-  rCout.textContent = fmtEur(coutTotalAffiche);
-  // Toujours visible ici (en bleu, même quand deux itinéraires sont comparés
-  // et que ce total est déjà répété en haut dans la fiche sélectionnée) : à
-  // la demande explicite, pour que le coût total reste lisible à côté des
-  // litres consommés sans avoir à remonter à la fiche d'itinéraire.
-  const nbOptions = routeOptionsData ? Object.keys(routeOptionsData).length : 0;
   // Distance/durée : déjà visibles dans les fiches d'itinéraire dès qu'il y
   // en a deux ; sert de secours sinon (pas de fiche pour les porter).
   const resTrajetLine = document.getElementById('resTrajetLine');
-  if (resTrajetLine) resTrajetLine.style.display = nbOptions >= 2 ? 'none' : 'block';
+  if (resTrajetLine) resTrajetLine.style.display = unSeul ? 'block' : 'none';
 }
 
 // --- Comparateur des itinéraires : rapide (tout péage) et zéro péage,
@@ -5036,6 +4941,103 @@ function buildNavInline(routeKey) {
     nav.appendChild(wazeBtn);
   }
   return nav;
+}
+
+// Détail compact "Carburant X · Péages Y" + "Z L consommés (· N pleins)",
+// intégré sous le total dans la fiche de l'itinéraire sélectionné (Prop 3).
+// o : une option d'itinéraire (routeOptionsData[...]) ou lastResultData,
+// même forme. Construit à partir des données de l'option elle-même, donc
+// indépendant de l'affichage.
+function buildCoutDetail(o, isAR) {
+  const f = isAR ? 2 : 1;
+  const box = document.createElement('div');
+  box.className = 'cout-detail';
+  const peageConnu = typeof o.coutPeage === 'number';
+
+  // Rangée flex (avec wrap) : "Carburant X" et "Péages Y" sont deux blocs
+  // indépendants séparés par un simple espacement (gap), pas un point de
+  // séparation textuel - sur mobile étroit, ils passent chacun sur leur
+  // propre ligne sans laisser un "·" qui traîne en bout de ligne.
+  const l1 = document.createElement('div');
+  l1.className = 'cout-detail-line cout-detail-l1';
+  const carbBloc = document.createElement('span');
+  carbBloc.appendChild(document.createTextNode('Carburant '));
+  const carb = document.createElement('strong');
+  carb.textContent = fmtEur(o.coutA * f);
+  carbBloc.appendChild(carb);
+  l1.appendChild(carbBloc);
+  if (peageConnu) {
+    const peageBloc = document.createElement('span');
+    peageBloc.className = 'cd-peage-bloc';
+    peageBloc.appendChild(document.createTextNode('Péages '));
+    const pe = document.createElement('strong');
+    pe.className = 'cd-peage';
+    pe.textContent = fmtEur(o.coutPeage * f);
+    peageBloc.appendChild(pe);
+    // Détail par tronçon, dépliable (comme l'ancienne pastille Péages).
+    let lignes = null;
+    if (Array.isArray(o.peageDetails) && o.peageDetails.length) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cd-peage-btn';
+      btn.setAttribute('aria-label', 'Détail des péages');
+      lignes = document.createElement('div');
+      lignes.className = 'cost-chip-lines';
+      lignes.style.display = 'none';
+      o.peageDetails.forEach(t => {
+        const ligne = document.createElement('div');
+        ligne.className = 'cost-chip-line';
+        const lbl = document.createElement('span');
+        lbl.textContent = t.label;
+        const val = document.createElement('span');
+        val.className = 'tarif';
+        val.textContent = fmtEur(t.price * f);
+        ligne.appendChild(lbl); ligne.appendChild(val);
+        lignes.appendChild(ligne);
+      });
+      const src = document.createElement('div');
+      src.className = 'src-note cost-chip-src';
+      src.textContent = o.peageSource === 'vinci' ? 'Tarifs Vinci Autoroutes · classe 1'
+        : o.peageSource === 'viamichelin' ? 'Source ViaMichelin · classe 1'
+        : 'Tarifs officiels · classe 1';
+      lignes.appendChild(src);
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const ouvert = lignes.style.display !== 'none';
+        lignes.style.display = ouvert ? 'none' : '';
+        btn.classList.toggle('open', !ouvert);
+      });
+      peageBloc.appendChild(btn);
+    }
+    l1.appendChild(peageBloc);
+    box.appendChild(l1);
+    if (lignes) box.appendChild(lignes);
+  } else if (o.vinciUrl) {
+    const a = document.createElement('a');
+    a.href = o.vinciUrl; a.target = '_blank'; a.rel = 'noopener';
+    a.className = 'cd-vinci';
+    a.textContent = 'Prix des péages sur Vinci';
+    a.addEventListener('click', (e) => e.stopPropagation());
+    l1.appendChild(a);
+    box.appendChild(l1);
+  } else {
+    l1.appendChild(document.createTextNode('Péages indisponibles'));
+    box.appendChild(l1);
+  }
+
+  const litres = o.litresA * f;
+  const l2 = document.createElement('div');
+  l2.className = 'cout-detail-line cout-detail-conso';
+  let txt = fmtL(litres, o.unit) + ' consommés';
+  const reservoir = o.unit !== 'kWh' ? getReservoirInfo() : null;
+  if (reservoir && reservoir.capacite > 0) {
+    const nb = litres / reservoir.capacite;
+    txt += ' · ' + nb.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+      + (Math.round(nb * 10) === 10 ? ' plein' : ' pleins');
+  }
+  l2.textContent = txt;
+  box.appendChild(l2);
+  return box;
 }
 
 function renderRouteOptions() {
@@ -5090,7 +5092,11 @@ function renderRouteOptions() {
     infos.className = 'route-infos';
     infos.style.display = 'block';
     if (key === 'rapide') {
-      const peageTxt = typeof o.coutPeage === 'number' ? ' · péages ' + fmtEur(o.coutPeage * f) : '';
+      // Le montant des péages est répété dans le détail intégré de la fiche
+      // sélectionnée : on ne le remet dans la ligne d'infos que quand cette
+      // fiche n'est PAS sélectionnée (sinon doublon).
+      const peageTxt = (key !== selectedRouteOption && typeof o.coutPeage === 'number')
+        ? ' · péages ' + fmtEur(o.coutPeage * f) : '';
       infos.textContent = formatDuree(o.dureeSec * f) + ' · ' + fmtKm(o.distA * f) + peageTxt;
     } else {
       // Écart toujours affiché (même quand l'alternative est en fait plus
@@ -5136,7 +5142,16 @@ function renderRouteOptions() {
     top.appendChild(radio);
 
     row.appendChild(top);
-    if (key === selectedRouteOption) row.appendChild(buildNavInline(key));
+    // Fiche sélectionnée : détail coût/conso à gauche, Maps/Waze à droite,
+    // sur une même ligne intégrée sous le total (Prop 3 - plus de bloc
+    // "Coût & conso" dupliqué en dessous).
+    if (key === selectedRouteOption) {
+      const detailRow = document.createElement('div');
+      detailRow.className = 'route-detail-row';
+      detailRow.appendChild(buildCoutDetail(o, resultMode === 'ar'));
+      detailRow.appendChild(buildNavInline(key));
+      row.appendChild(detailRow);
+    }
 
     wrap.appendChild(row);
   }
