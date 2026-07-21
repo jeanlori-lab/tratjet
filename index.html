@@ -1596,6 +1596,12 @@
 
     <!-- Bloc Départ / Destination -->
     <div class="section">
+      <!-- "+ Ajouter une étape" : en haut à droite de "Départ", dans
+           l'encadré, aligné avec "Enregistrer ce trajet" plus bas. -->
+      <div class="itinerary-controls" style="justify-content:flex-end; margin-top:0; margin-bottom:4px;">
+        <button type="button" class="link-btn" onclick="addPoint()"><span class="plus-etape">+</span> Ajouter une étape</button>
+      </div>
+
       <!-- Points du trajet (départ, étapes, destination) - réordonnables -->
       <div class="points-wrap">
         <div id="points"></div>
@@ -1603,11 +1609,8 @@
         <button type="button" class="swap-btn" id="swapBtn" onclick="swapItinerary()" aria-label="Inverser départ et arrivée">⇅</button>
       </div>
 
-      <!-- "+ Ajouter une étape" et "Enregistrer ce trajet" : même style de
-           lien, groupés et alignés à droite. -->
-      <div class="itinerary-controls" style="gap:14px; justify-content:flex-end;">
-        <button type="button" class="link-btn" onclick="addPoint()"><span class="plus-etape">+</span> Ajouter une étape</button>
-        <button type="button" class="link-btn" onclick="enregistrerTrajet()">☆ Enregistrer ce trajet</button>
+      <div class="itinerary-controls" style="gap:14px;">
+        <button type="button" class="link-btn" style="margin-left:auto;" onclick="enregistrerTrajet()">☆ Enregistrer ce trajet</button>
       </div>
       <!-- Trajets favoris (localStorage) : une puce = un itinéraire complet.
            Le champ de nom s'ouvre prérempli ("Départ → Arrivée"), modifiable. -->
