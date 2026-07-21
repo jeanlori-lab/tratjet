@@ -763,6 +763,29 @@
     }
     .swap-btn:hover { background: #eef4fb; color: #1976d2; border-color: #cfe0f3; box-shadow: 0 0 0 3px rgba(33,150,243,0.10); }
     .swap-btn:active { transform: translateY(-50%) scale(0.9); }
+    /* "+ Ajouter une étape" : en haut à droite de l'encadré Départ (premier
+       point, toujours en haut de .points-wrap). */
+    .add-stop-btn {
+      position: absolute;
+      z-index: 20;
+      top: -9px;
+      right: 6px;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: #fff;
+      border: 1px solid #d5e0ee;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: inherit;
+      color: #1976d2;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .add-stop-btn:hover { background: #eef4fb; }
+    .add-stop-btn .plus-etape { font-size: 13px; vertical-align: -1px; }
     /* Info-bulle instantanée (pas d'attente contrairement au title natif du navigateur). */
     .swap-btn::after {
       content: attr(aria-label);
@@ -1601,10 +1624,11 @@
         <div id="points"></div>
         <!-- Inverser départ ↔ destination (visible seulement sans étape) -->
         <button type="button" class="swap-btn" id="swapBtn" onclick="swapItinerary()" aria-label="Inverser départ et arrivée">⇅</button>
+        <!-- En haut à droite de l'encadré "Départ" (voir .add-stop-btn) -->
+        <button type="button" class="add-stop-btn" onclick="addPoint()"><span class="plus-etape">+</span> Ajouter une étape</button>
       </div>
 
       <div class="itinerary-controls" style="gap:14px;">
-        <button type="button" class="link-btn" onclick="addPoint()"><span class="plus-etape">+</span> Ajouter une étape</button>
         <button type="button" class="link-btn" style="margin-left:auto;" onclick="enregistrerTrajet()">☆ Enregistrer ce trajet</button>
       </div>
       <!-- Trajets favoris (localStorage) : une puce = un itinéraire complet.
