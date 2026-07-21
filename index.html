@@ -651,10 +651,12 @@
     }
     .save-form-ok { background: #2e7d32; color: #fff; }
     .save-form-cancel { background: #eceff1; color: #607080; }
-    /* Masqué par défaut ; renderTrajetChips() l'affiche en JS dès qu'il y a
-       au moins un favori (voir le commentaire là-bas : l'ancien sélecteur
-       :has(:empty) était peu fiable sur iOS Safari). */
-    .trajet-chips-wrap { padding: 2px 0 6px; display: none; }
+    /* Masqué par défaut (aucune marge ni trait tant qu'il n'y a pas de
+       favori) ; renderTrajetChips() l'affiche en JS dès qu'il y en a au
+       moins un (voir le commentaire là-bas : l'ancien sélecteur
+       :has(:empty) était peu fiable sur iOS Safari). Même forme que la
+       ligne "Mes véhicules" (.veh-row) : étiquette à gauche, puces à droite. */
+    .trajet-row { display: none; padding: 10px 0 6px; }
     /* Comparateur des itinéraires (péages / sans péages), en tête des
        résultats, affiché seulement quand pertinent : une ligne par option,
        la sélection change tout le détail en dessous (coûts, litres,
@@ -1604,7 +1606,12 @@
         <button type="button" class="save-form-btn save-form-ok" onclick="confirmerTrajet()" aria-label="Enregistrer le trajet">✓</button>
         <button type="button" class="save-form-btn save-form-cancel" onclick="toggleTrajetForm(false)" aria-label="Annuler">✕</button>
       </div>
-      <div class="trajet-chips-wrap"><div class="saved-chips" id="trajetChips"></div></div>
+      <div class="param-row trajet-row" id="trajetRow">
+        <div class="param-label">Mes trajets</div>
+        <div class="param-input">
+          <div class="saved-chips" id="trajetChips"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Bloc Carburant / Consommation. Repliable : une fois les réglages
@@ -2466,15 +2473,14 @@ function renderTrajetChips() {
         renderTrajetChips();
       })));
   });
-  // Affiche/masque le conteneur en JS, comme la ligne "Mes véhicules"
-  // (renderVehChips). On n'utilise plus la règle CSS
-  // `.trajet-chips-wrap:has(.saved-chips:empty)` : sur iOS Safari, ce
-  // sélecteur :has(:empty) ne se réévalue pas de façon fiable après l'ajout
+  // Affiche/masque la ligne "Mes trajets" en JS, comme "Mes véhicules"
+  // (renderVehChips). Pas de règle CSS `:has(.saved-chips:empty)` : sur iOS
+  // Safari, ce sélecteur ne se réévalue pas de façon fiable après l'ajout
   // dynamique des puces, laissant le conteneur replié - les favoris
   // existaient alors dans le DOM mais n'étaient pas peints (~1 chargement
   // sur 4). Le pilotage en JS supprime cette dépendance capricieuse.
-  const wrapEl = document.querySelector('.trajet-chips-wrap');
-  if (wrapEl) wrapEl.style.display = trajets.length ? 'block' : 'none';
+  const trajetRow = document.getElementById('trajetRow');
+  if (trajetRow) trajetRow.style.display = trajets.length ? 'flex' : 'none';
 }
 function toggleTrajetForm(open) {
   document.getElementById('trajetSaveForm').classList.toggle('open', open);
