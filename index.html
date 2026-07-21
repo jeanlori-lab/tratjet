@@ -1442,21 +1442,26 @@
       flex-wrap: wrap;
       margin-top: 18px;
     }
+    /* Style "fantôme" harmonisé avec .troncon-cta : fond blanc, bordure
+       fine, texte coloré selon l'action - plus discret que les anciens
+       boutons pleins, tout en gardant leurs couleurs distinctives. */
     .cheapest-mode-btn, .cheapest-nolimit-btn {
-      border: none;
-      border-radius: 999px;
-      padding: 7px 14px;
-      font-size: 12px;
-      font-weight: 700;
+      border: 1px solid;
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
       font-family: inherit;
-      color: #ffffff;
+      background: #fff;
       cursor: pointer;
-      transition: filter 0.15s;
+      transition: background 0.15s;
     }
-    .cheapest-mode-btn:hover, .cheapest-nolimit-btn:hover { filter: brightness(1.08); }
-    .cheapest-mode-btn.mode-plus-chere { background: #d32f2f; }
-    .cheapest-mode-btn.mode-moins-chere { background: #2e7d32; }
-    .cheapest-nolimit-btn { background: #1976d2; }
+    .cheapest-mode-btn.mode-plus-chere { color: #c62828; border-color: #ffcdd2; }
+    .cheapest-mode-btn.mode-plus-chere:hover { background: #fdecea; }
+    .cheapest-mode-btn.mode-moins-chere { color: #2e7d32; border-color: #cfe0cf; }
+    .cheapest-mode-btn.mode-moins-chere:hover { background: #f3faf3; }
+    .cheapest-nolimit-btn { color: #1976d2; border-color: #cfe0f4; }
+    .cheapest-nolimit-btn:hover { background: #e8f2ff; }
     /* Résultat "pas de limites" (France entière) : même mise en avant que le
        coût total du trajet, pour qu'un prix isolé se voie au premier regard. */
     .cheapest-detail-big {
