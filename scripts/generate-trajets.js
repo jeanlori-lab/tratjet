@@ -79,7 +79,7 @@ function verdictSansPeages(rapide, zero) {
 }
 
 function renderPage(t, r) {
-  const title = `Trajet ${t.depart} → ${t.arrivee} : coût, péages, faut-il éviter l'autoroute ? | Tratjet`;
+  const title = `Trajet ${t.depart} → ${t.arrivee} : coût, péages, faut-il éviter l'autoroute ? | Futéroute`;
   const totalRapide = r.coutCarburant + (r.coutPeage || 0);
   const verdict = verdictSansPeages(r, r.zero);
   const dateMaj = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -149,7 +149,7 @@ function renderPage(t, r) {
 </head>
 <body>
 <div class="page">
-  <div class="breadcrumb"><a href="${SITE_URL}/">Tratjet</a> › <a href="./">Trajets</a> › ${t.depart} → ${t.arrivee}</div>
+  <div class="breadcrumb"><a href="${SITE_URL}/">Futéroute</a> › <a href="./">Trajets</a> › ${t.depart} → ${t.arrivee}</div>
   <h1>${t.depart} → ${t.arrivee} : coût du trajet en voiture</h1>
   <div class="maj">Chiffres mis à jour le ${dateMaj} · estimation, hors trafic</div>
 
@@ -172,7 +172,7 @@ function renderPage(t, r) {
     ${faq}
   </div>
 
-  <footer><a href="${SITE_URL}/">← Retour à Tratjet</a></footer>
+  <footer><a href="${SITE_URL}/">← Retour à Futéroute</a></footer>
 </div>
 </body>
 </html>
@@ -186,7 +186,7 @@ function renderIndex(reussis) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Coût des trajets en voiture : carburant, péages | Tratjet</title>
+<title>Coût des trajets en voiture : carburant, péages | Futéroute</title>
 <meta name="description" content="Coût détaillé (carburant + péages) des trajets les plus recherchés en France, avec comparaison éviter/prendre les péages.">
 <link rel="canonical" href="${SITE_URL}/trajets/">
 <link rel="icon" type="image/png" href="../logo trajet rat.png">
@@ -208,10 +208,10 @@ function renderIndex(reussis) {
 </head>
 <body>
 <div class="page">
-  <div class="breadcrumb"><a href="${SITE_URL}/">Tratjet</a> › Trajets</div>
+  <div class="breadcrumb"><a href="${SITE_URL}/">Futéroute</a> › Trajets</div>
   <h1>Coût des trajets en voiture</h1>
   <div class="card"><ul>${items}</ul></div>
-  <footer><a href="${SITE_URL}/">← Retour à Tratjet</a></footer>
+  <footer><a href="${SITE_URL}/">← Retour à Futéroute</a></footer>
 </div>
 </body>
 </html>
