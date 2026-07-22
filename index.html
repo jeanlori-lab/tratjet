@@ -1406,8 +1406,10 @@
       transition: background 0.15s;
     }
     .itmap-recenter-btn:hover { background: #145ea8; }
+    /* Attribution en bas à gauche (le bas droite est pris par le bouton
+       « ma position » sur les cartes station). */
     .itmap-attrib-overlay {
-      position: absolute; bottom: 5px; right: 7px; z-index: 1000;
+      position: absolute; bottom: 5px; left: 7px; z-index: 1000;
       font-size: 10px; color: #607080;
       background: rgba(255,255,255,0.78); padding: 1px 6px; border-radius: 6px;
     }
@@ -3222,13 +3224,63 @@ function refreshStationMaps() {
   stationLeafletMaps.forEach(m => { try { m.invalidateSize(); if (m._itFit) m._itFit(); } catch (e) {} });
 }
 
+// Contrôles communs aux cartes station et itinéraire : attribution en
+// surimpression (visible aussi en plein écran), bouton Agrandir/Réduire (quasi
+// plein écran) et bouton de recentrage qui n'apparaît que si la cible sort du
+// cadre. `recadrer` recentre (fitBounds trajet, ou setView station),
+// `estDansCadre` dit si la cible est encore visible, `labelRecentrer` est le
+// texte du bouton de recentrage.
+function ajouterControlesCarte(wrap, map, recadrer, estDansCadre, labelRecentrer) {
+  // Bouton Agrandir / Réduire (quasi plein écran).
+  const expandBtn = document.createElement('button');
+  expandBtn.type = 'button';
+  expandBtn.className = 'itmap-expand-btn';
+  const majBtn = (full) => {
+    expandBtn.textContent = full ? '✕ Réduire' : '⛶ Agrandir';
+    expandBtn.setAttribute('aria-label', full ? 'Réduire la carte' : 'Agrandir la carte en plein écran');
+  };
+  const onEsc = (e) => { if (e.key === 'Escape') setPleinEcran(false); };
+  function setPleinEcran(full) {
+    wrap.classList.toggle('itmap-fullscreen', full);
+    document.body.classList.toggle('itmap-noscroll', full);
+    majBtn(full);
+    if (full) document.addEventListener('keydown', onEsc);
+    else document.removeEventListener('keydown', onEsc);
+    requestAnimationFrame(() => { recadrer(); requestAnimationFrame(recadrer); });
+  }
+  majBtn(false);
+  expandBtn.addEventListener('click', () => setPleinEcran(!wrap.classList.contains('itmap-fullscreen')));
+  wrap.appendChild(expandBtn);
+
+  // Bouton de recentrage, visible seulement quand la cible est hors cadre.
+  const recenterBtn = document.createElement('button');
+  recenterBtn.type = 'button';
+  recenterBtn.className = 'itmap-recenter-btn';
+  recenterBtn.textContent = labelRecentrer;
+  recenterBtn.style.display = 'none';
+  recenterBtn.addEventListener('click', () => recadrer());
+  wrap.appendChild(recenterBtn);
+  const majRecenter = () => {
+    let visible = true;
+    try { visible = estDansCadre(); } catch (e) { visible = true; }
+    recenterBtn.style.display = visible ? 'none' : '';
+  };
+  map.on('moveend zoomend', majRecenter);
+
+  // Attribution (dans la carte, pour rester visible en plein écran).
+  const attrib = document.createElement('div');
+  attrib.className = 'itmap-attrib-overlay';
+  attrib.innerHTML = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+  wrap.appendChild(attrib);
+}
+
 function buildStationMap(lat, lon) {
   const wrap = document.createElement('div');
-  wrap.className = 'cheapest-map-wrap';
-
-  const attrib = document.createElement('div');
-  attrib.className = 'cheapest-map-attrib';
-  attrib.innerHTML = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a>';
+  // itmap-tall : même gabarit compact + contrôles (molette, plein écran,
+  // recentrage) que la carte d'itinéraire, pour une expérience cohérente.
+  wrap.className = 'cheapest-map-wrap itmap-tall';
+  const frag = document.createDocumentFragment();
+  frag.appendChild(wrap);
 
   if (typeof L !== 'undefined') {
     // Carte Leaflet : marqueur station + boule bleue de position.
@@ -3236,7 +3288,7 @@ function buildStationMap(lat, lon) {
     div.className = 'cheapest-map';
     wrap.appendChild(div);
 
-    const map = L.map(div, { attributionControl: false, scrollWheelZoom: false });
+    const map = L.map(div, { attributionControl: false, scrollWheelZoom: true, zoomControl: false });
     map.setView([lat, lon], 14);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
     L.marker([lat, lon]).addTo(map);
@@ -3244,6 +3296,9 @@ function buildStationMap(lat, lon) {
     // Les encadrés sont reconstruits à chaque recherche : on détruit les
     // vieilles cartes pour ne pas accumuler d'instances en mémoire.
     while (stationLeafletMaps.length > 6) { try { stationLeafletMaps.shift().remove(); } catch (e) {} }
+    // Recentre sur la station (recadrage + après changement de taille).
+    const recadrer = () => { try { map.invalidateSize(); map.setView([lat, lon], 14); } catch (e) {} };
+    map._itFit = recadrer;
     // Encadré construit avant d'être affiché : recalcul de taille dès que possible.
     requestAnimationFrame(() => { try { map.invalidateSize(); } catch (e) {} });
 
@@ -3280,6 +3335,11 @@ function buildStationMap(lat, lon) {
       });
     });
     wrap.appendChild(locBtn);
+
+    // Contrôles communs : plein écran + recentrage sur la station (visible
+    // seulement quand le marqueur station est sorti du cadre).
+    ajouterControlesCarte(wrap, map, recadrer,
+      () => map.getBounds().contains(L.latLng(lat, lon)), '⟳ Retourner à la station');
   } else {
     // Repli sans Leaflet : l'iframe OpenStreetMap d'origine (sans position).
     const delta = 0.01;
@@ -3289,11 +3349,12 @@ function buildStationMap(lat, lon) {
     iframe.loading = 'lazy';
     iframe.src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lon}`;
     wrap.appendChild(iframe);
+    const attrib = document.createElement('div');
+    attrib.className = 'cheapest-map-attrib';
+    attrib.innerHTML = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">contributeurs OpenStreetMap</a>';
+    frag.appendChild(attrib);
   }
 
-  const frag = document.createDocumentFragment();
-  frag.appendChild(wrap);
-  frag.appendChild(attrib);
   return frag;
 }
 
@@ -3311,11 +3372,6 @@ function buildItineraireMap(polyline5, station) {
 
   const wrap = document.createElement('div');
   wrap.className = 'cheapest-map-wrap itmap-tall';
-  // Attribution en surimpression (dans la carte) plutôt qu'en dessous : ainsi
-  // elle reste visible aussi en mode plein écran, où le conteneur couvre tout.
-  const attrib = document.createElement('div');
-  attrib.className = 'itmap-attrib-overlay';
-  attrib.innerHTML = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
 
   const div = document.createElement('div');
   div.className = 'cheapest-map';
@@ -3378,49 +3434,10 @@ function buildItineraireMap(polyline5, station) {
   recadrer();
   requestAnimationFrame(recadrer);
 
-  // Bouton Agrandir / Réduire : bascule la carte en quasi plein écran (le
-  // conteneur passe en position fixe couvrant presque tout l'écran) puis revient
-  // à sa taille compacte. On recadre après chaque bascule car la taille du
-  // conteneur a changé (invalidateSize + fitBounds via recadrer).
-  const expandBtn = document.createElement('button');
-  expandBtn.type = 'button';
-  expandBtn.className = 'itmap-expand-btn';
-  const majBtn = (full) => {
-    expandBtn.textContent = full ? '✕ Réduire' : '⛶ Agrandir';
-    expandBtn.setAttribute('aria-label', full ? 'Réduire la carte' : 'Agrandir la carte en plein écran');
-  };
-  const onEsc = (e) => { if (e.key === 'Escape') setPleinEcran(false); };
-  function setPleinEcran(full) {
-    wrap.classList.toggle('itmap-fullscreen', full);
-    document.body.classList.toggle('itmap-noscroll', full);
-    majBtn(full);
-    if (full) document.addEventListener('keydown', onEsc);
-    else document.removeEventListener('keydown', onEsc);
-    requestAnimationFrame(() => { recadrer(); requestAnimationFrame(recadrer); });
-  }
-  majBtn(false);
-  expandBtn.addEventListener('click', () => setPleinEcran(!wrap.classList.contains('itmap-fullscreen')));
-  wrap.appendChild(expandBtn);
-
-  // Bouton "Retourner au trajet" : n'apparaît que si l'utilisateur a déplacé /
-  // zoomé la carte au point que le trajet n'est plus du tout dans le cadre.
-  // Un clic recentre sur le trajet (recadrer). On teste l'intersection du
-  // cadre visible avec l'emprise du trajet à chaque fin de déplacement/zoom.
-  const recenterBtn = document.createElement('button');
-  recenterBtn.type = 'button';
-  recenterBtn.className = 'itmap-recenter-btn';
-  recenterBtn.textContent = '⟳ Retourner au trajet';
-  recenterBtn.style.display = 'none';
-  recenterBtn.addEventListener('click', () => recadrer());
-  wrap.appendChild(recenterBtn);
-  const majRecenter = () => {
-    let visible = true;
-    try { visible = map.getBounds().intersects(bounds); } catch (e) { visible = true; }
-    recenterBtn.style.display = visible ? 'none' : '';
-  };
-  map.on('moveend zoomend', majRecenter);
-
-  wrap.appendChild(attrib);
+  // Contrôles communs : plein écran + recentrage sur le trajet (visible
+  // seulement quand le trajet est sorti du cadre) + attribution.
+  ajouterControlesCarte(wrap, map, recadrer,
+    () => map.getBounds().intersects(bounds), '⟳ Retourner au trajet');
 
   const frag = document.createDocumentFragment();
   frag.appendChild(wrap);
