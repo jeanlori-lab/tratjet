@@ -610,8 +610,8 @@
        ordinateur le libellé "Départ" est à côté du champ, sur mobile (≤480px)
        il passe au-dessus, ce qui décale le champ - d'où la marge plus négative
        en mobile pour garder le même écart visuel. */
-    .add-stop-row { justify-content: flex-end; margin-top: 0; margin-bottom: -2px; }
-    @media (max-width: 480px) { .add-stop-row { margin-bottom: -26px; } }
+    .add-stop-row { justify-content: flex-end; margin-top: 0; margin-bottom: -6px; }
+    @media (max-width: 480px) { .add-stop-row { margin-bottom: -30px; } }
     .link-btn {
       background: none;
       border: none;
@@ -1676,7 +1676,7 @@
         <button type="button" class="swap-btn" id="swapBtn" onclick="swapItinerary()" aria-label="Inverser départ et arrivée">⇅</button>
       </div>
 
-      <div class="itinerary-controls" style="gap:14px; margin-top:0;">
+      <div class="itinerary-controls" style="gap:14px; margin-top:-4px;">
         <button type="button" class="link-btn" style="margin-left:auto;" onclick="enregistrerTrajet()">☆ Enregistrer ce trajet</button>
       </div>
       <!-- Trajets favoris (localStorage) : une puce = un itinéraire complet.
