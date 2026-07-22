@@ -18,7 +18,7 @@ const { chromium } = require('playwright');
 
 const ROOT = path.join(__dirname, '..');
 const TRAJETS = JSON.parse(fs.readFileSync(path.join(ROOT, 'trajets/trajets.json'), 'utf8'));
-const SITE_URL = 'https://jeanlori-lab.github.io/tratjet';
+const SITE_URL = 'https://futeroute.fr';
 const PORT = 8973;
 
 function fmtEur(n) {

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://jeanlori-lab.github.io/tratjet/sitemap.xml
+Sitemap: https://futeroute.fr/sitemap.xml
