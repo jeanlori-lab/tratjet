@@ -1393,6 +1393,19 @@
       transition: color 0.15s;
     }
     .itmap-expand-btn:hover { color: #145ea8; }
+    /* Bouton "Retourner au trajet" (recentrage), en haut à gauche, visible
+       seulement quand le trajet est sorti du cadre. En bleu plein pour se
+       repérer comme une action. */
+    .itmap-recenter-btn {
+      position: absolute; top: 10px; left: 10px; z-index: 1100;
+      height: 30px; padding: 0 12px; border-radius: 999px;
+      background: #1976d2; color: #fff; border: none; cursor: pointer;
+      display: inline-flex; align-items: center;
+      font-family: inherit; font-size: 12px; font-weight: 700;
+      box-shadow: 0 2px 8px rgba(25,118,210,0.4);
+      transition: background 0.15s;
+    }
+    .itmap-recenter-btn:hover { background: #145ea8; }
     .itmap-attrib-overlay {
       position: absolute; bottom: 5px; right: 7px; z-index: 1000;
       font-size: 10px; color: #607080;
@@ -3308,7 +3321,10 @@ function buildItineraireMap(polyline5, station) {
   div.className = 'cheapest-map';
   wrap.appendChild(div);
 
-  const map = L.map(div, { attributionControl: false, scrollWheelZoom: false, zoomControl: false });
+  // scrollWheelZoom : zoom à la molette sur ordi (et pinch sur mobile, activé
+  // par défaut). Le recadrage automatique ne se refait qu'aux changements de
+  // taille (onglet, plein écran), donc le zoom manuel est conservé entre-temps.
+  const map = L.map(div, { attributionControl: false, scrollWheelZoom: true, zoomControl: false });
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
   // Tracé de l'itinéraire.
@@ -3385,6 +3401,25 @@ function buildItineraireMap(polyline5, station) {
   majBtn(false);
   expandBtn.addEventListener('click', () => setPleinEcran(!wrap.classList.contains('itmap-fullscreen')));
   wrap.appendChild(expandBtn);
+
+  // Bouton "Retourner au trajet" : n'apparaît que si l'utilisateur a déplacé /
+  // zoomé la carte au point que le trajet n'est plus du tout dans le cadre.
+  // Un clic recentre sur le trajet (recadrer). On teste l'intersection du
+  // cadre visible avec l'emprise du trajet à chaque fin de déplacement/zoom.
+  const recenterBtn = document.createElement('button');
+  recenterBtn.type = 'button';
+  recenterBtn.className = 'itmap-recenter-btn';
+  recenterBtn.textContent = '⟳ Retourner au trajet';
+  recenterBtn.style.display = 'none';
+  recenterBtn.addEventListener('click', () => recadrer());
+  wrap.appendChild(recenterBtn);
+  const majRecenter = () => {
+    let visible = true;
+    try { visible = map.getBounds().intersects(bounds); } catch (e) { visible = true; }
+    recenterBtn.style.display = visible ? 'none' : '';
+  };
+  map.on('moveend zoomend', majRecenter);
+
   wrap.appendChild(attrib);
 
   const frag = document.createDocumentFragment();
