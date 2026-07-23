@@ -4496,7 +4496,20 @@ async function afficherStationStandalone() {
   if (station) {
     // Carte EN HAUT, infos station en dessous (ordre cohérent partout).
     if (station.lat !== null && station.lon !== null) {
-      cheapestNote.appendChild(buildStationMap(station.lat, station.lon));
+      // Recherche par rayon : itinéraire du lieu recherché jusqu'à la station.
+      // Mode "France entière" (illimité) : la station peut être à des centaines
+      // de km, un itinéraire n'aurait pas de sens - on garde la carte simple.
+      if (!illimite) {
+        let routePoly = null;
+        try {
+          const apiKey = document.getElementById('apiKey').value.trim();
+          const r = await getRoute([[lon, lat], [station.lon, station.lat]], apiKey, false);
+          routePoly = r && r.polyline;
+        } catch (e) { /* repli sur carte station simple */ }
+        cheapestNote.appendChild(buildItineraireMap(routePoly, station, { originRoute: true }));
+      } else {
+        cheapestNote.appendChild(buildStationMap(station.lat, station.lon));
+      }
     }
     cheapestNote.appendChild(buildStationDetail(station, type, lat, lon, illimite));
 
