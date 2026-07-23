@@ -3385,6 +3385,9 @@ function buildStationMap(lat, lon) {
 // au sélecteur « Arrêt N ».
 function buildItineraireMap(polyline5, stations, opts) {
   opts = opts || {};
+  // originRoute : le tracé va du départ directement à la station (station =
+  // destination). Pas d'arrivée rouge distincte, ni de détour.
+  const originRoute = !!opts.originRoute;
   const list = (Array.isArray(stations) ? stations : [stations])
     .filter(s => s && isFinite(s.lat) && isFinite(s.lon));
   let points = null;
@@ -3409,25 +3412,28 @@ function buildItineraireMap(polyline5, stations, opts) {
   // Tracé de l'itinéraire.
   const routeLine = L.polyline(points, { color: '#1976d2', weight: 5, opacity: 0.9 }).addTo(map);
 
-  // Départ (vert) et arrivée (rouge) aux extrémités du tracé.
+  // Départ (vert) toujours ; arrivée (rouge) sauf pour un trajet départ→station
+  // (la station EST la destination, marquée par sa propre pastille).
   L.circleMarker(points[0], { radius: 7, color: '#fff', weight: 2.5, fillColor: '#2e7d32', fillOpacity: 1 }).addTo(map);
-  L.circleMarker(points[points.length - 1], { radius: 7, color: '#fff', weight: 2.5, fillColor: '#d1495b', fillOpacity: 1 }).addTo(map);
+  if (!originRoute) L.circleMarker(points[points.length - 1], { radius: 7, color: '#fff', weight: 2.5, fillColor: '#d1495b', fillOpacity: 1 }).addTo(map);
 
-  // Chaque station : détour + marqueur + étiquette de distance de détour.
+  // Chaque station : (détour +) marqueur (+ étiquette de distance de détour).
   const multiple = list.length > 1;
   const bounds = routeLine.getBounds();
   const markers = [];
   list.forEach((station, i) => {
-    // Point du tracé le plus proche de cette station : origine du détour.
-    let ancre = points[0], d2min = Infinity;
-    const cosLat = Math.cos(station.lat * Math.PI / 180);
-    for (const p of points) {
-      const dLat = (station.lat - p[0]) * 110.57;
-      const dLng = (station.lon - p[1]) * 111.32 * cosLat;
-      const d2 = dLat * dLat + dLng * dLng;
-      if (d2 < d2min) { d2min = d2; ancre = p; }
+    if (!originRoute) {
+      // Point du tracé le plus proche de cette station : origine du détour.
+      let ancre = points[0], d2min = Infinity;
+      const cosLat = Math.cos(station.lat * Math.PI / 180);
+      for (const p of points) {
+        const dLat = (station.lat - p[0]) * 110.57;
+        const dLng = (station.lon - p[1]) * 111.32 * cosLat;
+        const d2 = dLat * dLat + dLng * dLng;
+        if (d2 < d2min) { d2min = d2; ancre = p; }
+      }
+      L.polyline([ancre, [station.lat, station.lon]], { color: '#e2971a', weight: 3, opacity: 0.95, dashArray: '4 5' }).addTo(map);
     }
-    L.polyline([ancre, [station.lat, station.lon]], { color: '#e2971a', weight: 3, opacity: 0.95, dashArray: '4 5' }).addTo(map);
 
     // Marqueur : ⛽ pour un arrêt unique, numéro (1, 2, 3…) quand plusieurs. À
     // l'échelle du trajet un détour de 1-2 km est invisible : on l'écrit dans
@@ -3438,7 +3444,9 @@ function buildItineraireMap(polyline5, stations, opts) {
     // Cliquer un marqueur sélectionne l'arrêt (affiche sa fiche + le surligne).
     if (opts.onSelect) marker.on('click', () => opts.onSelect(i));
     markers.push(marker);
-    if (isFinite(station.distRoute) && station.distRoute >= 0.1) {
+    // Étiquette de détour : seulement en mode "arrêt sur le trajet" (pas quand
+    // la station est la destination directe).
+    if (!originRoute && isFinite(station.distRoute) && station.distRoute >= 0.1) {
       const km = station.distRoute.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
       const txt = (multiple ? '+' : 'détour +') + km + ' km';
       marker.bindTooltip(txt, { permanent: true, direction: 'auto', offset: [11, 0], className: 'itmap-detour-label' }).openTooltip();
@@ -3476,21 +3484,23 @@ function buildItineraireMap(polyline5, stations, opts) {
   recadrer();
   requestAnimationFrame(recadrer);
 
-  // Contrôles communs : plein écran + recentrage sur le trajet (visible
-  // seulement quand le trajet est sorti du cadre) + attribution.
+  // Contrôles communs : plein écran + recentrage (visible seulement quand la
+  // cible est sortie du cadre) + attribution.
   ajouterControlesCarte(wrap, map, recadrer,
-    () => map.getBounds().intersects(bounds), '⟳ Retourner au trajet');
+    () => map.getBounds().intersects(bounds), originRoute ? '⟳ Recentrer' : '⟳ Retourner au trajet');
 
   const frag = document.createDocumentFragment();
   frag.appendChild(wrap);
 
-  // Légende : départ/arrivée, itinéraire, arrêt essence + détour.
+  // Légende : adaptée au mode (départ→station directe, ou arrêt sur le trajet).
   const legende = document.createElement('div');
   legende.className = 'itmap-legend';
-  legende.innerHTML =
-    '<span><span class="dot" style="background:#2e7d32;"></span>Départ</span>'
-    + '<span><span class="dot" style="background:#d1495b;"></span>Arrivée</span>'
-    + '<span><span class="dot" style="background:#e2971a;"></span>Station essence (+ détour)</span>';
+  legende.innerHTML = originRoute
+    ? '<span><span class="dot" style="background:#2e7d32;"></span>Départ</span>'
+      + '<span><span class="dot" style="background:#e2971a;"></span>Station</span>'
+    : '<span><span class="dot" style="background:#2e7d32;"></span>Départ</span>'
+      + '<span><span class="dot" style="background:#d1495b;"></span>Arrivée</span>'
+      + '<span><span class="dot" style="background:#e2971a;"></span>Station essence (+ détour)</span>';
   frag.appendChild(legende);
   return frag;
 }
@@ -3931,6 +3941,20 @@ async function rechercherStationMoinsChere() {
   cheapestNote.appendChild(header);
 
   if (station) {
+    // Carte EN HAUT : itinéraire départ → station. On calcule la route depuis
+    // le point de départ ; si elle échoue (réseau, etc.), buildItineraireMap
+    // retombe sur la carte station simple.
+    if (station.lat !== null && station.lon !== null) {
+      let routePoly = null;
+      try {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        const r = await getRoute([[lon, lat], [station.lon, station.lat]], apiKey, false);
+        routePoly = r && r.polyline;
+      } catch (e) { /* repli sur carte station simple */ }
+      cheapestNote.appendChild(buildItineraireMap(routePoly, station, { originRoute: true }));
+    }
+
+    // Infos station EN DESSOUS de la carte.
     cheapestNote.appendChild(buildStationDetail(station, type, lat, lon, false));
 
     // Économie estimée sur un plein ici, vs prix moyen national. Cette
@@ -3949,8 +3973,6 @@ async function rechercherStationMoinsChere() {
     }
 
     if (station.lat !== null && station.lon !== null) {
-      cheapestNote.appendChild(buildStationMap(station.lat, station.lon));
-
       const btnRow = document.createElement('div');
       btnRow.className = 'cheapest-btn-row';
 
@@ -4319,6 +4341,9 @@ async function rechercherStationSurTrajet() {
   } else if (arrets && arrets.length) {
     renderArrets(note, arrets, type, depart, arrivee);
   } else if (station) {
+    // Carte EN HAUT (itinéraire complet + station + détour), infos en dessous.
+    note.appendChild(buildItineraireMap(polyline, station));
+
     const detail = buildStationDetail(station, type, null, null, false);
     if (isFinite(station.distRoute)) {
       detail.appendChild(document.createTextNode(' (à ' + station.distRoute.toFixed(1) + ' km de la route)'));
@@ -4328,9 +4353,6 @@ async function rechercherStationSurTrajet() {
     // Économie de ce plein par rapport au prix moyen national.
     const badge = buildEcoBadge(station.prix, litresPlein);
     if (badge) note.appendChild(badge);
-
-    // Carte de l'itinéraire complet avec la station en arrêt + son détour.
-    note.appendChild(buildItineraireMap(polyline, station));
 
     const btnRow = document.createElement('div');
     btnRow.className = 'cheapest-btn-row';
@@ -4472,11 +4494,13 @@ async function afficherStationStandalone() {
   cheapestNote.appendChild(header);
 
   if (station) {
+    // Carte EN HAUT, infos station en dessous (ordre cohérent partout).
+    if (station.lat !== null && station.lon !== null) {
+      cheapestNote.appendChild(buildStationMap(station.lat, station.lon));
+    }
     cheapestNote.appendChild(buildStationDetail(station, type, lat, lon, illimite));
 
     if (station.lat !== null && station.lon !== null) {
-      cheapestNote.appendChild(buildStationMap(station.lat, station.lon));
-
       const link = document.createElement('a');
       link.className = 'cheapest-link';
       link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${lat},${lon}&destination=${station.lat},${station.lon}`;
