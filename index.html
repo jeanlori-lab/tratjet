@@ -1457,6 +1457,12 @@
     /* Marqueur numéroté (plusieurs arrêts sur le même trajet) : le numéro en
        blanc gras dans la pastille orange. */
     .itmap-fuel-icon.itmap-num span { color: #fff; font-weight: 800; font-size: 14px; }
+    /* Marqueur de l'arrêt sélectionné : agrandi + anneau, pour le repérer. */
+    .itmap-fuel-icon span { transition: transform 0.12s, box-shadow 0.12s, background 0.12s; }
+    .itmap-fuel-icon.sel span {
+      background: #c77700; transform: scale(1.28);
+      box-shadow: 0 0 0 3px rgba(226,151,26,0.45), 0 2px 7px rgba(0,0,0,0.4);
+    }
     /* Petite légende sous la carte d'itinéraire. */
     .itmap-legend {
       display: flex; flex-wrap: wrap; gap: 10px 14px;
@@ -3377,7 +3383,8 @@ function buildStationMap(lat, lon) {
 // itinéraire). Chaque station est marquée sur le tracé avec son détour ; quand
 // il y en a plusieurs, les marqueurs sont numérotés (1, 2, 3…) pour se relier
 // au sélecteur « Arrêt N ».
-function buildItineraireMap(polyline5, stations) {
+function buildItineraireMap(polyline5, stations, opts) {
+  opts = opts || {};
   const list = (Array.isArray(stations) ? stations : [stations])
     .filter(s => s && isFinite(s.lat) && isFinite(s.lon));
   let points = null;
@@ -3409,6 +3416,7 @@ function buildItineraireMap(polyline5, stations) {
   // Chaque station : détour + marqueur + étiquette de distance de détour.
   const multiple = list.length > 1;
   const bounds = routeLine.getBounds();
+  const markers = [];
   list.forEach((station, i) => {
     // Point du tracé le plus proche de cette station : origine du détour.
     let ancre = points[0], d2min = Infinity;
@@ -3427,6 +3435,9 @@ function buildItineraireMap(polyline5, stations) {
     const html = multiple ? '<span>' + (i + 1) + '</span>' : '<span>⛽</span>';
     const icon = L.divIcon({ className: 'itmap-fuel-icon' + (multiple ? ' itmap-num' : ''), html, iconSize: [26, 26], iconAnchor: [13, 13] });
     const marker = L.marker([station.lat, station.lon], { icon }).addTo(map);
+    // Cliquer un marqueur sélectionne l'arrêt (affiche sa fiche + le surligne).
+    if (opts.onSelect) marker.on('click', () => opts.onSelect(i));
+    markers.push(marker);
     if (isFinite(station.distRoute) && station.distRoute >= 0.1) {
       const km = station.distRoute.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
       const txt = (multiple ? '+' : 'détour +') + km + ' km';
@@ -3434,6 +3445,18 @@ function buildItineraireMap(polyline5, stations) {
     }
     bounds.extend([station.lat, station.lon]);
   });
+
+  // Surligne le marqueur de l'arrêt sélectionné (classe .sel sur son icône) et
+  // le remonte au-dessus des autres. Exposé via opts.ref pour que le sélecteur
+  // et renderContent puissent synchroniser la carte avec la fiche affichée.
+  function setSelected(idx) {
+    markers.forEach((m, i) => {
+      const el = m.getElement();
+      if (el) el.classList.toggle('sel', i === idx);
+      if (i === idx && m.setZIndexOffset) m.setZIndexOffset(1000); else if (m.setZIndexOffset) m.setZIndexOffset(0);
+    });
+  }
+  if (opts.ref) opts.ref.setSelected = setSelected;
 
   // Cadre l'ensemble : tout le tracé + toutes les stations. La carte n'a ni
   // zoom ni attribution en surimpression (désactivés) : elle remplit tout son
@@ -3811,6 +3834,8 @@ async function calculerStationsParTroncon() {
 
   const contentWrap = document.createElement('div');
   contentWrap.className = 'arret-content';
+  let select = null;
+  const mapRef = {};
 
   function renderContent(idx) {
     contentWrap.textContent = '';
@@ -3846,13 +3871,15 @@ async function calculerStationsParTroncon() {
     btnRow.appendChild(link);
     finaliserBtnRow(btnRow);
     contentWrap.appendChild(btnRow);
+    if (select) select.value = String(idx);
+    if (mapRef.setSelected) mapRef.setSelected(idx);
     refreshStationMaps();
   }
 
   if (troncons.length > 1) {
     const wrap = document.createElement('div');
     wrap.className = 'troncon-select-wrap';
-    const select = document.createElement('select');
+    select = document.createElement('select');
     select.className = 'troncon-select';
     troncons.forEach((t, i) => {
       const opt = document.createElement('option');
@@ -3866,9 +3893,11 @@ async function calculerStationsParTroncon() {
   }
 
   // Carte unique de l'itinéraire complet avec TOUTES les stations de tronçon
-  // (numérotées) : on voit tous les arrêts d'un coup, pas juste le sélectionné.
+  // (numérotées) : on voit tous les arrêts d'un coup, et cliquer un marqueur
+  // sélectionne le tronçon correspondant.
   note.appendChild(buildItineraireMap(
-    lastStationSurTrajet && lastStationSurTrajet.polyline, troncons.map(t => t.station)));
+    lastStationSurTrajet && lastStationSurTrajet.polyline, troncons.map(t => t.station),
+    { onSelect: (i) => renderContent(i), ref: mapRef }));
 
   note.appendChild(contentWrap);
   renderContent(0);
@@ -4137,6 +4166,8 @@ async function planArretsSurTrajet(polyline, type, distKm, conso, reservoir) {
 function renderArrets(note, arrets, type, depart, arrivee) {
   const contentWrap = document.createElement('div');
   contentWrap.className = 'arret-content';
+  let select = null;        // sélecteur "Arrêt N" (si plusieurs arrêts)
+  const mapRef = {};        // rempli par buildItineraireMap : { setSelected }
 
   function renderContent(idx) {
     contentWrap.textContent = '';
@@ -4181,6 +4212,8 @@ function renderArrets(note, arrets, type, depart, arrivee) {
     finaliserBtnRow(btnRow);
     contentWrap.appendChild(btnRow);
 
+    if (select) select.value = String(idx);
+    if (mapRef.setSelected) mapRef.setSelected(idx);
     refreshStationMaps();
   }
 
@@ -4189,7 +4222,7 @@ function renderArrets(note, arrets, type, depart, arrivee) {
   if (arrets.length > 1) {
     const wrap = document.createElement('div');
     wrap.className = 'troncon-select-wrap';
-    const select = document.createElement('select');
+    select = document.createElement('select');
     select.className = 'troncon-select';
     arrets.forEach((a, i) => {
       const opt = document.createElement('option');
@@ -4204,9 +4237,10 @@ function renderArrets(note, arrets, type, depart, arrivee) {
   }
 
   // Carte unique de l'itinéraire montrant TOUS les arrêts (numérotés) : on voit
-  // d'un coup d'œil où s'arrêter, pas seulement l'arrêt sélectionné.
+  // d'un coup d'œil où s'arrêter, et cliquer un marqueur sélectionne l'arrêt.
   note.appendChild(buildItineraireMap(
-    lastStationSurTrajet && lastStationSurTrajet.polyline, arrets.map(a => a.station)));
+    lastStationSurTrajet && lastStationSurTrajet.polyline, arrets.map(a => a.station),
+    { onSelect: (i) => renderContent(i), ref: mapRef }));
 
   note.appendChild(contentWrap);
   renderContent(0);
