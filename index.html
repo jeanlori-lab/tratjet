@@ -3689,6 +3689,30 @@ function finaliserBtnRow(btnRow) {
   if (btnRow.querySelectorAll('.cheapest-link').length >= 2) btnRow.classList.add('two-links');
 }
 
+// Deux boutons de navigation vers une station : « Y aller avec Maps » (l'URL
+// Google Maps dépend du contexte : arrêt sur le trajet avec waypoint, ou
+// trajet direct) et « Y aller avec Waze » (navigation Waze vers le point de la
+// station). Chacun avec son logo (flèche Maps / logo Waze).
+function buildNavStationRow(station, mapsUrl) {
+  const row = document.createElement('div');
+  row.className = 'cheapest-btn-row';
+  const lien = (href, img, label) => {
+    const a = document.createElement('a');
+    a.className = 'cheapest-link';
+    a.href = href; a.target = '_blank'; a.rel = 'noopener';
+    const ic = document.createElement('img');
+    ic.src = img; ic.alt = '';
+    ic.style.cssText = 'width:15px;height:15px;object-fit:contain;margin-top:-2px;';
+    a.appendChild(ic);
+    a.appendChild(document.createTextNode(label));
+    row.appendChild(a);
+  };
+  lien(mapsUrl, 'logo fleche maps.png', 'Y aller avec Maps');
+  lien('https://waze.com/ul?ll=' + station.lat + ',' + station.lon + '&navigate=yes', 'logo waze.png', 'Y aller avec Waze');
+  finaliserBtnRow(row);
+  return row;
+}
+
 function buildEcoBadge(prixStation, litres) {
   if (typeof prixActuel !== 'number' || !isFinite(prixStation) || !isFinite(litres) || litres <= 0) return null;
   const gain = (prixActuel - prixStation) * litres;
@@ -3872,16 +3896,8 @@ async function calculerStationsParTroncon() {
     const badge = buildEcoBadge(t.station.prix, LITRES_PLEIN_MAX_DEFAUT);
     if (badge) contentWrap.appendChild(badge);
 
-    const btnRow = document.createElement('div');
-    btnRow.className = 'cheapest-btn-row';
-    const link = document.createElement('a');
-    link.className = 'cheapest-link';
-    link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${encodeURIComponent(t.depart)}&destination=${encodeURIComponent(t.arrivee)}&waypoints=${t.station.lat},${t.station.lon}`;
-    link.target = '_blank';
-    link.textContent = '📍 Ajouter cette station à mon trajet';
-    btnRow.appendChild(link);
-    finaliserBtnRow(btnRow);
-    contentWrap.appendChild(btnRow);
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${encodeURIComponent(t.depart)}&destination=${encodeURIComponent(t.arrivee)}&waypoints=${t.station.lat},${t.station.lon}`;
+    contentWrap.appendChild(buildNavStationRow(t.station, mapsUrl));
     if (select) select.value = String(idx);
     if (mapRef.setSelected) mapRef.setSelected(idx);
     refreshStationMaps();
@@ -3974,25 +3990,9 @@ async function rechercherStationMoinsChere() {
     }
 
     if (station.lat !== null && station.lon !== null) {
-      const btnRow = document.createElement('div');
-      btnRow.className = 'cheapest-btn-row';
-
-      // Un seul lien, centré : l'itinéraire direct vers la station (depuis
-      // la position de départ, sans la destination du trajet en plus).
-      const linkDirect = document.createElement('a');
-      linkDirect.className = 'cheapest-link';
-      linkDirect.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${lat},${lon}&destination=${station.lat},${station.lon}`;
-      linkDirect.target = '_blank';
-      const linkIcon = document.createElement('img');
-      linkIcon.src = 'logo fleche maps.png';
-      linkIcon.alt = '';
-      linkIcon.style.cssText = 'width:14px;height:14px;object-fit:contain;margin-top:-2px;';
-      linkDirect.appendChild(linkIcon);
-      linkDirect.appendChild(document.createTextNode(electrique ? 'Itinéraire vers cette borne' : 'Itinéraire vers cette station'));
-      btnRow.appendChild(linkDirect);
-
-      finaliserBtnRow(btnRow);
-      cheapestNote.appendChild(btnRow);
+      // Itinéraire direct depuis le point de départ vers la station.
+      const mapsUrl = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${lat},${lon}&destination=${station.lat},${station.lon}`;
+      cheapestNote.appendChild(buildNavStationRow(station, mapsUrl));
     }
   } else {
     const empty = document.createElement('div');
@@ -4224,16 +4224,8 @@ function renderArrets(note, arrets, type, depart, arrivee) {
     const badge = buildEcoBadge(a.station.prix, a.litresPlein);
     if (badge) contentWrap.appendChild(badge);
 
-    const btnRow = document.createElement('div');
-    btnRow.className = 'cheapest-btn-row';
-    const link = document.createElement('a');
-    link.className = 'cheapest-link';
-    link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${encodeURIComponent(depart)}&destination=${encodeURIComponent(arrivee)}&waypoints=${a.station.lat},${a.station.lon}`;
-    link.target = '_blank';
-    link.textContent = '📍 Ajouter cette station à mon trajet';
-    btnRow.appendChild(link);
-    finaliserBtnRow(btnRow);
-    contentWrap.appendChild(btnRow);
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${encodeURIComponent(depart)}&destination=${encodeURIComponent(arrivee)}&waypoints=${a.station.lat},${a.station.lon}`;
+    contentWrap.appendChild(buildNavStationRow(a.station, mapsUrl));
 
     if (select) select.value = String(idx);
     if (mapRef.setSelected) mapRef.setSelected(idx);
@@ -4355,18 +4347,10 @@ async function rechercherStationSurTrajet() {
     const badge = buildEcoBadge(station.prix, litresPlein);
     if (badge) note.appendChild(badge);
 
-    const btnRow = document.createElement('div');
-    btnRow.className = 'cheapest-btn-row';
-    const link = document.createElement('a');
-    link.className = 'cheapest-link';
     const origin = encodeURIComponent(depart);
     const destination = encodeURIComponent(arrivee);
-    link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}&waypoints=${station.lat},${station.lon}`;
-    link.target = '_blank';
-    link.textContent = '📍 Ajouter cette station à mon trajet';
-    btnRow.appendChild(link);
-    finaliserBtnRow(btnRow);
-    note.appendChild(btnRow);
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${origin}&destination=${destination}&waypoints=${station.lat},${station.lon}`;
+    note.appendChild(buildNavStationRow(station, mapsUrl));
   } else {
     const empty = document.createElement('div');
     empty.className = 'cheapest-empty';
@@ -4515,17 +4499,8 @@ async function afficherStationStandalone() {
     cheapestNote.appendChild(buildStationDetail(station, type, lat, lon, illimite));
 
     if (station.lat !== null && station.lon !== null) {
-      const link = document.createElement('a');
-      link.className = 'cheapest-link';
-      link.href = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${lat},${lon}&destination=${station.lat},${station.lon}`;
-      link.target = '_blank';
-      const linkIcon = document.createElement('img');
-      linkIcon.src = 'logo fleche maps.png';
-      linkIcon.alt = '';
-      linkIcon.style.cssText = 'width:14px;height:14px;object-fit:contain;margin-top:-2px;';
-      link.appendChild(linkIcon);
-      link.appendChild(document.createTextNode(electrique ? 'Itinéraire vers cette borne' : 'Itinéraire vers cette station'));
-      cheapestNote.appendChild(link);
+      const mapsUrl = `https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=${lat},${lon}&destination=${station.lat},${station.lon}`;
+      cheapestNote.appendChild(buildNavStationRow(station, mapsUrl));
     }
   } else {
     const empty = document.createElement('div');
