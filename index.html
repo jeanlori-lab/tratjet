@@ -1454,6 +1454,9 @@
       background: #e2971a; border: 2.5px solid #fff;
       box-shadow: 0 1px 4px rgba(0,0,0,0.35); font-size: 13px; line-height: 1;
     }
+    /* Marqueur numéroté (plusieurs arrêts sur le même trajet) : le numéro en
+       blanc gras dans la pastille orange. */
+    .itmap-fuel-icon.itmap-num span { color: #fff; font-weight: 800; font-size: 14px; }
     /* Petite légende sous la carte d'itinéraire. */
     .itmap-legend {
       display: flex; flex-wrap: wrap; gap: 10px 14px;
@@ -3370,12 +3373,17 @@ function buildStationMap(lat, lon) {
 // marquée comme un arrêt, reliée au tracé par son détour (Prop A). Situe la
 // station dans le trajet plutôt que de la montrer seule. Repli sur la petite
 // carte station classique si Leaflet ou le tracé manquent.
-function buildItineraireMap(polyline5, station) {
+// `stations` : une station unique OU un tableau (plusieurs arrêts sur le même
+// itinéraire). Chaque station est marquée sur le tracé avec son détour ; quand
+// il y en a plusieurs, les marqueurs sont numérotés (1, 2, 3…) pour se relier
+// au sélecteur « Arrêt N ».
+function buildItineraireMap(polyline5, stations) {
+  const list = (Array.isArray(stations) ? stations : [stations])
+    .filter(s => s && isFinite(s.lat) && isFinite(s.lon));
   let points = null;
   try { if (typeof polyline5 === 'string') points = decodePolyline(polyline5, 5); } catch (e) {}
-  if (typeof L === 'undefined' || !Array.isArray(points) || points.length < 2
-      || !isFinite(station.lat) || !isFinite(station.lon)) {
-    return buildStationMap(station.lat, station.lon);
+  if (typeof L === 'undefined' || !Array.isArray(points) || points.length < 2 || !list.length) {
+    return buildStationMap(list[0] ? list[0].lat : null, list[0] ? list[0].lon : null);
   }
 
   const wrap = document.createElement('div');
@@ -3394,46 +3402,49 @@ function buildItineraireMap(polyline5, station) {
   // Tracé de l'itinéraire.
   const routeLine = L.polyline(points, { color: '#1976d2', weight: 5, opacity: 0.9 }).addTo(map);
 
-  // Point du tracé le plus proche de la station : origine du détour.
-  let ancre = points[0], d2min = Infinity;
-  const cosLat = Math.cos(station.lat * Math.PI / 180);
-  for (const p of points) {
-    const dLat = (station.lat - p[0]) * 110.57;
-    const dLng = (station.lon - p[1]) * 111.32 * cosLat;
-    const d2 = dLat * dLat + dLng * dLng;
-    if (d2 < d2min) { d2min = d2; ancre = p; }
-  }
-  // Détour en pointillé orange, du tracé jusqu'à la station.
-  L.polyline([ancre, [station.lat, station.lon]], { color: '#e2971a', weight: 3, opacity: 0.95, dashArray: '4 5' }).addTo(map);
-
   // Départ (vert) et arrivée (rouge) aux extrémités du tracé.
   L.circleMarker(points[0], { radius: 7, color: '#fff', weight: 2.5, fillColor: '#2e7d32', fillOpacity: 1 }).addTo(map);
   L.circleMarker(points[points.length - 1], { radius: 7, color: '#fff', weight: 2.5, fillColor: '#d1495b', fillOpacity: 1 }).addTo(map);
 
-  // Marqueur station essence (pastille orange ⛽), au bout du détour. À
-  // l'échelle du trajet entier, un détour de 1-2 km est quasi invisible : on
-  // affiche donc sa longueur dans une petite étiquette « +X km » collée au
-  // marqueur, pour que le détour soit toujours lisible quel que soit le zoom.
-  const fuelIcon = L.divIcon({ className: 'itmap-fuel-icon', html: '<span>⛽</span>', iconSize: [26, 26], iconAnchor: [13, 13] });
-  const fuelMarker = L.marker([station.lat, station.lon], { icon: fuelIcon }).addTo(map);
-  if (isFinite(station.distRoute) && station.distRoute >= 0.1) {
-    const km = station.distRoute.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-    // direction 'auto' : l'étiquette bascule à gauche/droite selon la place,
-    // pour ne pas déborder du cadre quand la station est près d'un bord.
-    fuelMarker.bindTooltip('détour +' + km + ' km', { permanent: true, direction: 'auto', offset: [11, 0], className: 'itmap-detour-label' }).openTooltip();
-  }
+  // Chaque station : détour + marqueur + étiquette de distance de détour.
+  const multiple = list.length > 1;
+  const bounds = routeLine.getBounds();
+  list.forEach((station, i) => {
+    // Point du tracé le plus proche de cette station : origine du détour.
+    let ancre = points[0], d2min = Infinity;
+    const cosLat = Math.cos(station.lat * Math.PI / 180);
+    for (const p of points) {
+      const dLat = (station.lat - p[0]) * 110.57;
+      const dLng = (station.lon - p[1]) * 111.32 * cosLat;
+      const d2 = dLat * dLat + dLng * dLng;
+      if (d2 < d2min) { d2min = d2; ancre = p; }
+    }
+    L.polyline([ancre, [station.lat, station.lon]], { color: '#e2971a', weight: 3, opacity: 0.95, dashArray: '4 5' }).addTo(map);
 
-  // Cadre l'ensemble : tout le tracé + la station. La carte d'itinéraire n'a
-  // ni zoom ni attribution en surimpression (désactivés) : elle remplit tout
-  // son conteneur, on peut donc marger symétriquement.
-  const bounds = routeLine.getBounds().extend([station.lat, station.lon]);
+    // Marqueur : ⛽ pour un arrêt unique, numéro (1, 2, 3…) quand plusieurs. À
+    // l'échelle du trajet un détour de 1-2 km est invisible : on l'écrit dans
+    // une étiquette « +X km » collée au marqueur, lisible quel que soit le zoom.
+    const html = multiple ? '<span>' + (i + 1) + '</span>' : '<span>⛽</span>';
+    const icon = L.divIcon({ className: 'itmap-fuel-icon' + (multiple ? ' itmap-num' : ''), html, iconSize: [26, 26], iconAnchor: [13, 13] });
+    const marker = L.marker([station.lat, station.lon], { icon }).addTo(map);
+    if (isFinite(station.distRoute) && station.distRoute >= 0.1) {
+      const km = station.distRoute.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      const txt = (multiple ? '+' : 'détour +') + km + ' km';
+      marker.bindTooltip(txt, { permanent: true, direction: 'auto', offset: [11, 0], className: 'itmap-detour-label' }).openTooltip();
+    }
+    bounds.extend([station.lat, station.lon]);
+  });
+
+  // Cadre l'ensemble : tout le tracé + toutes les stations. La carte n'a ni
+  // zoom ni attribution en surimpression (désactivés) : elle remplit tout son
+  // conteneur, on peut donc marger symétriquement.
   const recadrer = () => {
     try {
       map.invalidateSize();
       // Marge horizontale plus large : réserve de la place pour l'étiquette
-      // « détour +X km » à côté du marqueur, qu'il soit à gauche ou à droite.
+      // « +X km » à côté du marqueur, qu'il soit à gauche ou à droite.
       map.fitBounds(bounds, { padding: [52, 28] });
-    } catch (e) { try { map.setView([station.lat, station.lon], 11); } catch (e2) {} }
+    } catch (e) { try { map.setView([list[0].lat, list[0].lon], 11); } catch (e2) {} }
   };
   map._itFit = recadrer; // rejoué par refreshStationMaps quand la carte redevient visible
 
@@ -3825,7 +3836,6 @@ async function calculerStationsParTroncon() {
     const badge = buildEcoBadge(t.station.prix, LITRES_PLEIN_MAX_DEFAUT);
     if (badge) contentWrap.appendChild(badge);
 
-    contentWrap.appendChild(buildStationMap(t.station.lat, t.station.lon));
     const btnRow = document.createElement('div');
     btnRow.className = 'cheapest-btn-row';
     const link = document.createElement('a');
@@ -3854,6 +3864,12 @@ async function calculerStationsParTroncon() {
     wrap.appendChild(select);
     note.appendChild(wrap);
   }
+
+  // Carte unique de l'itinéraire complet avec TOUTES les stations de tronçon
+  // (numérotées) : on voit tous les arrêts d'un coup, pas juste le sélectionné.
+  note.appendChild(buildItineraireMap(
+    lastStationSurTrajet && lastStationSurTrajet.polyline, troncons.map(t => t.station)));
+
   note.appendChild(contentWrap);
   renderContent(0);
   // Résultat prêt : la section passe en onglets (voir
@@ -4154,10 +4170,6 @@ function renderArrets(note, arrets, type, depart, arrivee) {
     const badge = buildEcoBadge(a.station.prix, a.litresPlein);
     if (badge) contentWrap.appendChild(badge);
 
-    // Carte de l'itinéraire complet avec cet arrêt marqué + son détour.
-    contentWrap.appendChild(buildItineraireMap(
-      lastStationSurTrajet && lastStationSurTrajet.polyline, a.station));
-
     const btnRow = document.createElement('div');
     btnRow.className = 'cheapest-btn-row';
     const link = document.createElement('a');
@@ -4190,6 +4202,11 @@ function renderArrets(note, arrets, type, depart, arrivee) {
     wrap.appendChild(select);
     note.appendChild(wrap);
   }
+
+  // Carte unique de l'itinéraire montrant TOUS les arrêts (numérotés) : on voit
+  // d'un coup d'œil où s'arrêter, pas seulement l'arrêt sélectionné.
+  note.appendChild(buildItineraireMap(
+    lastStationSurTrajet && lastStationSurTrajet.polyline, arrets.map(a => a.station)));
 
   note.appendChild(contentWrap);
   renderContent(0);
