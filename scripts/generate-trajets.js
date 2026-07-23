@@ -278,6 +278,15 @@ async function main() {
   await browser.close();
   server.close();
 
+  // Garde-fou : si trop de trajets ont échoué (API indisponible un matin, clé
+  // expirée…), on abandonne SANS rien écrire, pour ne pas publier une liste et
+  // un sitemap amputés. Les anciennes pages restent alors telles quelles.
+  const seuil = Math.ceil(TRAJETS.length * 0.7);
+  if (reussis.length < seuil) {
+    console.error(`\nTrop d'échecs : ${reussis.length}/${TRAJETS.length} réussis (seuil ${seuil}). Rien n'est écrit.`);
+    process.exit(1);
+  }
+
   // Passe 2 : rend les pages avec le maillage interne (liens vers les autres
   // trajets réussis uniquement). Deux passes pour n'avoir aucun lien mort.
   const urls = [];
