@@ -78,7 +78,17 @@ function verdictSansPeages(rapide, zero) {
   return { rentable: true, dE, dT, texte: `Éviter les péages fait économiser ${fmtEur(dE)}, au prix de ${fmtDuree(dT)} de trajet en plus.` };
 }
 
-function renderPage(t, r) {
+// Liens internes : autres trajets partageant une ville (départ ou arrivée)
+// avec le trajet courant. Aide Google à explorer, et garde le visiteur sur le
+// site. On ne relie qu'aux trajets RÉUSSIS (passés en paramètre), donc aucun
+// lien mort.
+function relatedLinks(t, all) {
+  return all.filter(o => o.slug !== t.slug &&
+    (o.depart === t.depart || o.arrivee === t.arrivee ||
+     o.depart === t.arrivee || o.arrivee === t.depart)).slice(0, 8);
+}
+
+function renderPage(t, r, all) {
   const title = `Trajet ${t.depart} → ${t.arrivee} : coût, péages, faut-il éviter l'autoroute ? | Futéroute`;
   const totalRapide = r.coutCarburant + (r.coutPeage || 0);
   const verdict = verdictSansPeages(r, r.zero);
@@ -107,6 +117,26 @@ function renderPage(t, r) {
     ],
   };
 
+  // Fil d'Ariane en données structurées (rich result dans Google).
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org', '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Futéroute', item: `${SITE_URL}/` },
+      { '@type': 'ListItem', position: 2, name: 'Trajets', item: `${SITE_URL}/trajets/` },
+      { '@type': 'ListItem', position: 3, name: `${t.depart} → ${t.arrivee}`, item: `${SITE_URL}/trajets/${t.slug}.html` },
+    ],
+  };
+
+  const rel = relatedLinks(t, all || []);
+  const relatedHtml = rel.length ? `
+  <div class="card">
+    <h2 class="rel-title">Autres trajets à comparer</h2>
+    <ul class="related">
+      ${rel.map(o => `<li><a href="./${o.slug}.html">${o.depart} → ${o.arrivee}</a></li>`).join('\n      ')}
+    </ul>
+    <p class="rel-all"><a href="./">Voir tous les trajets →</a></p>
+  </div>` : '';
+
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -118,8 +148,10 @@ function renderPage(t, r) {
 <meta property="og:title" content="${t.depart} → ${t.arrivee} : ${fmtEur(totalRapide)}">
 <meta property="og:type" content="article">
 <meta property="og:image" content="${SITE_URL}/logo%20trajet%20rat.png">
-<link rel="icon" type="image/png" href="../logo trajet rat.png">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="96x96" href="../favicon.png">
 <script type="application/ld+json">${JSON.stringify(faqSchema)}</script>
+<script type="application/ld+json">${JSON.stringify(breadcrumbSchema)}</script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #eef2f6; color: #1a2433; padding: 24px 16px; line-height: 1.5; }
@@ -142,6 +174,13 @@ function renderPage(t, r) {
   .faq-item { margin-bottom: 14px; }
   .faq-item h3 { font-size: 15px; margin-bottom: 4px; color: #0f1729; }
   .faq-item p { font-size: 14px; color: #455060; }
+  .rel-title { font-size: 16px; margin-bottom: 10px; color: #0f1729; }
+  .related { list-style: none; columns: 2; }
+  .related li { margin-bottom: 8px; break-inside: avoid; }
+  .related a { color: #1976d2; text-decoration: none; font-weight: 600; font-size: 14px; }
+  .related a:hover { text-decoration: underline; }
+  .rel-all { margin-top: 10px; font-size: 13px; }
+  .rel-all a { color: #607080; }
   .src-note { font-size: 11px; color: #a4b0bd; margin-top: 14px; }
   footer { text-align: center; margin-top: 20px; font-size: 12px; }
   footer a { color: #607080; }
@@ -171,7 +210,7 @@ function renderPage(t, r) {
   <div class="card">
     ${faq}
   </div>
-
+${relatedHtml}
   <footer><a href="${SITE_URL}/">← Retour à Futéroute</a></footer>
 </div>
 </body>
@@ -189,7 +228,8 @@ function renderIndex(reussis) {
 <title>Coût des trajets en voiture : carburant, péages | Futéroute</title>
 <meta name="description" content="Coût détaillé (carburant + péages) des trajets les plus recherchés en France, avec comparaison éviter/prendre les péages.">
 <link rel="canonical" href="${SITE_URL}/trajets/">
-<link rel="icon" type="image/png" href="../logo trajet rat.png">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="96x96" href="../favicon.png">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #eef2f6; color: #1a2433; padding: 24px 16px; }
@@ -222,27 +262,31 @@ async function main() {
   const server = await startServer();
   const browser = await chromium.launch();
   const outDir = path.join(ROOT, 'trajets');
-  const urls = [];
-  const reussis = [];
 
+  // Passe 1 : calcule les chiffres réels de chaque trajet (accès réseau).
+  const reussis = [];
   for (const t of TRAJETS) {
     process.stdout.write(`Calcul ${t.depart} → ${t.arrivee}… `);
     try {
       const r = await calculerTrajet(browser, t.depart, t.arrivee);
-      fs.writeFileSync(path.join(outDir, `${t.slug}.html`), renderPage(t, r));
-      urls.push(`${SITE_URL}/trajets/${t.slug}.html`);
-      reussis.push(t);
+      reussis.push({ ...t, r });
       console.log('ok');
     } catch (e) {
       console.log('ÉCHEC :', e.message);
     }
   }
-
-  fs.writeFileSync(path.join(outDir, 'index.html'), renderIndex(reussis));
-  urls.push(`${SITE_URL}/trajets/`);
-
   await browser.close();
   server.close();
+
+  // Passe 2 : rend les pages avec le maillage interne (liens vers les autres
+  // trajets réussis uniquement). Deux passes pour n'avoir aucun lien mort.
+  const urls = [];
+  for (const t of reussis) {
+    fs.writeFileSync(path.join(outDir, `${t.slug}.html`), renderPage(t, t.r, reussis));
+    urls.push(`${SITE_URL}/trajets/${t.slug}.html`);
+  }
+  fs.writeFileSync(path.join(outDir, 'index.html'), renderIndex(reussis));
+  urls.push(`${SITE_URL}/trajets/`);
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

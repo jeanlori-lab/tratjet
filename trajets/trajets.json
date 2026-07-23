@@ -1,34 +1,397 @@
 [
-  { "slug": "paris-lyon",       "depart": "Paris",     "arrivee": "Lyon" },
-  { "slug": "paris-marseille",  "depart": "Paris",     "arrivee": "Marseille" },
-  { "slug": "paris-bordeaux",   "depart": "Paris",     "arrivee": "Bordeaux" },
-  { "slug": "paris-nantes",     "depart": "Paris",     "arrivee": "Nantes" },
-  { "slug": "paris-lille",      "depart": "Paris",     "arrivee": "Lille" },
-  { "slug": "paris-strasbourg", "depart": "Paris",     "arrivee": "Strasbourg" },
-  { "slug": "paris-toulouse",   "depart": "Paris",     "arrivee": "Toulouse" },
-  { "slug": "paris-rennes",     "depart": "Paris",     "arrivee": "Rennes" },
-  { "slug": "paris-nice",       "depart": "Paris",     "arrivee": "Nice" },
-  { "slug": "paris-biarritz",   "depart": "Paris",     "arrivee": "Biarritz" },
-  { "slug": "paris-caen",       "depart": "Paris",     "arrivee": "Caen" },
-  { "slug": "paris-clermont-ferrand", "depart": "Paris", "arrivee": "Clermont-Ferrand" },
-  { "slug": "paris-grenoble",   "depart": "Paris",     "arrivee": "Grenoble" },
-  { "slug": "paris-montpellier","depart": "Paris",     "arrivee": "Montpellier" },
-  { "slug": "paris-annecy",     "depart": "Paris",     "arrivee": "Annecy" },
-  { "slug": "paris-dijon",      "depart": "Paris",     "arrivee": "Dijon" },
-  { "slug": "paris-la-rochelle","depart": "Paris",     "arrivee": "La Rochelle" },
-  { "slug": "lyon-marseille",   "depart": "Lyon",      "arrivee": "Marseille" },
-  { "slug": "lyon-bordeaux",    "depart": "Lyon",      "arrivee": "Bordeaux" },
-  { "slug": "lyon-nice",        "depart": "Lyon",      "arrivee": "Nice" },
-  { "slug": "lyon-strasbourg",  "depart": "Lyon",      "arrivee": "Strasbourg" },
-  { "slug": "lyon-toulouse",    "depart": "Lyon",      "arrivee": "Toulouse" },
-  { "slug": "lyon-geneve",      "depart": "Lyon",      "arrivee": "Genève" },
-  { "slug": "bordeaux-toulouse","depart": "Bordeaux",  "arrivee": "Toulouse" },
-  { "slug": "nantes-bordeaux",  "depart": "Nantes",    "arrivee": "Bordeaux" },
-  { "slug": "nantes-rennes",    "depart": "Nantes",    "arrivee": "Rennes" },
-  { "slug": "marseille-nice",   "depart": "Marseille", "arrivee": "Nice" },
-  { "slug": "marseille-toulouse","depart": "Marseille","arrivee": "Toulouse" },
-  { "slug": "lille-strasbourg", "depart": "Lille",     "arrivee": "Strasbourg" },
-  { "slug": "toulouse-montpellier", "depart": "Toulouse", "arrivee": "Montpellier" },
-  { "slug": "strasbourg-nancy", "depart": "Strasbourg","arrivee": "Nancy" },
-  { "slug": "bordeaux-nice",    "depart": "Bordeaux",  "arrivee": "Nice" }
+  {
+    "slug": "paris-lyon",
+    "depart": "Paris",
+    "arrivee": "Lyon"
+  },
+  {
+    "slug": "paris-marseille",
+    "depart": "Paris",
+    "arrivee": "Marseille"
+  },
+  {
+    "slug": "paris-bordeaux",
+    "depart": "Paris",
+    "arrivee": "Bordeaux"
+  },
+  {
+    "slug": "paris-nantes",
+    "depart": "Paris",
+    "arrivee": "Nantes"
+  },
+  {
+    "slug": "paris-lille",
+    "depart": "Paris",
+    "arrivee": "Lille"
+  },
+  {
+    "slug": "paris-strasbourg",
+    "depart": "Paris",
+    "arrivee": "Strasbourg"
+  },
+  {
+    "slug": "paris-toulouse",
+    "depart": "Paris",
+    "arrivee": "Toulouse"
+  },
+  {
+    "slug": "paris-rennes",
+    "depart": "Paris",
+    "arrivee": "Rennes"
+  },
+  {
+    "slug": "paris-nice",
+    "depart": "Paris",
+    "arrivee": "Nice"
+  },
+  {
+    "slug": "paris-biarritz",
+    "depart": "Paris",
+    "arrivee": "Biarritz"
+  },
+  {
+    "slug": "paris-caen",
+    "depart": "Paris",
+    "arrivee": "Caen"
+  },
+  {
+    "slug": "paris-clermont-ferrand",
+    "depart": "Paris",
+    "arrivee": "Clermont-Ferrand"
+  },
+  {
+    "slug": "paris-grenoble",
+    "depart": "Paris",
+    "arrivee": "Grenoble"
+  },
+  {
+    "slug": "paris-montpellier",
+    "depart": "Paris",
+    "arrivee": "Montpellier"
+  },
+  {
+    "slug": "paris-annecy",
+    "depart": "Paris",
+    "arrivee": "Annecy"
+  },
+  {
+    "slug": "paris-dijon",
+    "depart": "Paris",
+    "arrivee": "Dijon"
+  },
+  {
+    "slug": "paris-la-rochelle",
+    "depart": "Paris",
+    "arrivee": "La Rochelle"
+  },
+  {
+    "slug": "lyon-marseille",
+    "depart": "Lyon",
+    "arrivee": "Marseille"
+  },
+  {
+    "slug": "lyon-bordeaux",
+    "depart": "Lyon",
+    "arrivee": "Bordeaux"
+  },
+  {
+    "slug": "lyon-nice",
+    "depart": "Lyon",
+    "arrivee": "Nice"
+  },
+  {
+    "slug": "lyon-strasbourg",
+    "depart": "Lyon",
+    "arrivee": "Strasbourg"
+  },
+  {
+    "slug": "lyon-toulouse",
+    "depart": "Lyon",
+    "arrivee": "Toulouse"
+  },
+  {
+    "slug": "lyon-geneve",
+    "depart": "Lyon",
+    "arrivee": "Genève"
+  },
+  {
+    "slug": "bordeaux-toulouse",
+    "depart": "Bordeaux",
+    "arrivee": "Toulouse"
+  },
+  {
+    "slug": "nantes-bordeaux",
+    "depart": "Nantes",
+    "arrivee": "Bordeaux"
+  },
+  {
+    "slug": "nantes-rennes",
+    "depart": "Nantes",
+    "arrivee": "Rennes"
+  },
+  {
+    "slug": "marseille-nice",
+    "depart": "Marseille",
+    "arrivee": "Nice"
+  },
+  {
+    "slug": "marseille-toulouse",
+    "depart": "Marseille",
+    "arrivee": "Toulouse"
+  },
+  {
+    "slug": "lille-strasbourg",
+    "depart": "Lille",
+    "arrivee": "Strasbourg"
+  },
+  {
+    "slug": "toulouse-montpellier",
+    "depart": "Toulouse",
+    "arrivee": "Montpellier"
+  },
+  {
+    "slug": "strasbourg-nancy",
+    "depart": "Strasbourg",
+    "arrivee": "Nancy"
+  },
+  {
+    "slug": "bordeaux-nice",
+    "depart": "Bordeaux",
+    "arrivee": "Nice"
+  },
+  {
+    "slug": "paris-rouen",
+    "depart": "Paris",
+    "arrivee": "Rouen"
+  },
+  {
+    "slug": "paris-reims",
+    "depart": "Paris",
+    "arrivee": "Reims"
+  },
+  {
+    "slug": "paris-orleans",
+    "depart": "Paris",
+    "arrivee": "Orléans"
+  },
+  {
+    "slug": "paris-tours",
+    "depart": "Paris",
+    "arrivee": "Tours"
+  },
+  {
+    "slug": "paris-le-mans",
+    "depart": "Paris",
+    "arrivee": "Le Mans"
+  },
+  {
+    "slug": "paris-metz",
+    "depart": "Paris",
+    "arrivee": "Metz"
+  },
+  {
+    "slug": "paris-nancy",
+    "depart": "Paris",
+    "arrivee": "Nancy"
+  },
+  {
+    "slug": "paris-mulhouse",
+    "depart": "Paris",
+    "arrivee": "Mulhouse"
+  },
+  {
+    "slug": "paris-avignon",
+    "depart": "Paris",
+    "arrivee": "Avignon"
+  },
+  {
+    "slug": "paris-toulon",
+    "depart": "Paris",
+    "arrivee": "Toulon"
+  },
+  {
+    "slug": "paris-pau",
+    "depart": "Paris",
+    "arrivee": "Pau"
+  },
+  {
+    "slug": "paris-brest",
+    "depart": "Paris",
+    "arrivee": "Brest"
+  },
+  {
+    "slug": "paris-angers",
+    "depart": "Paris",
+    "arrivee": "Angers"
+  },
+  {
+    "slug": "paris-limoges",
+    "depart": "Paris",
+    "arrivee": "Limoges"
+  },
+  {
+    "slug": "paris-poitiers",
+    "depart": "Paris",
+    "arrivee": "Poitiers"
+  },
+  {
+    "slug": "paris-besancon",
+    "depart": "Paris",
+    "arrivee": "Besançon"
+  },
+  {
+    "slug": "paris-chambery",
+    "depart": "Paris",
+    "arrivee": "Chambéry"
+  },
+  {
+    "slug": "paris-perpignan",
+    "depart": "Paris",
+    "arrivee": "Perpignan"
+  },
+  {
+    "slug": "paris-amiens",
+    "depart": "Paris",
+    "arrivee": "Amiens"
+  },
+  {
+    "slug": "paris-le-havre",
+    "depart": "Paris",
+    "arrivee": "Le Havre"
+  },
+  {
+    "slug": "lyon-grenoble",
+    "depart": "Lyon",
+    "arrivee": "Grenoble"
+  },
+  {
+    "slug": "lyon-montpellier",
+    "depart": "Lyon",
+    "arrivee": "Montpellier"
+  },
+  {
+    "slug": "lyon-dijon",
+    "depart": "Lyon",
+    "arrivee": "Dijon"
+  },
+  {
+    "slug": "lyon-clermont-ferrand",
+    "depart": "Lyon",
+    "arrivee": "Clermont-Ferrand"
+  },
+  {
+    "slug": "lyon-annecy",
+    "depart": "Lyon",
+    "arrivee": "Annecy"
+  },
+  {
+    "slug": "lyon-chambery",
+    "depart": "Lyon",
+    "arrivee": "Chambéry"
+  },
+  {
+    "slug": "lyon-valence",
+    "depart": "Lyon",
+    "arrivee": "Valence"
+  },
+  {
+    "slug": "lyon-saint-etienne",
+    "depart": "Lyon",
+    "arrivee": "Saint-Étienne"
+  },
+  {
+    "slug": "marseille-montpellier",
+    "depart": "Marseille",
+    "arrivee": "Montpellier"
+  },
+  {
+    "slug": "marseille-avignon",
+    "depart": "Marseille",
+    "arrivee": "Avignon"
+  },
+  {
+    "slug": "marseille-aix-en-provence",
+    "depart": "Marseille",
+    "arrivee": "Aix-en-Provence"
+  },
+  {
+    "slug": "marseille-toulon",
+    "depart": "Marseille",
+    "arrivee": "Toulon"
+  },
+  {
+    "slug": "bordeaux-bayonne",
+    "depart": "Bordeaux",
+    "arrivee": "Bayonne"
+  },
+  {
+    "slug": "bordeaux-biarritz",
+    "depart": "Bordeaux",
+    "arrivee": "Biarritz"
+  },
+  {
+    "slug": "bordeaux-la-rochelle",
+    "depart": "Bordeaux",
+    "arrivee": "La Rochelle"
+  },
+  {
+    "slug": "bordeaux-limoges",
+    "depart": "Bordeaux",
+    "arrivee": "Limoges"
+  },
+  {
+    "slug": "toulouse-perpignan",
+    "depart": "Toulouse",
+    "arrivee": "Perpignan"
+  },
+  {
+    "slug": "toulouse-pau",
+    "depart": "Toulouse",
+    "arrivee": "Pau"
+  },
+  {
+    "slug": "nantes-angers",
+    "depart": "Nantes",
+    "arrivee": "Angers"
+  },
+  {
+    "slug": "nantes-la-rochelle",
+    "depart": "Nantes",
+    "arrivee": "La Rochelle"
+  },
+  {
+    "slug": "strasbourg-metz",
+    "depart": "Strasbourg",
+    "arrivee": "Metz"
+  },
+  {
+    "slug": "strasbourg-mulhouse",
+    "depart": "Strasbourg",
+    "arrivee": "Mulhouse"
+  },
+  {
+    "slug": "rennes-brest",
+    "depart": "Rennes",
+    "arrivee": "Brest"
+  },
+  {
+    "slug": "rennes-caen",
+    "depart": "Rennes",
+    "arrivee": "Caen"
+  },
+  {
+    "slug": "montpellier-nimes",
+    "depart": "Montpellier",
+    "arrivee": "Nîmes"
+  },
+  {
+    "slug": "montpellier-perpignan",
+    "depart": "Montpellier",
+    "arrivee": "Perpignan"
+  },
+  {
+    "slug": "nice-cannes",
+    "depart": "Nice",
+    "arrivee": "Cannes"
+  }
 ]
