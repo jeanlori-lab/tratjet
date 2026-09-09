@@ -1,0 +1,57 @@
+name: Limit equal-price stations to five
+
+on:
+  push:
+    branches:
+      - feature/filter-cheapest-ties-distance
+    paths:
+      - .github/workflows/limit-cheapest-ties-five.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Keep only five closest equal-price stations
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          old1 = """function renderStationsPrixEgaux(note, stations, type, depart, arrivee, litresPlein, customNote) {\n  const info = document.createElement('div');\n  info.className = 'cheapest-fuel-note';\n  info.style.marginBottom = '10px';\n  info.innerHTML = `<strong>${stations.length} stations</strong> sont au même prix minimum : <strong>${stations[0].prix.toFixed(3)} €/L</strong>. Choisissez celle qui vous arrange le mieux.`;\n  note.appendChild(info);\n"""
+          new1 = """function renderStationsPrixEgaux(note, stations, totalStations, type, depart, arrivee, litresPlein, customNote) {\n  const info = document.createElement('div');\n  info.className = 'cheapest-fuel-note';\n  info.style.marginBottom = '10px';\n  const intro = totalStations > 5\n    ? `Voici les 5 qui vous font faire le moins de détour. PARCE QUE C'EST NOTRE TRAJET.`\n    : `Voici les ${stations.length} qui vous font faire le moins de détour. PARCE QUE C'EST NOTRE TRAJET.`;\n  info.innerHTML = `<strong>${totalStations} stations</strong> sont au même prix minimum : <strong>${stations[0].prix.toFixed(3)} €/L</strong>. ${intro}`;\n  note.appendChild(info);\n"""
+          if s.count(old1) != 1:
+              raise SystemExit(f'render anchor count={s.count(old1)}')
+          s = s.replace(old1, new1, 1)
+
+          old2 = """  const stations = Array.isArray(lastStationsMinTrajet) ? lastStationsMinTrajet.slice() : [];\n  if (stations.length < 2) return;\n"""
+          new2 = """  const stationsExAequo = Array.isArray(lastStationsMinTrajet) ? lastStationsMinTrajet.slice() : [];\n  if (stationsExAequo.length < 2) return;\n\n  // L'utilisateur n'a besoin que des options qui minimisent réellement le détour.\n  // Le total reste affiché dans le texte, mais la carte, la liste et le sélecteur\n  // sont limités aux 5 stations ex aequo les plus proches du tracé.\n  const totalStations = stationsExAequo.length;\n  const stations = stationsExAequo\n    .sort((a, b) => a.distRoute - b.distRoute || a.kmSurTrajet - b.kmSurTrajet)\n    .slice(0, 5);\n"""
+          if s.count(old2) != 1:
+              raise SystemExit(f'stations anchor count={s.count(old2)}')
+          s = s.replace(old2, new2, 1)
+
+          old3 = """  renderStationsPrixEgaux(note, stations, ctx.type, ctx.depart, ctx.arrivee, litresPlein, customNote);\n"""
+          new3 = """  renderStationsPrixEgaux(note, stations, totalStations, ctx.type, ctx.depart, ctx.arrivee, litresPlein, customNote);\n"""
+          if s.count(old3) != 1:
+              raise SystemExit(f'call anchor count={s.count(old3)}')
+          s = s.replace(old3, new3, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Validate patch
+        run: |
+          grep -q "slice(0, 5)" index.html
+          grep -q "PARCE QUE C'EST NOTRE TRAJET" index.html
+          grep -q "renderStationsPrixEgaux(note, stations, totalStations" index.html
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Limite les stations ex aequo aux 5 plus proches du trajet"
+          git push
