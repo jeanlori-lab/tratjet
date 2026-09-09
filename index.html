@@ -5240,6 +5240,40 @@ async function geocode(lieu) {
   return [f.lng, f.lat];
 }
 
+
+// Pour les péages seulement, ramène une adresse/POI précis au centre
+// de sa commune. Le vrai trajet reste calculé depuis l'adresse exacte.
+function normaliserTexteVille(s) {
+  return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+async function pointVillePourPeage(lieu, coordExacte) {
+  if (!lieu || parseGPS(lieu)) return { lieu, coord: coordExacte, change: false };
+  try {
+    const results = await searchPlaces(lieu, 5);
+    if (!results.length) return { lieu, coord: coordExacte, change: false };
+    const cle = lieu.trim().toLowerCase();
+    const exact = results.find(r => (r.label || '').trim().toLowerCase() === cle);
+    const source = exact || results[0];
+    const ville = (source.city || '').trim();
+    if (!ville || normaliserTexteVille(ville) === normaliserTexteVille(lieu)) {
+      return { lieu, coord: coordExacte, change: false };
+    }
+    const villes = await searchPlaces(ville, 5);
+    if (!villes.length) return { lieu, coord: coordExacte, change: false };
+    const villeNorm = normaliserTexteVille(ville);
+    const centre = villes.find(r => normaliserTexteVille(r.label) === villeNorm)
+      || villes.find(r => normaliserTexteVille(r.city) === villeNorm)
+      || villes[0];
+    if (!centre || !isFinite(centre.lng) || !isFinite(centre.lat)) {
+      return { lieu, coord: coordExacte, change: false };
+    }
+    return { lieu: ville, coord: [centre.lng, centre.lat], change: true };
+  } catch (e) {
+    return { lieu, coord: coordExacte, change: false };
+  }
+}
+
 // Itinéraires de tronçons mis en cache pour la durée du calcul : sur un trajet
 // à étapes, l'analyse des péages ET la recherche de stations parcourent les
 // mêmes tronçons. Sans cache, chacune refait ses propres appels et on épuise
@@ -6195,7 +6229,35 @@ async function calculer() {
     const aucunPeageAttendu = !!routeZero && memeTrace(routeZero, routeRapide);
 
     // Péages du rapide (best-effort, Vinci puis ViaMichelin).
-    const peage = aucunPeageAttendu ? { cost: 0, details: null } : await getTolls(routeRapide, c1, c2, depart, arrivee);
+    // Pour un trajet direct, une adresse précise est ramenée à sa ville
+    // UNIQUEMENT pour le tracé transmis au moteur de péage. Distance, durée,
+    // carburant, navigation et stations restent basés sur l'adresse exacte.
+    let routePourPeage = routeRapide;
+    let c1Peage = c1, c2Peage = c2;
+    let departPeage = depart, arriveePeage = arrivee;
+    if (!aucunPeageAttendu && lieux.length === 2) {
+      try {
+        const [pDepart, pArrivee] = await Promise.all([
+          pointVillePourPeage(depart, c1),
+          pointVillePourPeage(arrivee, c2),
+        ]);
+        if (pDepart.change || pArrivee.change) {
+          const coordsPeage = [pDepart.coord, pArrivee.coord];
+          routePourPeage = await getRoute(coordsPeage, apiKey, false);
+          c1Peage = pDepart.coord;
+          c2Peage = pArrivee.coord;
+          departPeage = pDepart.lieu;
+          arriveePeage = pArrivee.lieu;
+        }
+      } catch (e) {
+        routePourPeage = routeRapide;
+        c1Peage = c1; c2Peage = c2;
+        departPeage = depart; arriveePeage = arrivee;
+      }
+    }
+    const peage = aucunPeageAttendu
+      ? { cost: 0, details: null }
+      : await getTolls(routePourPeage, c1Peage, c2Peage, departPeage, arriveePeage);
 
     const rapide = mkOption(routeRapide);
     rapide.coutPeage = peage && typeof peage.cost === 'number' ? peage.cost : null;
