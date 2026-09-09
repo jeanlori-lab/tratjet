@@ -4403,7 +4403,33 @@ async function fetchStationSurTrajet(polyline5, type, fenetreKm) {
         if (!deja) bests.push(candidate);
       }
     }
-    lastStationsMinTrajet = bests.sort((a, b) => a.kmSurTrajet - b.kmSurTrajet);
+    const exAequo = bests.sort((a, b) => a.kmSurTrajet - b.kmSurTrajet);
+
+    // Quand plusieurs stations partagent exactement le prix minimum, on
+    // privilégie celles qui collent réellement au trajet : d'abord à 500 m
+    // maximum de la route, puis à 1 km maximum s'il n'y en a aucune à 500 m.
+    // Au-delà de 1 km, on n'affiche plus une liste d'ex aequo : on garde
+    // seulement la plus proche de la route pour éviter de proposer plusieurs
+    // détours lointains au même prix.
+    if (exAequo.length >= 2) {
+      const a500m = exAequo.filter(st => st.distRoute <= 0.5);
+      if (a500m.length) {
+        lastStationsMinTrajet = a500m;
+        return a500m[0];
+      }
+
+      const a1km = exAequo.filter(st => st.distRoute <= 1);
+      if (a1km.length) {
+        lastStationsMinTrajet = a1km;
+        return a1km[0];
+      }
+
+      const plusProche = exAequo.reduce((a, b) => a.distRoute <= b.distRoute ? a : b);
+      lastStationsMinTrajet = [plusProche];
+      return plusProche;
+    }
+
+    lastStationsMinTrajet = exAequo;
     return best;
   } catch (e) { lastStationsMinTrajet = []; return null; }
 }
