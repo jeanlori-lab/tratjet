@@ -4403,7 +4403,33 @@ async function fetchStationSurTrajet(polyline5, type, fenetreKm) {
         if (!deja) bests.push(candidate);
       }
     }
-    lastStationsMinTrajet = bests.sort((a, b) => a.kmSurTrajet - b.kmSurTrajet);
+    const exAequo = bests.sort((a, b) => a.kmSurTrajet - b.kmSurTrajet);
+
+    // Quand plusieurs stations partagent exactement le prix minimum, on
+    // privilégie celles qui collent réellement au trajet : d'abord à 500 m
+    // maximum de la route, puis à 1 km maximum s'il n'y en a aucune à 500 m.
+    // Au-delà de 1 km, on n'affiche plus une liste d'ex aequo : on garde
+    // seulement la plus proche de la route pour éviter de proposer plusieurs
+    // détours lointains au même prix.
+    if (exAequo.length >= 2) {
+      const a500m = exAequo.filter(st => st.distRoute <= 0.5);
+      if (a500m.length) {
+        lastStationsMinTrajet = a500m;
+        return a500m[0];
+      }
+
+      const a1km = exAequo.filter(st => st.distRoute <= 1);
+      if (a1km.length) {
+        lastStationsMinTrajet = a1km;
+        return a1km[0];
+      }
+
+      const plusProche = exAequo.reduce((a, b) => a.distRoute <= b.distRoute ? a : b);
+      lastStationsMinTrajet = [plusProche];
+      return plusProche;
+    }
+
+    lastStationsMinTrajet = exAequo;
     return best;
   } catch (e) { lastStationsMinTrajet = []; return null; }
 }
@@ -6273,11 +6299,14 @@ document.addEventListener('keydown', e => { if (e.key === 'Enter') calculer(); }
 
 
 // --- TEST UX : stations ex aequo + sélection carburant après recherche ---
-function renderStationsPrixEgaux(note, stations, type, depart, arrivee, litresPlein, customNote) {
+function renderStationsPrixEgaux(note, stations, totalStations, type, depart, arrivee, litresPlein, customNote) {
   const info = document.createElement('div');
   info.className = 'cheapest-fuel-note';
   info.style.marginBottom = '10px';
-  info.innerHTML = `<strong>${stations.length} stations</strong> sont au même prix minimum : <strong>${stations[0].prix.toFixed(3)} €/L</strong>. Choisissez celle qui vous arrange le mieux.`;
+  const intro = totalStations > 5
+    ? `Voici les 5 qui vous font faire le moins de détour. PARCE QUE C'EST NOTRE TRAJET.`
+    : `Voici les ${stations.length} qui vous font faire le moins de détour. PARCE QUE C'EST NOTRE TRAJET.`;
+  info.innerHTML = `<strong>${totalStations} stations</strong> sont au même prix minimum : <strong>${stations[0].prix.toFixed(3)} €/L</strong>. ${intro}`;
   note.appendChild(info);
 
   const contentWrap = document.createElement('div');
@@ -6345,8 +6374,16 @@ rechercherStationSurTrajet = async function() {
   if (!ctx || ctx.type === 'electrique') return;
   if (Array.isArray(ctx.lieux) && ctx.lieux.length >= 3) return;
 
-  const stations = Array.isArray(lastStationsMinTrajet) ? lastStationsMinTrajet.slice() : [];
-  if (stations.length < 2) return;
+  const stationsExAequo = Array.isArray(lastStationsMinTrajet) ? lastStationsMinTrajet.slice() : [];
+  if (stationsExAequo.length < 2) return;
+
+  // L'utilisateur n'a besoin que des options qui minimisent réellement le détour.
+  // Le total reste affiché dans le texte, mais la carte, la liste et le sélecteur
+  // sont limités aux 5 stations ex aequo les plus proches du tracé.
+  const totalStations = stationsExAequo.length;
+  const stations = stationsExAequo
+    .sort((a, b) => a.distRoute - b.distRoute || a.kmSurTrajet - b.kmSurTrajet)
+    .slice(0, 5);
 
   let litresPlein = LITRES_PLEIN_MAX_DEFAUT;
   let customNote = '';
@@ -6379,7 +6416,7 @@ rechercherStationSurTrajet = async function() {
   header.appendChild(title);
   note.appendChild(header);
 
-  renderStationsPrixEgaux(note, stations, ctx.type, ctx.depart, ctx.arrivee, litresPlein, customNote);
+  renderStationsPrixEgaux(note, stations, totalStations, ctx.type, ctx.depart, ctx.arrivee, litresPlein, customNote);
   applyStationTabVisibility();
 };
 
