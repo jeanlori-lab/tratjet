@@ -1,0 +1,140 @@
+name: Patch tolls city-level endpoints
+
+on:
+  push:
+    branches:
+      - fix/tolls-city-level-endpoints
+    paths:
+      - .github/workflows/patch-tolls-city-level.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use city-level endpoints for toll estimation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          old_geocode = r'''async function geocode(lieu) {
+  const gps = parseGPS(lieu);
+  if (gps) return gps;
+  const results = await searchPlaces(lieu, 5);
+  if (!results.length) throw new Error('Adresse introuvable en Europe : "' + lieu + '"');
+  // Un libellé choisi dans les suggestions (POI, adresse…) doit être géocodé
+  // sur LUI-MÊME : la correspondance exacte prime sur le premier résultat,
+  // qui peut être une adresse approximative d'une autre source.
+  const cle = lieu.trim().toLowerCase();
+  const exact = results.find(r => (r.label || '').trim().toLowerCase() === cle);
+  const f = exact || results[0];
+  return [f.lng, f.lat];
+}
+'''
+          new_geocode = old_geocode + r'''
+// Le calcul des péages est volontairement moins précis que l'itinéraire :
+// certains moteurs de péage (dont Vinci/Ulys) peuvent changer de barrière
+// détectée selon la rue exacte choisie dans une grande ville, alors que le
+// tarif autoroutier pertinent est celui du trajet entre les villes. On garde
+// donc l'adresse exacte pour distance/durée/carburant/navigation, mais on
+// peut ramener uniquement les extrémités du calcul de péage au centre de leur
+// commune. En cas d'échec de résolution de la ville, on conserve le point exact.
+function normaliserTexteVille(s) {
+  return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+async function pointVillePourPeage(lieu, coordExacte) {
+  if (!lieu || parseGPS(lieu)) return { lieu, coord: coordExacte, change: false };
+  try {
+    const results = await searchPlaces(lieu, 5);
+    if (!results.length) return { lieu, coord: coordExacte, change: false };
+    const cle = lieu.trim().toLowerCase();
+    const exact = results.find(r => (r.label || '').trim().toLowerCase() === cle);
+    const source = exact || results[0];
+    const ville = (source.city || '').trim();
+    if (!ville || normaliserTexteVille(ville) === normaliserTexteVille(lieu)) {
+      return { lieu, coord: coordExacte, change: false };
+    }
+
+    const villes = await searchPlaces(ville, 5);
+    if (!villes.length) return { lieu, coord: coordExacte, change: false };
+    const villeNorm = normaliserTexteVille(ville);
+    const centre = villes.find(r => normaliserTexteVille(r.label) === villeNorm)
+      || villes.find(r => normaliserTexteVille(r.city) === villeNorm)
+      || villes[0];
+    if (!centre || !isFinite(centre.lng) || !isFinite(centre.lat)) {
+      return { lieu, coord: coordExacte, change: false };
+    }
+    return { lieu: ville, coord: [centre.lng, centre.lat], change: true };
+  } catch (e) {
+    return { lieu, coord: coordExacte, change: false };
+  }
+}
+'''
+          if s.count(old_geocode) != 1:
+              raise SystemExit(f'geocode anchor count={s.count(old_geocode)}')
+          s = s.replace(old_geocode, new_geocode, 1)
+
+          old_toll = r'''    // Péages du rapide (best-effort, Vinci puis ViaMichelin).
+    const peage = aucunPeageAttendu ? { cost: 0, details: null } : await getTolls(routeRapide, c1, c2, depart, arrivee);
+'''
+          new_toll = r'''    // Péages du rapide (best-effort, Vinci puis ViaMichelin).
+    // Pour un trajet direct, si une extrémité est une adresse/POI précis,
+    // on recalcule UNIQUEMENT le tracé envoyé au moteur de péage depuis le
+    // centre de la ville correspondante. Le trajet affiché à l'utilisateur
+    // reste celui de son adresse exacte (distance, durée, carburant, Maps,
+    // stations, etc.). Cela évite notamment qu'une rue de Paris fasse choisir
+    // à Vinci une combinaison de barrières différente de « Paris ».
+    let routePourPeage = routeRapide;
+    let c1Peage = c1, c2Peage = c2;
+    let departPeage = depart, arriveePeage = arrivee;
+    if (!aucunPeageAttendu && lieux.length === 2) {
+      try {
+        const [pDepart, pArrivee] = await Promise.all([
+          pointVillePourPeage(depart, c1),
+          pointVillePourPeage(arrivee, c2),
+        ]);
+        if (pDepart.change || pArrivee.change) {
+          const coordsPeage = [pDepart.coord, pArrivee.coord];
+          routePourPeage = await getRoute(coordsPeage, apiKey, false);
+          c1Peage = pDepart.coord;
+          c2Peage = pArrivee.coord;
+          departPeage = pDepart.lieu;
+          arriveePeage = pArrivee.lieu;
+        }
+      } catch (e) {
+        // Le calcul principal ne doit jamais échouer à cause de cette
+        // normalisation : repli silencieux sur le tracé exact actuel.
+        routePourPeage = routeRapide;
+        c1Peage = c1; c2Peage = c2;
+        departPeage = depart; arriveePeage = arrivee;
+      }
+    }
+    const peage = aucunPeageAttendu
+      ? { cost: 0, details: null }
+      : await getTolls(routePourPeage, c1Peage, c2Peage, departPeage, arriveePeage);
+'''
+          if s.count(old_toll) != 1:
+              raise SystemExit(f'toll anchor count={s.count(old_toll)}')
+          s = s.replace(old_toll, new_toll, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Validate patch
+        run: |
+          grep -q "async function pointVillePourPeage" index.html
+          grep -q "let routePourPeage = routeRapide" index.html
+          grep -q "getTolls(routePourPeage, c1Peage, c2Peage" index.html
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Calcule les péages au niveau ville pour les adresses précises"
+          git push
