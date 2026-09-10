@@ -1,0 +1,116 @@
+name: One-shot toll names and station route order
+
+on:
+  push:
+    branches:
+      - feature/toll-names-station-route-order
+    paths:
+      - .github/workflows/oneshot-toll-names-route-order.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/toll-names-station-route-order
+      - name: Patch index.html
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          marker = """// Via l'API interne (non documentée) de Vinci-autoroutes : reproduit
+// la chaîne \"tracé -> gares de péage traversées -> tarif\" observée sur leur
+"""
+          helper = r'''// Extrait un nom lisible de gare de péage depuis la réponse Vinci/Ulys.
+// L'API est interne et ses noms de champs peuvent évoluer : on teste d'abord
+// les variantes connues, puis les champs dont le nom ressemble à un libellé.
+function libelleGarePeageVinci(leg, code) {
+  const placemark = (leg && leg.Placemark) || {};
+  const tags = placemark.Tags || {};
+  const candidats = [
+    placemark.Name, placemark.name, placemark.Label, placemark.label,
+    tags.NOM_PEAGE, tags.NOM_GARE, tags.NOM_STATION,
+    tags.LIBELLE_PEAGE, tags.LIBELLE_GARE, tags.LIBELLE,
+    tags.NAME, tags.NOM, tags.LABEL, tags.GARE
+  ];
+  let valeur = candidats.find(v => typeof v === 'string' && v.trim().length > 1 && v.trim() !== code);
+  if (!valeur) {
+    for (const [cle, v] of Object.entries(tags)) {
+      if (typeof v !== 'string' || v.trim().length <= 1 || v.trim() === code) continue;
+      if (/(nom|name|libell|label|gare|peage|péage)/i.test(cle)) { valeur = v; break; }
+    }
+  }
+  if (!valeur) return `Péage ${code}`;
+  return valeur.trim().replace(/_/g, ' ').replace(/\s+/g, ' ');
+}
+
+'''
+          if marker not in s:
+              raise SystemExit('Marker getTollsVinci not found')
+          s = s.replace(marker, helper + marker, 1)
+
+          old_gate = "return { code, abscissa: isNaN(abscissa) ? null : abscissa };"
+          new_gate = "return { code, abscissa: isNaN(abscissa) ? null : abscissa, label: libelleGarePeageVinci(l, code) };"
+          if s.count(old_gate) != 1:
+              raise SystemExit(f'Expected one gate return, found {s.count(old_gate)}')
+          s = s.replace(old_gate, new_gate, 1)
+
+          old_details = """    const cost = tarifs.reduce((somme, t) => somme + t.price, 0);
+    // Libellé \"Tronçon N\" (les noms de gares seront branchés quand on aura
+    // la forme exacte des réponses de l'API).
+    const details = tarifs.map((t, i) => ({ label: 'Tronçon ' + (i + 1), price: t.price }));
+    return { cost, details, source: 'vinci' };
+"""
+          new_details = """    const cost = tarifs.reduce((somme, t) => somme + t.price, 0);
+    // Associe chaque tarif aux gares réellement rencontrées. Quand Vinci
+    // renvoie N tarifs pour N+1 gares, on affiche entrée → sortie. Dans les
+    // autres formes de réponse, on utilise la gare correspondante ; le code
+    // interne n'est affiché qu'en dernier repli.
+    const details = tarifs.map((t, i) => {
+      let label;
+      if (gates.length === tarifs.length + 1 && gates[i] && gates[i + 1]) {
+        label = `${gates[i].label} → ${gates[i + 1].label}`;
+      } else if (gates[i]) {
+        label = gates[i].label;
+      } else {
+        label = 'Tronçon ' + (i + 1);
+      }
+      return { label, price: t.price };
+    });
+    return { cost, details, source: 'vinci' };
+"""
+          if s.count(old_details) != 1:
+              raise SystemExit(f'Expected one details block, found {s.count(old_details)}')
+          s = s.replace(old_details, new_details, 1)
+
+          old_stations = """  const stations = stationsExAequo
+    .sort((a, b) => a.distRoute - b.distRoute || a.kmSurTrajet - b.kmSurTrajet)
+    .slice(0, 5);
+"""
+          new_stations = """  const stations = stationsExAequo
+    // On sélectionne toujours les 5 stations qui demandent le moins de détour…
+    .sort((a, b) => a.distRoute - b.distRoute || a.kmSurTrajet - b.kmSurTrajet)
+    .slice(0, 5)
+    // …mais on les présente dans l'ordre où le conducteur les rencontre.
+    .sort((a, b) => a.kmSurTrajet - b.kmSurTrajet);
+"""
+          if s.count(old_stations) != 1:
+              raise SystemExit(f'Expected one station sorting block, found {s.count(old_stations)}')
+          s = s.replace(old_stations, new_stations, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Nomme les péages et ordonne les stations sur le trajet"
+          git push
