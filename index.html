@@ -6366,7 +6366,7 @@ function renderStationsPrixEgaux(note, stations, totalStations, type, depart, ar
   info.className = 'cheapest-fuel-note';
   info.style.marginBottom = '10px';
   const intro = totalStations > 5
-    ? `Voici les 5 qui vous font faire le moins de détour. PARCE QUE C'EST NOTRE TRAJET.`
+    ? `Voici les 5 qui sont les plus proches de votre trajet. PARCE QUE C'EST NOTRE TRAJET.`
     : `Voici les ${stations.length} qui vous font faire le moins de détour. PARCE QUE C'EST NOTRE TRAJET.`;
   info.innerHTML = `<strong>${totalStations} stations</strong> sont au même prix minimum : <strong>${stations[0].prix.toFixed(3)} €/L</strong>. ${intro}`;
   note.appendChild(info);
