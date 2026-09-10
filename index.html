@@ -5506,8 +5506,9 @@ async function getTollsVinci(route) {
     if (!tarifs.length) return null;
 
     const cost = tarifs.reduce((somme, t) => somme + t.price, 0);
-    // Libellé "Tronçon N" (les noms de gares seront branchés quand on aura
-    // la forme exacte des réponses de l'API).
+    // L'API tarifaire ne fournit pas ici de libellé public fiable pour chaque
+    // section : on garde un numéro de tronçon plutôt que d'afficher les codes
+    // internes des gares comme s'il s'agissait de noms.
     const details = tarifs.map((t, i) => ({ label: 'Tronçon ' + (i + 1), price: t.price }));
     return { cost, details, source: 'vinci' };
   } catch (e) {
@@ -6444,8 +6445,11 @@ rechercherStationSurTrajet = async function() {
   // sont limités aux 5 stations ex aequo les plus proches du tracé.
   const totalStations = stationsExAequo.length;
   const stations = stationsExAequo
+    // On sélectionne toujours les 5 stations qui demandent le moins de détour…
     .sort((a, b) => a.distRoute - b.distRoute || a.kmSurTrajet - b.kmSurTrajet)
-    .slice(0, 5);
+    .slice(0, 5)
+    // …mais on les présente dans l'ordre où le conducteur les rencontre.
+    .sort((a, b) => a.kmSurTrajet - b.kmSurTrajet);
 
   let litresPlein = LITRES_PLEIN_MAX_DEFAUT;
   let customNote = '';
