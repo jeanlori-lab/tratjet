@@ -6,6 +6,7 @@ on:
       - feature/toll-names-station-route-order
     paths:
       - .github/workflows/oneshot-revert-toll-labels-keep-station-order.yml
+      - .github/revert_toll_labels.py
 
 permissions:
   contents: write
@@ -18,69 +19,7 @@ jobs:
         with:
           ref: feature/toll-names-station-route-order
       - name: Revert toll labels only
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p = Path('index.html')
-          s = p.read_text(encoding='utf-8')
-
-          start = s.find("// Extrait un nom lisible de gare de péage depuis la réponse Vinci/Ulys.")
-          end_marker = "// Via l'API interne (non documentée) de Vinci-autoroutes : reproduit"
-          if start == -1:
-              raise SystemExit('helper start not found')
-          end = s.find(end_marker, start)
-          if end == -1:
-              raise SystemExit('helper end marker not found')
-          s = s[:start] + s[end:]
-
-          old_gate = "return { code, abscissa: isNaN(abscissa) ? null : abscissa, label: libelleGarePeageVinci(l, code) };"
-          new_gate = "return { code, abscissa: isNaN(abscissa) ? null : abscissa };"
-          if s.count(old_gate) != 1:
-              raise SystemExit(f'Expected one labelled gate return, found {s.count(old_gate)}')
-          s = s.replace(old_gate, new_gate, 1)
-
-          old_details = """    const cost = tarifs.reduce((somme, t) => somme + t.price, 0);
-    // Associe chaque tarif aux gares réellement rencontrées. Quand Vinci
-    // renvoie N tarifs pour N+1 gares, on affiche entrée → sortie. Dans les
-    // autres formes de réponse, on utilise la gare correspondante ; le code
-    // interne n'est affiché qu'en dernier repli.
-    const details = tarifs.map((t, i) => {
-      let label;
-      if (gates.length === tarifs.length + 1 && gates[i] && gates[i + 1]) {
-        label = `${gates[i].label} → ${gates[i + 1].label}`;
-      } else if (gates[i]) {
-        label = gates[i].label;
-      } else {
-        label = 'Tronçon ' + (i + 1);
-      }
-      return { label, price: t.price };
-    });
-    return { cost, details, source: 'vinci' };
-"""
-          new_details = """    const cost = tarifs.reduce((somme, t) => somme + t.price, 0);
-    // L'API tarifaire ne fournit pas ici de libellé public fiable pour chaque
-    // section : on garde un numéro de tronçon plutôt que d'afficher les codes
-    // internes des gares comme s'il s'agissait de noms.
-    const details = tarifs.map((t, i) => ({ label: 'Tronçon ' + (i + 1), price: t.price }));
-    return { cost, details, source: 'vinci' };
-"""
-          if s.count(old_details) != 1:
-              raise SystemExit(f'Expected one named details block, found {s.count(old_details)}')
-          s = s.replace(old_details, new_details, 1)
-
-          # Garde-fou : le correctif stations doit rester présent.
-          expected = """  const stations = stationsExAequo
-    // On sélectionne toujours les 5 stations qui demandent le moins de détour…
-    .sort((a, b) => a.distRoute - b.distRoute || a.kmSurTrajet - b.kmSurTrajet)
-    .slice(0, 5)
-    // …mais on les présente dans l'ordre où le conducteur les rencontre.
-    .sort((a, b) => a.kmSurTrajet - b.kmSurTrajet);
-"""
-          if expected not in s:
-              raise SystemExit('station route-order fix missing')
-
-          p.write_text(s, encoding='utf-8')
-          PY
+        run: python .github/revert_toll_labels.py
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
